@@ -1,0 +1,3 @@
+# Drop Dialogporten dashboard JSON here. The Flux repo's GrafanaDashboard CRs fetch each
+# file by raw.githubusercontent URL pinned to the `release` branch (same pattern as
+# dashboards/{altinn,fluxcd,linkerd}). Alerts live in ../alerting/.

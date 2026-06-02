@@ -1,0 +1,645 @@
+# Dialogporten alert rules — ported from the Grafana alerting export (provisioning apiVersion:1).
+# data[].model (incl. the Azure Log Analytics KQL) is copied VERBATIM from the export.
+# Deltas vs export: added `for: 0s` (required by the CRD); added notificationSettings.receiver
+# to the four Exception rules (Connection Pool already had it); dropped deprecated rule-level
+# dashboardUid/panelId (kept as __dashboardUid__/__panelId__ annotations) and isPaused (default).
+# To edit: change in Grafana UI -> Export JSON -> re-port. Never regenerate the `uid`s.
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaAlertRuleGroup
+metadata:
+  name: dialogporten-exceptions
+  namespace: grafana
+spec:
+  name: Exception
+  folderRef: external-grafana-dialogporten
+  instanceSelector:
+    matchLabels:
+      dashboards: external-grafana
+  interval: 5m
+  rules:
+  - uid: deaunj9hgqxhcc
+    title: Exceptions Test
+    condition: C
+    for: 0s
+    noDataState: OK
+    execErrState: KeepLast
+    labels:
+      AlertType: Exception
+      Env: Test
+      Product: Dialogporten
+    annotations:
+      __dashboardUid__: Azure-AppInsights-Failures-Exceptions
+      __panelId__: '91'
+      AppInsightsURL: https://portal.azure.com#@cd0026d8-283b-4a55-9bfa-d0ef4a8ba21c/blade/Microsoft_OperationsManagementSuite_Workspace/Logs.ReactView/resourceId/%2Fsubscriptions%2F8a353de8-d81d-468d-a40d-f3574b6bb3f4%2FresourceGroups%2Fdp-be-test-rg%2Fproviders%2Fmicrosoft.insights%2Fcomponents%2Fdp-be-test-applicationInsights/source/LogsBlade.AnalyticsShareLinkToQuery/q/H4sIAAAAAAAAA5VUUW%252FTMBB%252B51fc8tIOZQE2XgOamiFVYmhaK5CopspzbomRY4fzZVvRfjyX0gXapFD8Evn83fm77z6ncca7F7C7xviosWY5C%252F3DJ3gokRCc57FuAvsqMxW60KKTxWiGdG80wnxV4%252BgG0hRG51dTuFROFSg4HoEnGEjs7kwqDEHAm2yltexPqq4AEHJDDnOhAKrh0pP5IbtaERsMMVQmBOMKOLdsnIOa%252FJ2x%252BH50vL8ZFrZwlEL01RTFakKo5AoMyUTpUkolH5qWZjJbOS6RjZ4Lc9%252FwxTPnaKg0PjK6HDpQKwmk67tiyDBoMuu4xKQW0uWvvo%252FjgYkwKZFhfwMB75EMrz7K18K7FM5amce98CkoodSTf%252BYb0jjxjoU0BBYpw4PhEqLMFLmh6C%252Fa9Ypd4%252FcGA18pyT%252F6s9arEpXl8r%252FE8oFJJtCz2iL6bZhW0ejmeFfUjY92qHdXzba0SUGrgOM%252BtW0JxZGvY4g%252BI936gNHAqHr4N4KfujtPlVpb5ZCcU8n5oshJ5wfhzwR%252FQeTpIPRbQU8kYrSyQwmd6FuZAxYYXPv0zpCVsaFV2isrk8KxPM1bi9U0j3suWkSb8clg%252F1mQsLbyPpYb2puD%252BNm9SeYrZVySGWV9UXuS9CSS411bP7U%252Fi2%252Bo%252BYTQU44ELITEwlUdb%252FslBsNYzXefcrxtYGnL%252BiZfXnuLn1Qle18jrW2wbJvuiL78CTKiwlGKBQAA
+      Count: '{{ $values.A.Value }}'
+    notificationSettings:
+      receiver: Dialogporten Slack Exceptions
+    data:
+    - refId: A
+      queryType: Azure Log Analytics
+      relativeTimeRange:
+        from: 300
+        to: 0
+      datasourceUid: azure-monitor-oob
+      model:
+        azureLogAnalytics:
+          dashboardTime: true
+          query: |-
+            let make_fp_trace = (raw: string) {
+                let s1 = replace_regex(raw, @'\b(Request|RequestJson|Payload|Body)\s*[:=]\s*\{.*$', '<stripped>');
+                let s2 = replace_regex(s1, @'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}', '<guid>');
+                let s3 = replace_regex(s2, @'\b[0-9a-f]{16,}\b', '<token>');
+                let s4 = replace_regex(s3, @'\((\d+)ms\)', '(<ms>ms)');
+                let s5 = replace_regex(s4, @'\b\d{4,}\b', '<num>');
+                substring(s5, 0, 200)
+            };
+            let exc =
+                exceptions
+                | where customDimensions.['Service Type'] != 'API Management'
+                | where customDimensions.['exception.message'] != 'access-management returned no authorized parties, missing Altinn profile?'
+                | where type != "ZiggyCreatures.Caching.Fusion.SyntheticTimeoutException"
+                | extend fp_raw = case(
+                    isnotempty(outerMessage), strcat(type, ": ", outerMessage),
+                    isnotempty(problemId), problemId,
+                    type);
+            let trc =
+                traces
+                | where severityLevel >= 3 or (severityLevel >= 2 and customDimensions.SourceContext startswith "Digdir")
+                | extend ExType = tostring(customDimensions.['exception.type'])
+                | extend MsgFp = make_fp_trace(message)
+                | extend fp_raw = iff(isnotempty(ExType), strcat(ExType, ": ", MsgFp), MsgFp);
+            let combined =
+                union exc, trc
+                | where customDimensions.RequestPath !startswith "/health"
+                // exclude actor id duplicate-key issue
+                | where not(cloud_RoleName == "dp-be-test-cae.dp-be-test-webapi-so-ca"
+                    and type == "Npgsql.PostgresException"
+                    and customDimensions.["exception.message"] contains "23505: duplicate key value violates unique constraint \"IX_ActorName_ActorId_Name\"")
+                // exclude transient concurrency errors https://github.com/Altinn/dialogporten/issues/1763
+                | where not(cloud_RoleName == "dp-be-test-cae.dp-be-test-service"
+                    and customDimensions.["exception.stacktrace"] contains "could not serialize access due to concurrent update"
+                    and customDimensions.["exception.stacktrace"] contains "BusOutboxDeliveryService")
+                | where not(cloud_RoleName == "dp-be-test-cae.dp-be-test-service"
+                    and type == "Npgsql.PostgresException"
+                    and customDimensions.["exception.message"] == "40001: could not serialize access due to concurrent update")
+                | where not(cloud_RoleName == "dp-be-test-cae.dp-be-test-service"
+                    and customDimensions.commandText == "SELECT *, xmin FROM \"MassTransitOutboxState\" ORDER BY \"Created\" LIMIT 1 FOR UPDATE SKIP LOCKED")
+                | extend fp = substring(replace_string(fp_raw, "Digdir.Domain.Dialogporten.", ""), 0, 200);
+            let ops_with_companion =
+                combined
+                | where fp != "GRAPHQL_ERROR: Unexpected Execution Error"
+                | where isnotempty(operation_Id)
+                | distinct operation_Id;
+            combined
+            | where not(fp == "GRAPHQL_ERROR: Unexpected Execution Error" and operation_Id in (ops_with_companion))
+            | summarize Count = count(), Sample = take_any(message)
+                by Environment = tostring(customDimensions.EnvironmentName),
+                   Type = itemType,
+                   severityLevel,
+                   fp
+            | extend SeverityLevel = case(
+                severityLevel == 0, "Verbose",
+                severityLevel == 1, "Information",
+                severityLevel == 2, "Warning",
+                severityLevel == 3, "Error",
+                severityLevel == 4, "Critical",
+                tostring(severityLevel))
+            | project Environment, Type, SeverityLevel, Count, Details = fp
+          resources:
+          - /subscriptions/8a353de8-d81d-468d-a40d-f3574b6bb3f4/resourceGroups/dp-be-test-rg/providers/Microsoft.Insights/components/dp-be-test-applicationInsights
+          resultFormat: logs
+          timeColumn: timestamp
+          workspace: ''
+        datasource:
+          type: grafana-azure-monitor-datasource
+          uid: azure-monitor-oob
+        intervalMs: 1000
+        maxDataPoints: 43200
+        queryType: Azure Log Analytics
+        refId: A
+    - refId: C
+      relativeTimeRange:
+        from: 300
+        to: 0
+      datasourceUid: __expr__
+      model:
+        conditions:
+        - evaluator:
+            params:
+            - 0
+            type: gt
+          operator:
+            type: and
+          query:
+            params:
+            - C
+          reducer:
+            params: []
+            type: last
+          type: query
+        datasource:
+          type: __expr__
+          uid: __expr__
+        expression: A
+        intervalMs: 1000
+        maxDataPoints: 43200
+        refId: C
+        type: threshold
+  - uid: feaunnapmypkwf
+    title: Exceptions YT01
+    condition: C
+    for: 0s
+    noDataState: OK
+    execErrState: KeepLast
+    labels:
+      AlertType: Exception
+      Env: YT01
+      Product: Dialogporten
+    annotations:
+      __dashboardUid__: eeflo3ghwlkowf
+      __panelId__: '91'
+      AppInsightsURL: https://portal.azure.com#@cd0026d8-283b-4a55-9bfa-d0ef4a8ba21c/blade/Microsoft_OperationsManagementSuite_Workspace/Logs.ReactView/resourceId/%2Fsubscriptions%2F8a353de8-d81d-468d-a40d-f3574b6bb3f4%2FresourceGroups%2Fdp-be-yt01-rg%2Fproviders%2Fmicrosoft.insights%2Fcomponents%2Fdp-be-yt01-applicationInsights/source/LogsBlade.AnalyticsShareLinkToQuery/q/H4sIAAAAAAAAA5VUUW%252FTMBB%252B51fc8tIOZQE2XgOamiFVYmhaK5CopspzbomRY4fzZVvRfjyX0gXapFD8Evn83fm77z6ncca7F7C7xviosWY5C%252F3DJ3gokRCc57FuAvsqMxW60KKTxWiGdG80wnxV4%252BgG0hRG51dTuFROFSg4HoEnGEjs7kwqDEHAm2yltexPqq4AEHJDDnOhAKrh0pP5IbtaERsMMVQmBOMKOLdsnIOa%252FJ2x%252BH50vL8ZFrZwlEL01RTFakKo5AoMyUTpUkolH5qWZjJbOS6RjZ4Lc9%252FwxTPnaKg0PjK6HDpQKwmk67tiyDBoMuu4xKQW0uWvvo%252FjgYkwKZFhfwMB75EMrz7K18K7FM5amce98CkoodSTf%252BYb0jjxjoU0BBYpw4PhEqLMFLmh6C%252Fa9Ypd4%252FcGA18pyT%252F6s9arEpXl8r%252FE8oFJJtCz2iL6bZhW0ejmeFfUjY92qHdXzba0SUGrgOM%252BtW0JxZGvY4g%252BI936gNHAqHr4N4KfujtPlVpb5ZCcU8n5oshJ5wfhzwR%252FQeTpIPRbQU8kYrSyQwmd6FuZAxYYXPv0zpCVsaFV2isrk8KxPM1bi9U0j3suWkSb8clg%252F1mQsLbyPpYb2puD%252BNm9SeYrZVySGWV9UXuS9CSS411bP7U%252Fi2%252Bo%252BYTQU44ELITEwlUdb%252FslBsNYzXefcrxtYGnL%252BiZfXnuLn1Qle18jrW2wbJvuiL78CTKiwlGKBQAA
+      Count: '{{ $values.A.Value }}'
+    notificationSettings:
+      receiver: Dialogporten Slack Exceptions
+    data:
+    - refId: A
+      queryType: Azure Log Analytics
+      relativeTimeRange:
+        from: 300
+        to: 0
+      datasourceUid: azure-monitor-oob
+      model:
+        azureLogAnalytics:
+          dashboardTime: true
+          query: |-
+            let make_fp_trace = (raw: string) {
+                let s1 = replace_regex(raw, @'\b(Request|RequestJson|Payload|Body)\s*[:=]\s*\{.*$', '<stripped>');
+                let s2 = replace_regex(s1, @'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}', '<guid>');
+                let s3 = replace_regex(s2, @'\b[0-9a-f]{16,}\b', '<token>');
+                let s4 = replace_regex(s3, @'\((\d+)ms\)', '(<ms>ms)');
+                let s5 = replace_regex(s4, @'\b\d{4,}\b', '<num>');
+                substring(s5, 0, 200)
+            };
+            let exc =
+                exceptions
+                | where customDimensions.['Service Type'] != 'API Management'
+                | where customDimensions.['exception.message'] != 'access-management returned no authorized parties, missing Altinn profile?'
+                | where type != "ZiggyCreatures.Caching.Fusion.SyntheticTimeoutException"
+                | extend fp_raw = case(
+                    isnotempty(outerMessage), strcat(type, ": ", outerMessage),
+                    isnotempty(problemId), problemId,
+                    type);
+            let trc =
+                traces
+                | where severityLevel >= 3 or (severityLevel >= 2 and customDimensions.SourceContext startswith "Digdir")
+                | extend ExType = tostring(customDimensions.['exception.type'])
+                | extend MsgFp = make_fp_trace(message)
+                | extend fp_raw = iff(isnotempty(ExType), strcat(ExType, ": ", MsgFp), MsgFp);
+            let combined =
+                union exc, trc
+                | where customDimensions.RequestPath !startswith "/health"
+                // exclude actor id duplicate-key issue
+                | where not(cloud_RoleName == "dp-be-yt01-cae.dp-be-yt01-webapi-so-ca"
+                    and type == "Npgsql.PostgresException"
+                    and customDimensions.["exception.message"] contains "23505: duplicate key value violates unique constraint \"IX_ActorName_ActorId_Name\"")
+                // exclude transient concurrency errors https://github.com/Altinn/dialogporten/issues/1763
+                | where not(cloud_RoleName == "dp-be-yt01-cae.dp-be-yt01-service"
+                    and customDimensions.["exception.stacktrace"] contains "could not serialize access due to concurrent update"
+                    and customDimensions.["exception.stacktrace"] contains "BusOutboxDeliveryService")
+                | where not(cloud_RoleName == "dp-be-yt01-cae.dp-be-yt01-service"
+                    and type == "Npgsql.PostgresException"
+                    and customDimensions.["exception.message"] == "40001: could not serialize access due to concurrent update")
+                | where not(cloud_RoleName == "dp-be-yt01-cae.dp-be-yt01-service"
+                    and customDimensions.commandText == "SELECT *, xmin FROM \"MassTransitOutboxState\" ORDER BY \"Created\" LIMIT 1 FOR UPDATE SKIP LOCKED")
+                | extend fp = substring(replace_string(fp_raw, "Digdir.Domain.Dialogporten.", ""), 0, 200);
+            let ops_with_companion =
+                combined
+                | where fp != "GRAPHQL_ERROR: Unexpected Execution Error"
+                | where isnotempty(operation_Id)
+                | distinct operation_Id;
+            combined
+            | where not(fp == "GRAPHQL_ERROR: Unexpected Execution Error" and operation_Id in (ops_with_companion))
+            | summarize Count = count(), Sample = take_any(message)
+                by Environment = tostring(customDimensions.EnvironmentName),
+                   Type = itemType,
+                   severityLevel,
+                   fp
+            | extend SeverityLevel = case(
+                severityLevel == 0, "Verbose",
+                severityLevel == 1, "Information",
+                severityLevel == 2, "Warning",
+                severityLevel == 3, "Error",
+                severityLevel == 4, "Critical",
+                tostring(severityLevel))
+            | project Environment, Type, SeverityLevel, Count, Details = fp
+          resources:
+          - /subscriptions/8a353de8-d81d-468d-a40d-f3574b6bb3f4/resourceGroups/dp-be-yt01-rg/providers/Microsoft.Insights/components/dp-be-yt01-applicationInsights
+          resultFormat: logs
+          timeColumn: timestamp
+          workspace: ''
+        datasource:
+          type: grafana-azure-monitor-datasource
+          uid: azure-monitor-oob
+        intervalMs: 1000
+        maxDataPoints: 43200
+        queryType: Azure Log Analytics
+        refId: A
+    - refId: C
+      relativeTimeRange:
+        from: 300
+        to: 0
+      datasourceUid: __expr__
+      model:
+        conditions:
+        - evaluator:
+            params:
+            - 0
+            type: gt
+          operator:
+            type: and
+          query:
+            params:
+            - C
+          reducer:
+            params: []
+            type: last
+          type: query
+        datasource:
+          type: __expr__
+          uid: __expr__
+        expression: A
+        intervalMs: 1000
+        maxDataPoints: 43200
+        refId: C
+        type: threshold
+  - uid: feauomjg8tgcgc
+    title: Exceptions Staging
+    condition: C
+    for: 0s
+    noDataState: OK
+    execErrState: KeepLast
+    labels:
+      AlertType: Exception
+      Env: Staging
+      Product: Dialogporten
+    annotations:
+      __dashboardUid__: deflodkx7wf7kf
+      __panelId__: '91'
+      AppInsightsURL: https://portal.azure.com#@cd0026d8-283b-4a55-9bfa-d0ef4a8ba21c/blade/Microsoft_OperationsManagementSuite_Workspace/Logs.ReactView/resourceId/%2Fsubscriptions%2Fe4926efc-0577-47b3-9c3d-757925630eca%2FresourceGroups%2Fdp-be-staging-rg%2Fproviders%2Fmicrosoft.insights%2Fcomponents%2Fdp-be-staging-applicationInsights/source/LogsBlade.AnalyticsShareLinkToQuery/q/H4sIAAAAAAAAA5VUUW%252FTMBB%252B51fc8tIOZQE2XgOamiFVYmhaK5CopspzbomRY4fzZVvRfjyX0gXapFD8Evn83fm77z6ncca7F7C7xviosWY5C%252F3DJ3gokRCc57FuAvsqMxW60KKTxWiGdG80wnxV4%252BgG0hRG51dTuFROFSg4HoEnGEjs7kwqDEHAm2yltexPqq4AEHJDDnOhAKrh0pP5IbtaERsMMVQmBOMKOLdsnIOa%252FJ2x%252BH50vL8ZFrZwlEL01RTFakKo5AoMyUTpUkolH5qWZjJbOS6RjZ4Lc9%252FwxTPnaKg0PjK6HDpQKwmk67tiyDBoMuu4xKQW0uWvvo%252FjgYkwKZFhfwMB75EMrz7K18K7FM5amce98CkoodSTf%252BYb0jjxjoU0BBYpw4PhEqLMFLmh6C%252Fa9Ypd4%252FcGA18pyT%252F6s9arEpXl8r%252FE8oFJJtCz2iL6bZhW0ejmeFfUjY92qHdXzba0SUGrgOM%252BtW0JxZGvY4g%252BI936gNHAqHr4N4KfujtPlVpb5ZCcU8n5oshJ5wfhzwR%252FQeTpIPRbQU8kYrSyQwmd6FuZAxYYXPv0zpCVsaFV2isrk8KxPM1bi9U0j3suWkSb8clg%252F1mQsLbyPpYb2puD%252BNm9SeYrZVySGWV9UXuS9CSS411bP7U%252Fi2%252Bo%252BYTQU44ELITEwlUdb%252FslBsNYzXefcrxtYGnL%252BiZfXnuLn1Qle18jrW2wbJvuiL78CTKiwlGKBQAA
+      Count: '{{ $values.A.Value }}'
+    notificationSettings:
+      receiver: Dialogporten Slack Exceptions
+    data:
+    - refId: A
+      queryType: Azure Log Analytics
+      relativeTimeRange:
+        from: 300
+        to: 0
+      datasourceUid: azure-monitor-oob
+      model:
+        azureLogAnalytics:
+          dashboardTime: true
+          query: |-
+            let make_fp_trace = (raw: string) {
+                let s1 = replace_regex(raw, @'\b(Request|RequestJson|Payload|Body)\s*[:=]\s*\{.*$', '<stripped>');
+                let s2 = replace_regex(s1, @'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}', '<guid>');
+                let s3 = replace_regex(s2, @'\b[0-9a-f]{16,}\b', '<token>');
+                let s4 = replace_regex(s3, @'\((\d+)ms\)', '(<ms>ms)');
+                let s5 = replace_regex(s4, @'\b\d{4,}\b', '<num>');
+                substring(s5, 0, 200)
+            };
+            let exc =
+                exceptions
+                | where customDimensions.['Service Type'] != 'API Management'
+                | where customDimensions.['exception.message'] != 'access-management returned no authorized parties, missing Altinn profile?'
+                | where type != "ZiggyCreatures.Caching.Fusion.SyntheticTimeoutException"
+                | extend fp_raw = case(
+                    isnotempty(outerMessage), strcat(type, ": ", outerMessage),
+                    isnotempty(problemId), problemId,
+                    type);
+            let trc =
+                traces
+                | where severityLevel >= 3 or (severityLevel >= 2 and customDimensions.SourceContext startswith "Digdir")
+                | extend ExType = tostring(customDimensions.['exception.type'])
+                | extend MsgFp = make_fp_trace(message)
+                | extend fp_raw = iff(isnotempty(ExType), strcat(ExType, ": ", MsgFp), MsgFp);
+            let combined =
+                union exc, trc
+                | where customDimensions.RequestPath !startswith "/health"
+                // exclude actor id duplicate-key issue
+                | where not(cloud_RoleName == "dp-be-staging-cae.dp-be-staging-webapi-so-ca"
+                    and type == "Npgsql.PostgresException"
+                    and customDimensions.["exception.message"] contains "23505: duplicate key value violates unique constraint \"IX_ActorName_ActorId_Name\"")
+                // exclude transient concurrency errors https://github.com/Altinn/dialogporten/issues/1763
+                | where not(cloud_RoleName == "dp-be-staging-cae.dp-be-staging-service"
+                    and customDimensions.["exception.stacktrace"] contains "could not serialize access due to concurrent update"
+                    and customDimensions.["exception.stacktrace"] contains "BusOutboxDeliveryService")
+                | where not(cloud_RoleName == "dp-be-staging-cae.dp-be-staging-service"
+                    and type == "Npgsql.PostgresException"
+                    and customDimensions.["exception.message"] == "40001: could not serialize access due to concurrent update")
+                | where not(cloud_RoleName == "dp-be-staging-cae.dp-be-staging-service"
+                    and customDimensions.commandText == "SELECT *, xmin FROM \"MassTransitOutboxState\" ORDER BY \"Created\" LIMIT 1 FOR UPDATE SKIP LOCKED")
+                // mute sr-sync error, see https://github.com/Altinn/dialogporten/issues/2584
+                | where not(customDimensions.["exception.message"] == "21000: MERGE command cannot affect row a second time")
+                | where not(customDimensions.["service.version"] == "dp-be-staging-sync-sr-mappings")
+                | extend fp = substring(replace_string(fp_raw, "Digdir.Domain.Dialogporten.", ""), 0, 200);
+            let ops_with_companion =
+                combined
+                | where fp != "GRAPHQL_ERROR: Unexpected Execution Error"
+                | where isnotempty(operation_Id)
+                | distinct operation_Id;
+            combined
+            | where not(fp == "GRAPHQL_ERROR: Unexpected Execution Error" and operation_Id in (ops_with_companion))
+            | summarize Count = count(), Sample = take_any(message)
+                by Environment = tostring(customDimensions.EnvironmentName),
+                   Type = itemType,
+                   severityLevel,
+                   fp
+            | extend SeverityLevel = case(
+                severityLevel == 0, "Verbose",
+                severityLevel == 1, "Information",
+                severityLevel == 2, "Warning",
+                severityLevel == 3, "Error",
+                severityLevel == 4, "Critical",
+                tostring(severityLevel))
+            | project Environment, Type, SeverityLevel, Count, Details = fp
+          resources:
+          - /subscriptions/e4926efc-0577-47b3-9c3d-757925630eca/resourceGroups/dp-be-staging-rg/providers/Microsoft.Insights/components/dp-be-staging-applicationInsights
+          resultFormat: logs
+          timeColumn: timestamp
+          workspace: ''
+        datasource:
+          type: grafana-azure-monitor-datasource
+          uid: azure-monitor-oob
+        intervalMs: 1000
+        maxDataPoints: 43200
+        queryType: Azure Log Analytics
+        refId: A
+    - refId: C
+      relativeTimeRange:
+        from: 300
+        to: 0
+      datasourceUid: __expr__
+      model:
+        conditions:
+        - evaluator:
+            params:
+            - 0
+            type: gt
+          operator:
+            type: and
+          query:
+            params:
+            - C
+          reducer:
+            params: []
+            type: last
+          type: query
+        datasource:
+          type: __expr__
+          uid: __expr__
+        expression: A
+        intervalMs: 1000
+        maxDataPoints: 43200
+        refId: C
+        type: threshold
+  - uid: beauoo57ua7swb
+    title: Exceptions Prod
+    condition: C
+    for: 0s
+    noDataState: OK
+    execErrState: KeepLast
+    labels:
+      AlertType: Exception
+      Env: Prod
+      Product: Dialogporten
+    annotations:
+      __dashboardUid__: ceflolcp1hj40f
+      __panelId__: '91'
+      AppInsightsURL: https://portal.azure.com#@cd0026d8-283b-4a55-9bfa-d0ef4a8ba21c/blade/Microsoft_OperationsManagementSuite_Workspace/Logs.ReactView/resourceId/%2Fsubscriptions%2Fc595f787-450d-4c57-84fa-abc5f95d5459%2FresourceGroups%2Fdp-be-prod-rg%2Fproviders%2FMicrosoft.Insights%2Fcomponents%2Fdp-be-prod-applicationInsights/source/LogsBlade.AnalyticsShareLinkToQuery/q/H4sIAAAAAAAAA5VUUW%252FTMBB%252B51fc8tIOZQE2XgOamiFVYmhaK5CopspzbomRY4fzZVvRfjyX0gXapFD8Evn83fm77z6ncca7F7C7xviosWY5C%252F3DJ3gokRCc57FuAvsqMxW60KKTxWiGdG80wnxV4%252BgG0hRG51dTuFROFSg4HoEnGEjs7kwqDEHAm2yltexPqq4AEHJDDnOhAKrh0pP5IbtaERsMMVQmBOMKOLdsnIOa%252FJ2x%252BH50vL8ZFrZwlEL01RTFakKo5AoMyUTpUkolH5qWZjJbOS6RjZ4Lc9%252FwxTPnaKg0PjK6HDpQKwmk67tiyDBoMuu4xKQW0uWvvo%252FjgYkwKZFhfwMB75EMrz7K18K7FM5amce98CkoodSTf%252BYb0jjxjoU0BBYpw4PhEqLMFLmh6C%252Fa9Ypd4%252FcGA18pyT%252F6s9arEpXl8r%252FE8oFJJtCz2iL6bZhW0ejmeFfUjY92qHdXzba0SUGrgOM%252BtW0JxZGvY4g%252BI936gNHAqHr4N4KfujtPlVpb5ZCcU8n5oshJ5wfhzwR%252FQeTpIPRbQU8kYrSyQwmd6FuZAxYYXPv0zpCVsaFV2isrk8KxPM1bi9U0j3suWkSb8clg%252F1mQsLbyPpYb2puD%252BNm9SeYrZVySGWV9UXuS9CSS411bP7U%252Fi2%252Bo%252BYTQU44ELITEwlUdb%252FslBsNYzXefcrxtYGnL%252BiZfXnuLn1Qle18jrW2wbJvuiL78CTKiwlGKBQAA
+      Count: '{{ $values.A.Value }}'
+    notificationSettings:
+      receiver: Dialogporten Slack Exceptions
+    data:
+    - refId: A
+      queryType: Azure Log Analytics
+      relativeTimeRange:
+        from: 300
+        to: 0
+      datasourceUid: azure-monitor-oob
+      model:
+        azureLogAnalytics:
+          dashboardTime: true
+          query: |-
+            let make_fp_trace = (raw: string) {
+                let s1 = replace_regex(raw, @'\b(Request|RequestJson|Payload|Body)\s*[:=]\s*\{.*$', '<stripped>');
+                let s2 = replace_regex(s1, @'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}', '<guid>');
+                let s3 = replace_regex(s2, @'\b[0-9a-f]{16,}\b', '<token>');
+                let s4 = replace_regex(s3, @'\((\d+)ms\)', '(<ms>ms)');
+                let s5 = replace_regex(s4, @'\b\d{4,}\b', '<num>');
+                substring(s5, 0, 200)
+            };
+            // Unfiltered universe used to detect a GRAPHQL_ERROR's companion.
+            // Intentionally skips the noise-exclusion filters so suppressed types
+            // (FusionCache SyntheticTimeout, AUTH_USER_TYPE_UNKNOWN, etc.) still
+            // count as companions for dedup purposes.
+            let exc_all =
+                exceptions
+                | extend fp_raw = case(
+                    isnotempty(outerMessage), strcat(type, ": ", outerMessage),
+                    isnotempty(problemId), problemId,
+                    type);
+            let trc_all =
+                traces
+                | where severityLevel >= 2
+                | extend ExType = tostring(customDimensions.['exception.type'])
+                | extend MsgFp = make_fp_trace(message)
+                | extend fp_raw = iff(isnotempty(ExType), strcat(ExType, ": ", MsgFp), MsgFp);
+            let ops_with_companion =
+                union exc_all, trc_all
+                | extend fp = substring(replace_string(fp_raw, "Digdir.Domain.Dialogporten.", ""), 0, 200)
+                | where fp != "GRAPHQL_ERROR: Unexpected Execution Error"
+                | where isnotempty(operation_Id)
+                | distinct operation_Id;
+            let exc =
+                exceptions
+                | where customDimensions.['Service Type'] != 'API Management'
+                | where customDimensions.['exception.message'] != 'access-management returned no authorized parties, missing Altinn profile?'
+                | where type != "ZiggyCreatures.Caching.Fusion.SyntheticTimeoutException"
+                | where type != "AUTH_USER_TYPE_UNKNOWN"
+                | extend fp_raw = case(
+                    isnotempty(outerMessage), strcat(type, ": ", outerMessage),
+                    isnotempty(problemId), problemId,
+                    type);
+            let trc =
+                traces
+                | where severityLevel >= 3 or (severityLevel >= 2 and customDimensions.SourceContext startswith "Digdir")
+                | extend ExType = tostring(customDimensions.['exception.type'])
+                | extend MsgFp = make_fp_trace(message)
+                | extend fp_raw = iff(isnotempty(ExType), strcat(ExType, ": ", MsgFp), MsgFp);
+            union exc, trc
+            | where customDimensions.RequestPath !startswith "/health"
+            // exclude actor id duplicate-key issue
+            | where not(cloud_RoleName == "dp-be-prod-cae.dp-be-prod-webapi-so-ca"
+                and type == "Npgsql.PostgresException"
+                and customDimensions.["exception.message"] contains "23505: duplicate key value violates unique constraint \"IX_ActorName_ActorId_Name\"")
+            // exclude transient concurrency errors https://github.com/Altinn/dialogporten/issues/1763
+            | where not(cloud_RoleName == "dp-be-prod-cae.dp-be-prod-service"
+                and customDimensions.["exception.stacktrace"] contains "could not serialize access due to concurrent update"
+                and customDimensions.["exception.stacktrace"] contains "BusOutboxDeliveryService")
+            | where not(cloud_RoleName == "dp-be-prod-cae.dp-be-prod-service"
+                and type == "Npgsql.PostgresException"
+                and customDimensions.["exception.message"] == "40001: could not serialize access due to concurrent update")
+            | where not(cloud_RoleName == "dp-be-prod-cae.dp-be-prod-service"
+                and customDimensions.commandText == "SELECT *, xmin FROM \"MassTransitOutboxState\" ORDER BY \"Created\" LIMIT 1 FOR UPDATE SKIP LOCKED")
+            | extend fp = substring(replace_string(fp_raw, "Digdir.Domain.Dialogporten.", ""), 0, 200)
+            | where not(fp == "GRAPHQL_ERROR: Unexpected Execution Error" and operation_Id in (ops_with_companion))
+            | summarize Count = count(), Sample = take_any(message)
+                by Environment = tostring(customDimensions.EnvironmentName),
+                   Type = itemType,
+                   severityLevel,
+                   fp
+            | extend SeverityLevel = case(
+                severityLevel == 0, "Verbose",
+                severityLevel == 1, "Information",
+                severityLevel == 2, "Warning",
+                severityLevel == 3, "Error",
+                severityLevel == 4, "Critical",
+                tostring(severityLevel))
+            | project Environment, Type, SeverityLevel, Count, Details = fp
+          resources:
+          - /subscriptions/c595f787-450d-4c57-84fa-abc5f95d5459/resourceGroups/dp-be-prod-rg/providers/Microsoft.Insights/components/dp-be-prod-applicationInsights
+          resultFormat: logs
+          timeColumn: timestamp
+          workspace: ''
+        datasource:
+          type: grafana-azure-monitor-datasource
+          uid: azure-monitor-oob
+        intervalMs: 1000
+        maxDataPoints: 43200
+        queryType: Azure Log Analytics
+        refId: A
+    - refId: C
+      relativeTimeRange:
+        from: 300
+        to: 0
+      datasourceUid: __expr__
+      model:
+        conditions:
+        - evaluator:
+            params:
+            - 0
+            type: gt
+          operator:
+            type: and
+          query:
+            params:
+            - C
+          reducer:
+            params: []
+            type: last
+          type: query
+        datasource:
+          type: __expr__
+          uid: __expr__
+        expression: A
+        intervalMs: 1000
+        maxDataPoints: 43200
+        refId: C
+        type: threshold
+  - uid: ffgfdd8ydm3ggf
+    title: Connection Pool Exhaustion
+    condition: C
+    for: 0s
+    noDataState: OK
+    execErrState: Error
+    labels:
+      AlertType: Exception
+      Env: Prod
+      Product: Dialogporten
+      Severity: Critical
+      Tier: Critical
+    annotations:
+      description: Queries are holding connections too long, likely due to slow queries or downstream dependency issues. Check for UpsertDialogSearchOne timeouts and external service health (e.g., Correspondence).
+      summary: Database connection pool exhausted — all 100 connections in use
+    notificationSettings:
+      receiver: Dialogporten Slack Exceptions
+    data:
+    - refId: A
+      queryType: Azure Log Analytics
+      relativeTimeRange:
+        from: 300
+        to: 0
+      datasourceUid: azure-monitor-oob
+      model:
+        azureLogAnalytics:
+          dashboardTime: false
+          query: |-
+            union exceptions, traces
+            | where timestamp > ago(15m)
+            | where customDimensions.RequestPath !startswith "/health"
+            | where message contains "connection pool has been exhausted"
+                or customDimensions.["exception.message"] contains "connection pool has been exhausted"
+            | summarize Count = count() by RoleName = cloud_RoleName
+          resources:
+          - /subscriptions/c595f787-450d-4c57-84fa-abc5f95d5459/resourceGroups/dp-be-prod-rg/providers/Microsoft.Insights/components/dp-be-prod-applicationInsights
+          resultFormat: logs
+        azureMonitor:
+          allowedTimeGrainsMs: []
+          timeGrain: auto
+        intervalMs: 1000
+        maxDataPoints: 43200
+        queryType: Azure Log Analytics
+        refId: A
+    - refId: B
+      datasourceUid: __expr__
+      model:
+        conditions:
+        - evaluator:
+            params: []
+            type: gt
+          operator:
+            type: and
+          query:
+            params:
+            - B
+          reducer:
+            params: []
+            type: last
+          type: query
+        datasource:
+          type: __expr__
+          uid: __expr__
+        expression: A
+        intervalMs: 1000
+        maxDataPoints: 43200
+        reducer: last
+        refId: B
+        type: reduce
+    - refId: C
+      datasourceUid: __expr__
+      model:
+        conditions:
+        - evaluator:
+            params:
+            - 5
+            type: gt
+          operator:
+            type: and
+          query:
+            params:
+            - C
+          reducer:
+            params: []
+            type: last
+          type: query
+        datasource:
+          type: __expr__
+          uid: __expr__
+        expression: B
+        intervalMs: 1000
+        maxDataPoints: 43200
+        refId: C
+        type: threshold

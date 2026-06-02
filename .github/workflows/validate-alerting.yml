@@ -1,0 +1,149 @@
+name: validate-alerting
+
+# Offline validation of the grafana-operator alerting CRs and dashboard JSON.
+# - kustomize build (catches bad overlays / kustomize errors)
+# - kubeconform -strict against the vendored, version-pinned CRD schemas in schemas/
+#   (no network / no schema-catalog dependency at run time)
+# - dashboard-linter on dashboard JSON changed in the PR
+#
+# See README.md "Alerting-as-Code" and schemas/regenerate.py.
+
+on:
+  pull_request:
+    paths:
+      - "products/**"
+      - "platform/**"
+      - "dashboards/**"
+      - "schemas/**"
+      - "kustomization.yaml"
+      - ".github/workflows/validate-alerting.yml"
+  push:
+    branches: [main, release]
+    paths:
+      - "products/**"
+      - "platform/**"
+      - "dashboards/**"
+      - "schemas/**"
+      - "kustomization.yaml"
+      - ".github/workflows/validate-alerting.yml"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+env:
+  KUSTOMIZE_VERSION: "5.4.3"
+  KUBECONFORM_VERSION: "0.6.7"
+  DASHBOARD_LINTER_VERSION: "0.1.1"   # release-asset filenames omit the leading "v"
+
+jobs:
+  alerting:
+    name: kustomize build + kubeconform (-strict)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install kustomize
+        run: |
+          set -euo pipefail
+          curl -fsSL -o kustomize.tar.gz \
+            "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv${KUSTOMIZE_VERSION}/kustomize_v${KUSTOMIZE_VERSION}_linux_amd64.tar.gz"
+          tar -xzf kustomize.tar.gz
+          sudo install -m 0755 kustomize /usr/local/bin/kustomize
+          kustomize version
+
+      - name: Install kubeconform
+        run: |
+          set -euo pipefail
+          curl -fsSL -o kubeconform.tar.gz \
+            "https://github.com/yannh/kubeconform/releases/download/v${KUBECONFORM_VERSION}/kubeconform-linux-amd64.tar.gz"
+          tar -xzf kubeconform.tar.gz kubeconform
+          sudo install -m 0755 kubeconform /usr/local/bin/kubeconform
+          kubeconform -v
+
+      - name: Validate every alerting overlay + the root aggregate
+        run: |
+          set -euo pipefail
+          # Vendored CRD schemas are lowercase-named because kubeconform lowercases the
+          # {{.ResourceKind}} template variable (no template function needed / supported).
+          # Pinned to grafana-operator v5.23.0 — bump with schemas/regenerate.py on upgrade.
+          SCHEMA_LOC='schemas/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json'
+          targets=()
+          while IFS= read -r d; do targets+=("$d"); done < <(
+            find products -mindepth 2 -maxdepth 2 -type d -name alerting | sort
+          )
+          if [ -f platform/alerting/kustomization.yaml ]; then targets+=("platform/alerting"); fi
+          targets+=(".")   # root aggregator
+          rc=0
+          for d in "${targets[@]}"; do
+            [ -f "$d/kustomization.yaml" ] || continue
+            echo "::group::validate $d"
+            if kustomize build "$d" \
+                | kubeconform -strict -summary -verbose \
+                    -schema-location default \
+                    -schema-location "$SCHEMA_LOC" -; then
+              echo "OK: $d"
+            else
+              echo "::error::validation failed for $d"
+              rc=1
+            fi
+            echo "::endgroup::"
+          done
+          exit $rc
+
+  dashboards:
+    name: dashboard-linter (changed JSON)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install dashboard-linter
+        # `go install ...@version` refuses this module (its go.mod has a `replace`
+        # directive), so install the pinned release binary instead. The git tag is
+        # v<ver> but the asset filename drops the "v".
+        run: |
+          set -euo pipefail
+          v="${DASHBOARD_LINTER_VERSION}"
+          curl -fsSL -o dashboard-linter.tar.gz \
+            "https://github.com/grafana/dashboard-linter/releases/download/v${v}/dashboard-linter_${v}_linux_amd64.tar.gz"
+          tar -xzf dashboard-linter.tar.gz dashboard-linter
+          sudo install -m 0755 dashboard-linter /usr/local/bin/dashboard-linter
+          dashboard-linter --help >/dev/null && echo "dashboard-linter ${v} installed"
+
+      - name: Lint dashboard JSON changed in this PR
+        run: |
+          set -euo pipefail
+          base="origin/${{ github.base_ref }}"
+          git fetch --no-tags --depth=1 origin "${{ github.base_ref }}"
+          mapfile -t changed < <(
+            git diff --name-only --diff-filter=ACMR "$base"...HEAD \
+              | grep -E '(^dashboards/|/dashboards/).*\.json$' || true
+          )
+          if [ "${#changed[@]}" -eq 0 ]; then
+            echo "No dashboard JSON changed — nothing to lint."
+            exit 0
+          fi
+          rc=0
+          for f in "${changed[@]}"; do
+            [ -f "$f" ] || continue
+            echo "::group::dashboard-linter --strict $f"
+            dashboard-linter lint --strict "$f" || rc=1
+            echo "::endgroup::"
+          done
+          exit $rc
+
+  yaml:
+    name: yamllint (relaxed)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: yamllint
+        run: |
+          set -euo pipefail
+          pipx install yamllint
+          targets="products"
+          if [ -d platform ]; then targets="$targets platform"; fi
+          yamllint -d relaxed $targets
