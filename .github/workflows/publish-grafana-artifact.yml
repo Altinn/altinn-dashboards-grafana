@@ -1,0 +1,89 @@
+name: Publish grafana artifact
+
+# Packages the repo-root kustomize aggregate (dashboards + all product alerts) as
+# a Flux OCI artifact and pushes it to ACR. The aggregate pulls in the self-contained
+# dashboard CRs (configMapRef) under dashboards/ and every products/*/alerting overlay.
+# Flux in the cluster pulls it via an OCIRepository and applies the CRs into the
+# `grafana` namespace. See docs/flux-repo-wiring.md.
+#
+# This mirrors the OCI publishing pattern used by Altinn/dialogporten-manifests
+# (.github/workflows/publish-flux-artifacts.yml) — same reusable build-push action,
+# same Azure-workload-identity (OIDC) auth, same `flux push artifact` under the hood.
+#
+# The action always pushes an immutable `:<short-commit-sha>` tag, and ADDITIONALLY
+# applies the `tag` input below (the branch name). So `main` and `release` produce
+# separate, independently-pinnable moving tags (`:main`, `:release`) plus a permanent
+# per-commit tag. Promote by merging main -> release; the cluster's OCIRepository pins
+# `tag: release` (or a `:<sha>` to freeze a specific revision).
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches:
+      - main
+      - release
+    paths:
+      - "dashboards/**"
+      - "products/**"
+      - "platform/**"
+      - "schemas/**"
+      - "kustomization.yaml"
+      - ".github/workflows/publish-grafana-artifact.yml"
+
+# ACR repository the artifact is pushed to. The registry host is fixed by the
+# build-push-image action (it derives `${acr_name}.azurecr.io`, default acr_name
+# `altinncr`), so the published ref is oci://altinncr.azurecr.io/${ARTIFACT_NAME}.
+# NOTE: confirm ARTIFACT_NAME with the platform team before first publish (see the
+#       "TODO / confirm before first publish" note in docs/flux-repo-wiring.md).
+env:
+  ARTIFACT_NAME: monitoring/grafana
+
+# Azure workload-identity federation needs id-token: write to mint the OIDC token.
+permissions:
+  contents: read
+  id-token: write
+
+# Never let two publishes to the same branch race on the same tag.
+concurrency:
+  group: publish-grafana-artifact-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Build + push grafana OCI artifact
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install kustomize
+        run: |
+          set -euo pipefail
+          ver="5.4.3"
+          curl -fsSL -o kustomize.tar.gz \
+            "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv${ver}/kustomize_v${ver}_linux_amd64.tar.gz"
+          tar -xzf kustomize.tar.gz
+          sudo install -m 0755 kustomize /usr/local/bin/kustomize
+          kustomize version
+
+      - name: Validate the aggregate builds before publishing
+        # Gate the push: a broken root kustomization must never be packaged into an
+        # artifact the cluster will pull. Builds the same root aggregate Flux applies.
+        run: |
+          set -euo pipefail
+          if [ ! -f kustomization.yaml ]; then
+            echo "::error::repo-root kustomization.yaml not found — nothing to publish"
+            exit 1
+          fi
+          kustomize build . >/dev/null
+          echo "root aggregate builds OK"
+
+      - name: Build and push grafana artifact
+        uses: Altinn/altinn-platform/actions/flux/build-push-image@fb059cc61cdd200c0bd89bb9af106b16c066e4cd # main
+        with:
+          image_name: ${{ env.ARTIFACT_NAME }}
+          tag: ${{ github.ref_name }}
+          workdir: .
+          azure_subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          azure_app_id: ${{ secrets.AZURE_CLIENT_ID }}
+          azure_tenant_id: ${{ secrets.AZURE_TENANT_ID }}
