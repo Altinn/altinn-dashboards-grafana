@@ -159,11 +159,28 @@ az role assignment create \
   --scope "$REGISTRY_RESOURCE_ID"
 ```
 
+### 3c. Order `grafana-content` after the operator (`dependsOn`)
+
+`Kustomization/grafana-content` applies `grafana.integreatly.org/v1beta1` CRs (folders, dashboards, alert rules). Those CRDs are registered by the **grafana-operator HelmRelease**, which is applied by a *different* (cluster-bootstrap) Kustomization. If `grafana-content` reconciles before the operator's CRDs exist (fresh-cluster bootstrap, or operator reinstall), the apply fails with `no matches for kind "GrafanaFolder" in version "grafana.integreatly.org/v1beta1"`; it self-heals on the next `retryInterval` (1m), but with `wait: true` it reports **NotReady** until then and may trip alerting.
+
+`oci/grafana-operator/grafana-manifests/base/flux-kustomize.yaml` ships a **commented-out `dependsOn`** for this. Confirm the name of the bootstrap Kustomization that applies `oci/grafana-operator/base` (it is not in `gitops-manifests` — it lives in the cluster-bootstrap repo), then uncomment and set it:
+
+```yaml
+spec:
+  dependsOn:
+    - name: <grafana-operator-kustomization-name>   # the one that applies oci/grafana-operator/base
+      namespace: flux-system
+```
+
+> Do **not** guess the name — a `dependsOn` pointing at a non-existent Kustomization blocks `grafana-content` **permanently** (worse than the transient retry). If you cannot confirm the name before cutover, leave it commented and accept the self-healing NotReady window on first bootstrap.
+
 ---
 
 ## 4. Cutover Order
 
 Perform the steps in this exact order to avoid a window where the consumer in `gitops-manifests` references an artifact that does not yet exist.
+
+> **Ownership hand-off — expect a brief flicker.** Before this change, the 9 dashboards + 3 platform folders were inventory-owned by the parent bootstrap Kustomization (they were inline manifests under `grafana-manifests/`). After it, the *same-named* objects (`external-grafana-altinn`, `external-grafana-altinn-blackbox-exporter`, … in namespace `grafana`) are owned by `Kustomization/grafana-content`. At cutover the parent stops rendering them and **prunes** them while `grafana-content` **re-creates** them — two independent Kustomizations on independent timers, so the transition is not atomic. Expect dashboards/folders to briefly disappear and reappear in Grafana during the first post-merge reconcile; this self-heals within one `interval`. To minimise it, wire the §3c `dependsOn` (so `grafana-content` is Ready before the parent's prune pass) and reconcile `grafana-content --with-source` immediately after the repo-B merge (Step 4). Do not mistake the flicker for a failure — confirm with §5 before rolling back.
 
 ### Step 1 — Merge the `altinn-dashboards-grafana` PR first
 
