@@ -8,6 +8,8 @@ kind: Kustomization
 # root notification policy here, to avoid the per-instance singleton clash. See the
 # README "Routing" section before adding platform/alerting.
 resources:
+  - dashboards
   - products/dialogporten/alerting
   # - products/<next-product>/alerting
+  # - products/<next-product>/dashboards
   # - platform/alerting                  # Option B only: central root policy + routes
