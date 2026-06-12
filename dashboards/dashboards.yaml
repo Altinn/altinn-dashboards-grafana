@@ -1,0 +1,125 @@
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: external-grafana-altinn-blackbox-exporter
+  namespace: grafana
+spec:
+  folderRef: external-grafana-altinn
+  instanceSelector:
+    matchLabels:
+      dashboards: "external-grafana"
+  configMapRef:
+    name: dashboard-altinn-blackbox-exporter
+    key: blackbox-exporter.json
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: external-grafana-altinn-pod-console-error-logs
+  namespace: grafana
+spec:
+  folderRef: external-grafana-altinn
+  instanceSelector:
+    matchLabels:
+      dashboards: "external-grafana"
+  configMapRef:
+    name: dashboard-altinn-pod-console-error-logs
+    key: pod-console-error-logs.json
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: external-grafana-altinn-publicip
+  namespace: grafana
+spec:
+  folderRef: external-grafana-altinn
+  instanceSelector:
+    matchLabels:
+      dashboards: "external-grafana"
+  configMapRef:
+    name: dashboard-altinn-publicip
+    key: publicip.json
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: external-grafana-altinn-traefik-official
+  namespace: grafana
+spec:
+  folderRef: external-grafana-altinn
+  instanceSelector:
+    matchLabels:
+      dashboards: "external-grafana"
+  configMapRef:
+    name: dashboard-altinn-traefik-official
+    key: traefik-official.json
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: external-grafana-fluxcd-flux-cluster-stats
+  namespace: grafana
+spec:
+  folderRef: external-grafana-fluxcd
+  instanceSelector:
+    matchLabels:
+      dashboards: "external-grafana"
+  configMapRef:
+    name: dashboard-fluxcd-flux-cluster-stats
+    key: flux-cluster-stats.json
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: external-grafana-fluxcd-flux-control-plane
+  namespace: grafana
+spec:
+  folderRef: external-grafana-fluxcd
+  instanceSelector:
+    matchLabels:
+      dashboards: "external-grafana"
+  configMapRef:
+    name: dashboard-fluxcd-flux-control-plane
+    key: flux-control-plane.json
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: external-grafana-fluxcd-gitops-flux-application-deployments-dashboard
+  namespace: grafana
+spec:
+  folderRef: external-grafana-fluxcd
+  instanceSelector:
+    matchLabels:
+      dashboards: "external-grafana"
+  configMapRef:
+    name: dashboard-fluxcd-gitops-flux-application-deployments-dashboard
+    key: gitops-flux-application-deployments-dashboard.json
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: external-grafana-linkerd-daemonset
+  namespace: grafana
+spec:
+  folderRef: external-grafana-linkerd
+  instanceSelector:
+    matchLabels:
+      dashboards: "external-grafana"
+  configMapRef:
+    name: dashboard-linkerd-daemonset
+    key: daemonset.json
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: external-grafana-linkerd-deployment
+  namespace: grafana
+spec:
+  folderRef: external-grafana-linkerd
+  instanceSelector:
+    matchLabels:
+      dashboards: "external-grafana"
+  configMapRef:
+    name: dashboard-linkerd-deployment
+    key: deployment.json
