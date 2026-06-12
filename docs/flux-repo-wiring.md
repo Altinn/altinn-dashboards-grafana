@@ -1,56 +1,84 @@
-# Flux repo wiring (goes in the *other* repo, not here)
+# Flux repo wiring (goes in the *consumer* repo, not here)
 
-Dashboards in this repo are pulled by `GrafanaDashboard.spec.url`. Alert CRs
-(`GrafanaAlertRuleGroup`, `GrafanaContactPoint`, `GrafanaNotificationPolicy*`) have **no
-`spec.url`** — they cannot be fetched by URL, so they must be *applied* by Flux as real
-manifests. This repo holds those manifests; the Flux repo points at it with a
-`GitRepository` + `Kustomization` and supplies the Slack webhook `Secret`.
+This repo is the single content source for the central Grafana: all platform dashboards
+(self-contained `GrafanaDashboard` CRs that reference a wrapped-JSON `ConfigMap` via
+`spec.configMapRef`), the 3 platform `GrafanaFolder`s (`external-grafana-altinn/fluxcd/linkerd`),
+and every product's alert CRs (`GrafanaAlertRuleGroup`, `GrafanaContactPoint`,
+`GrafanaNotificationPolicy*`). CI packages the repo-root kustomize aggregate as **one Flux OCI
+artifact** (`oci://altinncr.azurecr.io/monitoring/grafana`) and pushes it to ACR. The consumer
+repo (`gitops-manifests`) pulls that single artifact with one `OCIRepository` + one
+`Kustomization` and supplies the Slack webhook `Secret`.
 
-Everything below is copy-paste ready for the **Flux repo**. Adjust namespaces/refs to match
-that repo's conventions.
+Everything below is copy-paste ready for the **consumer repo** (`gitops-manifests`). Adjust
+namespaces/refs to match that repo's conventions.
 
-## 1. Source + Kustomization
+## 1. Source + Kustomization (in gitops-manifests `oci/grafana-operator/grafana-manifests/base/`)
+
+The consumer adds these two files; together they replace the in-repo dashboard CRs + folders
+that previously lived in `gitops-manifests`. Azure workload identity in-cluster
+(`provider: azure`) authenticates the pull — no registry pull secret is needed when the Flux
+source-controller runs with a federated identity that has `AcrPull` on the registry.
 
 ```yaml
-# Source: this repo, tracking the same branch the dashboards already use.
+# oci-repository.yaml
 apiVersion: source.toolkit.fluxcd.io/v1
-kind: GitRepository
+kind: OCIRepository
 metadata:
-  name: altinn-dashboards-grafana
+  name: grafana-content
   namespace: flux-system
 spec:
-  interval: 5m
-  url: https://github.com/Altinn/altinn-dashboards-grafana.git
+  interval: 5m0s
+  provider: azure
   ref:
-    branch: release        # same branch GrafanaDashboard.spec.url pins to
+    tag: release            # promote main -> release; CI tags the artifact per branch
+  timeout: 5m0s
+  url: oci://altinncr.azurecr.io/monitoring/grafana
 ---
-# Apply the alert CRs into the `grafana` namespace.
+# flux-kustomize.yaml
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: grafana-alerting
+  name: grafana-content
   namespace: flux-system
 spec:
-  interval: 10m
+  interval: 5m0s
+  retryInterval: 1m0s
+  path: ./                  # repo-root kustomization aggregates dashboards + products/*/alerting
   prune: true
   sourceRef:
-    kind: GitRepository
-    name: altinn-dashboards-grafana
-  path: "./"               # repo-root kustomization.yaml aggregates products/*/alerting
+    kind: OCIRepository
+    name: grafana-content
+    namespace: flux-system
   targetNamespace: grafana
-  dependsOn:
-    - name: grafana-operator   # ensure the CRDs exist before applying CRs
-  # postBuild:
-  #   substitute: {}           # only if any value here is parameterised with ${VAR}
+  timeout: 5m0s
+  wait: true
 ```
 
 Notes:
-- `path: "./"` builds this repo's root `kustomization.yaml`, which lists each
-  `products/<name>/alerting` overlay. The non-manifest files in this repo (raw dashboard
-  JSON, README, workflows) are ignored because the root kustomization only references the
-  alerting overlays.
+- `path: ./` builds this repo's root `kustomization.yaml`, which aggregates the `dashboards/`
+  kustomization (folders + dashboard CRs + the wrapped-JSON ConfigMaps) and each
+  `products/<name>/alerting` overlay. Everything the cluster needs ships inside the artifact —
+  nothing is fetched by URL.
 - `targetNamespace: grafana` is belt-and-suspenders: the CRs also declare
   `metadata.namespace: grafana`.
+- **How the artifact is produced:** `.github/workflows/publish-grafana-artifact.yml` runs
+  `flux push artifact` (via `Altinn/altinn-platform/actions/flux/build-push-image`) on every
+  push to `main`/`release`. Each run pushes an immutable `:<short-commit-sha>` tag and also
+  moves the branch tag (`:main` / `:release`), so the `ref.tag: release` above tracks the tip
+  of `release` — or pin `ref.tag: <short-sha>` (or use `ref.digest:`) to freeze an exact
+  revision. The same push can be done by hand with
+  `scripts/publish-grafana-artifact-manual.sh` (e.g.
+  `./scripts/publish-grafana-artifact-manual.sh --acr-login --tag release`).
+
+> **Provisioning prerequisites (one-time).** Two values must be agreed with the platform team
+> and kept identical on both sides (publisher ↔ consumer):
+> - **Registry + repository:** `oci://altinncr.azurecr.io/monitoring/grafana` — set in
+>   `.github/workflows/publish-grafana-artifact.yml` (`ARTIFACT_NAME`) and in the
+>   `OCIRepository` above.
+> - **Push credentials:** the workflow authenticates to ACR via Azure workload-identity
+>   federation and needs repo secrets `AZURE_SUBSCRIPTION_ID`, `AZURE_CLIENT_ID`,
+>   `AZURE_TENANT_ID` for an app registration that (a) has a federated credential trusting
+>   this repo's `main`/`release` refs and (b) holds the `AcrPush` role on the registry.
 
 ## 2. Slack webhook Secret
 
@@ -97,13 +125,18 @@ spec:
 
 1. The `Grafana` CR carries `labels.dashboards: external-grafana` (matches every CR's
    `instanceSelector` in this repo).
-2. **No pre-existing root `GrafanaNotificationPolicy`** for `external-grafana` unless you
+2. **The 3 platform folders (`external-grafana-altinn`, `external-grafana-fluxcd`,
+   `external-grafana-linkerd`) and all 9 platform dashboards now ship from this artifact** —
+   they are no longer defined in `gitops-manifests`. Before promoting, confirm the consumer
+   repo has dropped its in-repo dashboard CRs + `folders.yaml` so the operator never sees two
+   definitions of the same object.
+3. **No pre-existing root `GrafanaNotificationPolicy`** for `external-grafana` unless you
    intend to adopt routing Option B — there can be only one per instance. With the default
    per-rule routing (Option A) you don't need one. See the README "Routing" section.
-3. The `external-grafana-dialogporten` `GrafanaFolder` is defined exactly once. This repo
-   ships one in `products/dialogporten/alerting/folder.yaml`; if the Flux repo already
-   defines it, delete this repo's copy and keep the Flux repo's.
-4. grafana-operator ≥ **v5.21.0** (for `GrafanaContactPoint.spec.receivers[]`) and, only if
+4. The `external-grafana-dialogporten` `GrafanaFolder` is defined exactly once. This repo
+   ships one in `products/dialogporten/alerting/folder.yaml`; if the consumer repo already
+   defines it, delete this repo's copy and keep the consumer repo's.
+5. grafana-operator ≥ **v5.21.0** (for `GrafanaContactPoint.spec.receivers[]`) and, only if
    adopting Option B, ≥ **v5.16.0** (for `GrafanaNotificationPolicyRoute`). These are the
    feature-introduction floors; this repo's CI schemas are pinned to **v5.23.0** (see
    `schemas/regenerate.py`) and should track whatever version the cluster actually runs.
@@ -111,10 +144,16 @@ spec:
 ## 4. Verify after apply
 
 ```bash
-# CRs reconciled
+# Source + sync reconciled
+flux get kustomization grafana-content -n flux-system
+
+# CRs reconciled (4 folders, 9 dashboards, 1 contactpoint, 1 alertrulegroup)
+kubectl -n grafana get grafanafolder,grafanadashboard,grafanacontactpoint,grafanaalertrulegroup
+
 kubectl -n grafana get grafanaalertrulegroup dialogporten-exceptions -o jsonpath='{.status}'
 kubectl -n grafana get grafanacontactpoint dialogporten-slack-exceptions
 
-# In Grafana UI: folder "Dialogporten" shows the rules; Alerting → Contact points shows
-# "Dialogporten Slack Exceptions" (provisioned, read-only) → Test delivers to Slack.
+# In Grafana UI: the Altinn/Fluxcd/Linkerd folders show their dashboards; folder
+# "Dialogporten" shows the rules; Alerting → Contact points shows "Dialogporten Slack
+# Exceptions" (provisioned, read-only) → Test delivers to Slack.
 ```

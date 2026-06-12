@@ -1,36 +1,38 @@
 # Altinn Grafana Dashboards & Alerts
 
 Grafana dashboards **and alerting-as-code** for monitoring Altinn infrastructure and
-services. Dashboards are raw JSON consumed by the central Grafana over a `GrafanaDashboard`
-URL; alerts are [grafana-operator](https://github.com/grafana/grafana-operator) custom
-resources applied from this repo by Flux. See **[Alerting-as-Code](#alerting-as-code-operator-crs)**.
+services. Dashboards and alerts are both [grafana-operator](https://github.com/grafana/grafana-operator)
+custom resources applied from this repo by Flux: each platform dashboard JSON is wrapped into a
+`ConfigMap` and referenced by a self-contained `GrafanaDashboard` (`spec.configMapRef`), and the
+alert CRs ship alongside. The whole repo-root kustomize aggregate is published as **one Flux OCI
+artifact** (`oci://altinncr.azurecr.io/monitoring/grafana`) and consumed by `gitops-manifests`.
+See **[Alerting-as-Code](#alerting-as-code-operator-crs)** and **[Delivery](#delivery-oci-artifact)**.
 
 ## Repository Structure
 
 ```
-dashboards/                     # platform/infra dashboard JSON (fetched by URL from the Flux repo)
-├── altinn/                     #   Altinn-specific monitoring dashboards
-├── fluxcd/                     #   FluxCD GitOps monitoring dashboards
-└── linkerd/                    #   Linkerd service mesh monitoring dashboards
+dashboards/                     # platform/infra dashboards (self-contained configMapRef CRs)
+├── kustomization.yaml          #   wraps each JSON into a ConfigMap (configMapGenerator) + lists the CRs
+├── folders.yaml                #   3 GrafanaFolder CRs (Altinn/Fluxcd/Linkerd)
+├── dashboards.yaml             #   9 GrafanaDashboard CRs (spec.configMapRef → the wrapped JSON)
+├── altinn/                     #   Altinn-specific monitoring dashboard JSON
+├── fluxcd/                     #   FluxCD GitOps monitoring dashboard JSON
+└── linkerd/                    #   Linkerd service mesh monitoring dashboard JSON
 products/                       # one folder per product, owning its dashboards + alerts
 └── dialogporten/
-    ├── dashboards/             #   product dashboard JSON (consumed by URL, like dashboards/ above)
+    ├── dashboards/             #   product dashboard JSON
     └── alerting/               #   operator CRs, APPLIED from this repo by Flux
         ├── kustomization.yaml
         ├── folder.yaml             # GrafanaFolder
         ├── contact-points.yaml     # GrafanaContactPoint (Slack, webhook from a Secret)
         └── rules-exceptions.yaml   # GrafanaAlertRuleGroup (Test/YT01/Staging/Prod + more)
 schemas/                        # vendored, version-pinned CRD JSON schemas for CI (regenerate.py)
-kustomization.yaml              # repo-root aggregator: lists each products/*/alerting overlay
-docs/flux-repo-wiring.md        # copy-paste GitRepository + Kustomization + Secret for the Flux repo
-.github/workflows/validate-alerting.yml
+kustomization.yaml              # repo-root aggregator: dashboards/ + each products/*/alerting overlay
+scripts/publish-grafana-artifact-manual.sh    # manual `flux push artifact` (mirrors CI)
+docs/flux-repo-wiring.md        # copy-paste OCIRepository + Kustomization + Secret for the consumer repo
+.github/workflows/validate-alerting.yml        # offline CI: kustomize + kubeconform + linters
+.github/workflows/publish-grafana-artifact.yml # publishes the unified OCI artifact to ACR (main/release)
 ```
-
-> **Layout note:** `dashboards/{altinn,fluxcd,linkerd}/` is the platform/infra area and is left
-> in place. Relocating it under `platform/dashboards/` is a deferred, coordinated follow-up —
-> it would break the Flux repo's `GrafanaDashboard.spec.url` paths, so it must be sequenced
-> (add new-path copies → update the Flux repo's URLs → remove old paths) and is intentionally
-> out of scope here.
 
 ## Dashboard Categories
 
@@ -125,11 +127,13 @@ Alerts live next to each product's dashboards under `products/<name>/alerting/` 
 [grafana-operator](https://github.com/grafana/grafana-operator) custom resources
 (`grafana.integreatly.org/v1beta1`). **Dialogporten** is the first product.
 
-**Why these are real manifests (not URLs):** `GrafanaDashboard` is fetched by `spec.url`,
-but alert CRs (`GrafanaAlertRuleGroup`, `GrafanaContactPoint`, `GrafanaNotificationPolicy*`)
-have **no `spec.url`** — they must be *applied* by Flux. So they live here and the Flux repo
-points at this repo with a `GitRepository` + `Kustomization`
-(see **[docs/flux-repo-wiring.md](docs/flux-repo-wiring.md)**).
+**Everything is applied as real manifests (no URLs):** the platform dashboards are
+self-contained `GrafanaDashboard` CRs (`spec.configMapRef` → a wrapped-JSON `ConfigMap`, see
+[Repository Structure](#repository-structure)), and the alert CRs (`GrafanaAlertRuleGroup`,
+`GrafanaContactPoint`, `GrafanaNotificationPolicy*`) have **no `spec.url`** at all. CI publishes
+the whole repo-root aggregate as a single **OCI artifact** to ACR, and `gitops-manifests` points
+at that artifact with one `OCIRepository` + `Kustomization` (named `grafana-content`) —
+see **[docs/flux-repo-wiring.md](docs/flux-repo-wiring.md)** and [Delivery](#delivery-oci-artifact).
 
 The central Grafana (`instanceSelector dashboards=external-grafana`, namespace `grafana`,
 Azure Monitor datasource `azure-monitor-oob`) monitors all environments via Azure Monitor.
@@ -195,8 +199,9 @@ here** (public repo). See [docs/flux-repo-wiring.md](docs/flux-repo-wiring.md).
    - `kustomization.yaml` listing those files.
 3. Add `products/<name>/alerting` to the repo-root `kustomization.yaml`.
 4. Add the product's Slack webhook key to the Flux repo's `ExternalSecret`.
-5. Dashboards: drop JSON in `products/<name>/dashboards/`; add the `GrafanaDashboard` URL-CR
-   in the Flux repo (as today).
+5. Dashboards: drop JSON in `products/<name>/dashboards/`; wrap it into a `ConfigMap` and add a
+   self-contained `GrafanaDashboard` (`spec.configMapRef`) CR — the same pattern used by the
+   platform dashboards under `dashboards/` (no Flux-repo URL-CR needed).
 6. Open a PR → CI validates → merge → promote `main → release`.
 
 ### Validate locally
@@ -220,6 +225,34 @@ When the cluster's grafana-operator is upgraded, bump `OPERATOR_VERSION` in
 > `folderRef` resolves, that `condition` points at a real `refId`, or that the Azure `model`
 > query is valid. A `kubectl apply --dry-run=server` against a cluster with the CRDs can be
 > added later as a deeper pre-deploy gate.
+
+### Delivery (OCI artifact)
+
+The whole repo-root aggregate — the platform dashboards (`configMapRef` CRs + the 3 platform
+folders) **and** every product's alert CRs — is delivered to the cluster as **one Flux OCI
+artifact** (`oci://altinncr.azurecr.io/monitoring/grafana`), mirroring the pattern in
+[`Altinn/dialogporten-manifests`](https://github.com/Altinn/dialogporten-manifests). The cluster
+pulls the single artifact and applies all CRs into the `grafana` namespace — nothing is fetched
+by URL. `gitops-manifests` consumes it through one `OCIRepository` + `Kustomization` (named
+`grafana-content`), replacing the dashboard CRs + folders it used to hold in-repo.
+
+- **Publish (CI):** `.github/workflows/publish-grafana-artifact.yml` runs on push to
+  `main`/`release`. It validates the root aggregate (`kustomize build .`) then calls
+  `Altinn/altinn-platform/actions/flux/build-push-image`, which authenticates to ACR via
+  Azure workload-identity federation and runs `flux push artifact
+  oci://altinncr.azurecr.io/monitoring/grafana:<branch>`. The artifact is tagged with the branch
+  name, so `main` and `release` are independently pinnable; promote by merging `main → release`.
+- **Publish (manual / break-glass):** `scripts/publish-grafana-artifact-manual.sh`
+  (`--acr-login --tag release`, `--dry-run` to preview the `flux push artifact` command).
+- **Pull (cluster):** an `OCIRepository` (`provider: azure`, `tag: release`) + `Kustomization`
+  (`path: ./`, `targetNamespace: grafana`), both named `grafana-content`, in `gitops-manifests`
+  — copy-paste ready in [docs/flux-repo-wiring.md](docs/flux-repo-wiring.md).
+
+> **Before the first publish**, confirm the ACR repository name (`ARTIFACT_NAME` in the
+> workflow, `monitoring/grafana`) and provision the Azure OIDC repo secrets
+> (`AZURE_SUBSCRIPTION_ID`, `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`) for an app registration with
+> a federated credential on this repo and the `AcrPush` role. Details in
+> [docs/flux-repo-wiring.md](docs/flux-repo-wiring.md).
 
 ## Contributing
 
