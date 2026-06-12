@@ -202,7 +202,9 @@ here** (public repo). See [docs/flux-repo-wiring.md](docs/flux-repo-wiring.md).
 5. Dashboards: drop JSON in `products/<name>/dashboards/`; wrap it into a `ConfigMap` and add a
    self-contained `GrafanaDashboard` (`spec.configMapRef`) CR — the same pattern used by the
    platform dashboards under `dashboards/` (no Flux-repo URL-CR needed).
-6. Open a PR → CI validates → merge → promote `main → release`.
+6. Add the product's ownership line to `CODEOWNERS` — `/products/<name>/    @Altinn/team-<name>`
+   (trailing slash = the whole folder). Every product team owns its own folder.
+7. Open a PR → CI validates → merge → promote `main → release`.
 
 ### Validate locally
 
