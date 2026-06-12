@@ -144,6 +144,6 @@ jobs:
         run: |
           set -euo pipefail
           pipx install yamllint
-          targets="products"
-          if [ -d platform ]; then targets="$targets platform"; fi
-          yamllint -d relaxed $targets
+          targets=(dashboards products)
+          if [ -d platform ]; then targets+=(platform); fi
+          yamllint -d relaxed "${targets[@]}"
