@@ -1,0 +1,40 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+# Self-contained platform dashboards: each raw JSON (kept in altinn/, fluxcd/, linkerd/
+# below this kustomization so kustomize's load-restrictor is satisfied) is wrapped into a
+# ConfigMap, and the matching GrafanaDashboard CR references it by spec.configMapRef.
+# disableNameSuffixHash keeps the ConfigMap name stable so the CR reference is valid.
+namespace: grafana
+generatorOptions:
+  disableNameSuffixHash: true
+resources:
+  - folders.yaml
+  - dashboards.yaml
+configMapGenerator:
+  - name: dashboard-altinn-blackbox-exporter
+    files:
+      - altinn/blackbox-exporter.json
+  - name: dashboard-altinn-pod-console-error-logs
+    files:
+      - altinn/pod-console-error-logs.json
+  - name: dashboard-altinn-publicip
+    files:
+      - altinn/publicip.json
+  - name: dashboard-altinn-traefik-official
+    files:
+      - altinn/traefik-official.json
+  - name: dashboard-fluxcd-flux-cluster-stats
+    files:
+      - fluxcd/flux-cluster-stats.json
+  - name: dashboard-fluxcd-flux-control-plane
+    files:
+      - fluxcd/flux-control-plane.json
+  - name: dashboard-fluxcd-gitops-flux-application-deployments-dashboard
+    files:
+      - fluxcd/gitops-flux-application-deployments-dashboard.json
+  - name: dashboard-linkerd-daemonset
+    files:
+      - linkerd/daemonset.json
+  - name: dashboard-linkerd-deployment
+    files:
+      - linkerd/deployment.json
