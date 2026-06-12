@@ -147,3 +147,14 @@ jobs:
           targets=(dashboards products)
           if [ -d platform ]; then targets+=(platform); fi
           yamllint -d relaxed "${targets[@]}"
+
+  dashboard-wiring:
+    name: dashboard JSON wired to ConfigMap + CR
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate every dashboard JSON is wired into a ConfigMap + CR
+        run: |
+          set -euo pipefail
+          python3 -m pip install --quiet pyyaml
+          python3 scripts/validate-dashboards.py

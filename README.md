@@ -15,6 +15,7 @@ dashboards/                     # platform/infra dashboards (self-contained conf
 ├── kustomization.yaml          #   wraps each JSON into a ConfigMap (configMapGenerator) + lists the CRs
 ├── folders.yaml                #   3 GrafanaFolder CRs (Altinn/Fluxcd/Linkerd)
 ├── dashboards.yaml             #   9 GrafanaDashboard CRs (spec.configMapRef → the wrapped JSON)
+│                               #   wiring (JSON ↔ ConfigMap ↔ CR) enforced by scripts/validate-dashboards.py in CI
 ├── altinn/                     #   Altinn-specific monitoring dashboard JSON
 ├── fluxcd/                     #   FluxCD GitOps monitoring dashboard JSON
 └── linkerd/                    #   Linkerd service mesh monitoring dashboard JSON
@@ -201,7 +202,9 @@ here** (public repo). See [docs/flux-repo-wiring.md](docs/flux-repo-wiring.md).
 4. Add the product's Slack webhook key to the Flux repo's `ExternalSecret`.
 5. Dashboards: drop JSON in `products/<name>/dashboards/`; wrap it into a `ConfigMap` and add a
    self-contained `GrafanaDashboard` (`spec.configMapRef`) CR — the same pattern used by the
-   platform dashboards under `dashboards/` (no Flux-repo URL-CR needed).
+   platform dashboards under `dashboards/` (no Flux-repo URL-CR needed). CI
+   (`scripts/validate-dashboards.py`) fails if a dashboard JSON is added without a matching
+   `configMapGenerator` entry + `GrafanaDashboard` CR, so it can't silently go un-deployed.
 6. Add the product's ownership line to `CODEOWNERS` — `/products/<name>/    @Altinn/team-<name>`
    (trailing slash = the whole folder). Every product team owns its own folder.
 7. Open a PR → CI validates → merge → promote `main → release`.
