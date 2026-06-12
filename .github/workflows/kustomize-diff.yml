@@ -1,0 +1,21 @@
+name: Kustomize Diff
+
+# Posts a rendered-kustomize diff as a PR comment (reuses the same dis-way reusable
+# workflow that gitops-manifests uses). Review aid: a new dashboard shows up as an added
+# ConfigMap + GrafanaDashboard; an orphaned JSON shows NO new rendered output.
+# NOTE: the Altinn org Actions policy must allow the `dis-way/actions` reusable workflow.
+# If the job fails with a "not allowed" error, allow-list it under repo/org
+# Settings -> Actions -> "Allow specified actions and reusable workflows".
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  kustomize-diff:
+    uses: dis-way/actions/.github/workflows/kustomize-diff.yml@22c5df1f11f27332501a9073f63b6febdada279e # main
+    with:
+      build-paths: "dashboards,products/*/alerting"
+    permissions:
+      contents: read
+      pull-requests: write
