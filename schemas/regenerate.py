@@ -19,6 +19,7 @@ OPERATOR_VERSION = "v5.23.0"  # keep in sync with the cluster's grafana-operator
 KINDS = {
     "GrafanaAlertRuleGroup": "grafanaalertrulegroups",
     "GrafanaContactPoint": "grafanacontactpoints",
+    "GrafanaDashboard": "grafanadashboards",
     "GrafanaFolder": "grafanafolders",
     "GrafanaNotificationPolicy": "grafananotificationpolicies",
     "GrafanaNotificationPolicyRoute": "grafananotificationpolicyroutes",
