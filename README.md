@@ -127,9 +127,10 @@ The whole repo-root aggregate is published as one Flux OCI artifact to
 `.github/workflows/publish-grafana-artifact.yml` (on push to `main`/`release`; manual via
 `scripts/publish-grafana-artifact-manual.sh`). `gitops-manifests` consumes it through one
 `OCIRepository` + `Kustomization` (named `grafana-content`) and applies all CRs into the
-`grafana` namespace. Provisioning prerequisite: Azure OIDC repo secrets
-(`AZURE_SUBSCRIPTION_ID`, `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`) for an app registration with the
-`AcrPush` role, and the artifact path (`ARTIFACT_NAME` = `monitoring/grafana`).
+`grafana` namespace. Provisioning prerequisite: Azure OIDC secrets
+(`DIS_SYNCROOT_AZURE_SUBSCRIPTION_ID`, `DIS_SYNCROOT_AZURE_CLIENT_ID`,
+`DIS_SYNCROOT_AZURE_TENANT_ID`) for an identity with the `AcrPush` role, and the artifact path
+(`ARTIFACT_NAME` = `monitoring/grafana`).
 
 ## Requirements
 
