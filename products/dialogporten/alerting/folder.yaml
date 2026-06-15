@@ -1,9 +1,3 @@
-# GrafanaFolder that backs both the Dialogporten alert rules (folderRef below) and,
-# optionally, the product's GrafanaDashboard CRs in the Flux repo.
-#
-# Define this folder ONCE per instance. If the Flux repo already ships a GrafanaFolder
-# named `external-grafana-dialogporten`, delete this file and reference the existing one
-# (rules only need a GrafanaFolder with this metadata.name to resolve `folderRef`).
 apiVersion: grafana.integreatly.org/v1beta1
 kind: GrafanaFolder
 metadata:

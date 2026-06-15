@@ -1,11 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Manually publish all grafana CRs (dashboards + alerts) as a Flux OCI artifact to ACR,
-# aligned with .github/workflows/publish-grafana-artifact.yml. Use for break-glass
-# publishes or to seed a tag before CI is wired up.
-#
-# Mirrors Altinn/dialogporten-manifests' scripts/publish-flux-artifacts-manual.sh.
+# Manually publish all grafana CRs as a Flux OCI artifact to ACR (break-glass; mirrors
+# .github/workflows/publish-grafana-artifact.yml).
 
 usage() {
   cat <<'EOF'
@@ -90,15 +87,11 @@ require_cmd flux
 require_cmd git
 
 if [[ -z "${TAG}" ]]; then
-  # Default to the current branch. OCI tags forbid '/', so sanitize feature
-  # branches like `user/topic` -> `user-topic`. (CI uses github.ref_name on
-  # main/release only, which is already slash-free.)
+  # Default to the current branch; OCI tags forbid '/', so sanitize it.
   TAG="$(git rev-parse --abbrev-ref HEAD)"
   TAG="${TAG//\//-}"
 fi
 
-# OCI tag grammar: [A-Za-z0-9_][A-Za-z0-9._-]{0,127}. Guard any --tag value (or an
-# exotic branch name) so we fail loudly here instead of deep inside `flux push`.
 if [[ ! "${TAG}" =~ ^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$ ]]; then
   echo "Error: '${TAG}' is not a valid OCI tag (allowed: A-Za-z0-9_.- , max 128 chars, no leading '.' or '-'). Pass --tag <tag>." >&2
   exit 1

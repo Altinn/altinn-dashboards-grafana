@@ -1,17 +1,11 @@
-# Slack contact point for Dialogporten. The rules reference it by spec.name
-# ("Dialogporten Slack Exceptions") via notificationSettings.receiver.
-#
-# The Slack incoming-webhook URL is NOT stored here (this is a public repo). It is read at
-# reconcile time from the `grafana-slack-webhooks` Secret in the `grafana` namespace, which
-# is created in-cluster from the Flux repo (External Secrets / Sealed Secrets). See
-# the README "Secrets" section.
+# Slack webhook is injected from the grafana-slack-webhooks Secret at reconcile time — never commit it.
 apiVersion: grafana.integreatly.org/v1beta1
 kind: GrafanaContactPoint
 metadata:
   name: dialogporten-slack-exceptions
   namespace: grafana
 spec:
-  name: "Dialogporten Slack Exceptions"   # <- rules reference THIS name
+  name: "Dialogporten Slack Exceptions"
   instanceSelector:
     matchLabels:
       dashboards: external-grafana
@@ -19,14 +13,11 @@ spec:
   receivers:
     - type: slack
       disableResolveMessage: false
-      # `settings` is an opaque pass-through to Grafana's Slack integration. The two templates
-      # below are Grafana's built-in defaults (equivalent to leaving them unset). `url` is
-      # injected from the Secret via valuesFrom, so the webhook is never committed here.
       settings:
         title: '{{ template "default.title" . }}'
         text: '{{ template "default.message" . }}'
       valuesFrom:
-        - targetPath: url                 # writes the secret value into settings.url
+        - targetPath: url
           valueFrom:
             secretKeyRef:
               name: grafana-slack-webhooks

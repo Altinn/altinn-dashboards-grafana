@@ -1,17 +1,8 @@
 #!/usr/bin/env python3
 """Validate that every dashboard JSON is wired into a ConfigMap + GrafanaDashboard CR.
 
-`kustomize build` only fails on a *dangling* reference (an entry pointing at a missing
-file); it cannot detect a NEW dashboard JSON that nobody wired up — that JSON just
-silently never deploys. This script closes that gap: it enforces a 1:1:1 correspondence
-between dashboards/<category>/<name>.json  <->  a configMapGenerator entry in
-dashboards/kustomization.yaml  <->  a GrafanaDashboard CR (spec.configMapRef) in
-dashboards/dashboards.yaml, and that each CR's folderRef has a GrafanaFolder in
-dashboards/folders.yaml.
-
-Run from anywhere:  python3 scripts/validate-dashboards.py
-Exits non-zero (listing every problem) so CI fails when a dashboard is added but not
-fully wired up.
+Enforces a 1:1:1 correspondence (JSON <-> configMapGenerator entry <-> GrafanaDashboard CR)
+and that each CR's folderRef resolves; exits non-zero listing every problem.
 """
 import os
 import sys
@@ -30,13 +21,11 @@ def load_all(path):
 def main():
     errors = []
 
-    # JSON files on disk: dashboards/<category>/<name>.json
     json_files = sorted(
         os.path.relpath(p, DASH).replace(os.sep, "/")
         for p in glob.glob(os.path.join(DASH, "*", "*.json"))
     )
 
-    # configMapGenerator in kustomization.yaml: file -> cm name, cm name -> file
     kust = load_all(os.path.join(DASH, "kustomization.yaml"))[0]
     file_to_cm = {}
     cm_to_file = {}
@@ -46,7 +35,6 @@ def main():
             file_to_cm[fp] = name
             cm_to_file[name] = fp
 
-    # GrafanaDashboard CRs: configMapRef.name -> (cr name, key, folderRef)
     crs = [d for d in load_all(os.path.join(DASH, "dashboards.yaml"))
            if d.get("kind") == "GrafanaDashboard"]
     ref_to_cr = {}
@@ -56,7 +44,6 @@ def main():
         ref_to_cr[ref.get("name")] = (
             cr.get("metadata", {}).get("name"), ref.get("key"), spec.get("folderRef"))
 
-    # GrafanaFolders
     folders = {d.get("metadata", {}).get("name")
                for d in load_all(os.path.join(DASH, "folders.yaml"))
                if d.get("kind") == "GrafanaFolder"}

@@ -1,21 +1,13 @@
 #!/usr/bin/env python3
 """Regenerate the vendored grafana-operator CRD JSON schemas used by CI (kubeconform).
 
-These are converted from the operator's published CRD bases (openAPIV3Schema) the same way
-the Datree CRDs-catalog does it, but pinned to a specific operator version so validation
-tracks the cluster's operator. Bump OPERATOR_VERSION when the cluster's grafana-operator
-is upgraded, then re-run:  python3 schemas/regenerate.py
-
-Files are named `<kind-lowercased>_v1beta1.json` because kubeconform lowercases the
-`{{.ResourceKind}}` template variable when resolving a schema location (same convention as
-the Datree CRDs-catalog). Case matters on Linux CI runners — PascalCase names are not found.
+Pinned to OPERATOR_VERSION; bump it and re-run when the cluster's grafana-operator upgrades.
 """
 import json
 import subprocess
 
 OPERATOR_VERSION = "v5.23.0"  # keep in sync with the cluster's grafana-operator
 
-# Kind -> CRD plural (file name in config/crd/bases)
 KINDS = {
     "GrafanaAlertRuleGroup": "grafanaalertrulegroups",
     "GrafanaContactPoint": "grafanacontactpoints",
@@ -29,10 +21,8 @@ BASE = ("https://raw.githubusercontent.com/grafana/grafana-operator/"
 
 
 def transform(node):
-    """Mirror openapi2jsonschema: drop `format` (avoids ISO-8601 false positives on Go
-    durations like `5m`; the `pattern` still constrains the value), and close objects with
-    `additionalProperties: false` so kubeconform -strict catches typo'd fields — except
-    x-kubernetes-preserve-unknown-fields nodes (model/settings), which stay open."""
+    """Drop `format` (avoids false positives on Go durations like `5m`) and close objects
+    with `additionalProperties: false`, except x-kubernetes-preserve-unknown-fields nodes."""
     if isinstance(node, dict):
         node.pop("format", None)
         for v in node.values():
@@ -51,8 +41,7 @@ def transform(node):
 def main():
     import yaml  # PyYAML, to parse the CRD bases
     for kind, plural in KINDS.items():
-        # curl uses the OS trust store — reliable on macOS dev machines and Linux CI alike
-        # (avoids the python.org build's missing-CA-bundle SSL errors).
+        # curl uses the OS trust store (avoids the python.org build's missing-CA SSL errors).
         raw = subprocess.run(
             ["curl", "-fsSL", BASE + plural + ".yaml"],
             check=True, capture_output=True, text=True,

@@ -1,12 +1,6 @@
 name: validate-alerting
 
 # Offline validation of the grafana-operator alerting CRs and dashboard JSON.
-# - kustomize build (catches bad overlays / kustomize errors)
-# - kubeconform -strict against the vendored, version-pinned CRD schemas in schemas/
-#   (no network / no schema-catalog dependency at run time)
-# - dashboard-linter on dashboard JSON changed in the PR
-#
-# See README.md "Alerting-as-Code" and schemas/regenerate.py.
 
 on:
   pull_request:
@@ -34,7 +28,7 @@ permissions:
 env:
   KUSTOMIZE_VERSION: "5.4.3"
   KUBECONFORM_VERSION: "0.6.7"
-  DASHBOARD_LINTER_VERSION: "0.1.1"   # release-asset filenames omit the leading "v"
+  DASHBOARD_LINTER_VERSION: "0.1.1"
 
 jobs:
   alerting:
@@ -64,9 +58,7 @@ jobs:
       - name: Validate every alerting overlay + the root aggregate
         run: |
           set -euo pipefail
-          # Vendored CRD schemas are lowercase-named because kubeconform lowercases the
-          # {{.ResourceKind}} template variable (no template function needed / supported).
-          # Pinned to grafana-operator v5.23.0 — bump with schemas/regenerate.py on upgrade.
+          # Schema filenames are lowercase because kubeconform lowercases {{.ResourceKind}}.
           SCHEMA_LOC='schemas/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json'
           targets=()
           while IFS= read -r d; do targets+=("$d"); done < <(
@@ -101,9 +93,7 @@ jobs:
           fetch-depth: 0
 
       - name: Install dashboard-linter
-        # `go install ...@version` refuses this module (its go.mod has a `replace`
-        # directive), so install the pinned release binary instead. The git tag is
-        # v<ver> but the asset filename drops the "v".
+        # Installed from the pinned release binary (go install is broken for this module).
         run: |
           set -euo pipefail
           v="${DASHBOARD_LINTER_VERSION}"

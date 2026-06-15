@@ -1,10 +1,5 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
-# Self-contained platform dashboards: each raw JSON (in altinn/, fluxcd/,
-# linkerd/ below this kustomization, so kustomize's load-restrictor is
-# satisfied) is wrapped into a ConfigMap, and the matching GrafanaDashboard
-# CR references it via spec.configMapRef. disableNameSuffixHash keeps the
-# ConfigMap name stable so the CR reference stays valid.
 namespace: grafana
 generatorOptions:
   disableNameSuffixHash: true

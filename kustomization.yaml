@@ -1,15 +1,5 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
-# Repo-root aggregator for grafana-operator alerting CRs. The Flux repo's Kustomization
-# points here (path: "./") and applies the result into the `grafana` namespace.
-# Add one line per product alerting overlay below.
-#
-# Routing model: Option A (per-rule notificationSettings.receiver) — no central
-# root notification policy here, to avoid the per-instance singleton clash. See the
-# README "Routing" section before adding platform/alerting.
 resources:
   - dashboards
   - products/dialogporten/alerting
-  # - products/<next-product>/alerting
-  # - products/<next-product>/dashboards
-  # - platform/alerting                  # Option B only: central root policy + routes

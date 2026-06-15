@@ -1,9 +1,4 @@
-# Dialogporten alert rules — ported from the Grafana alerting export (provisioning apiVersion:1).
-# data[].model (incl. the Azure Log Analytics KQL) is copied VERBATIM from the export.
-# Deltas vs export: added `for: 0s` (required by the CRD); added notificationSettings.receiver
-# to the four Exception rules (Connection Pool already had it); dropped deprecated rule-level
-# dashboardUid/panelId (kept as __dashboardUid__/__panelId__ annotations) and isPaused (default).
-# To edit: change in Grafana UI -> Export JSON -> re-port. Never regenerate the `uid`s.
+# Rules ported verbatim from the Grafana alerting export — edit in the Grafana UI, re-export, and re-port; do not hand-edit data[].model or regenerate uids.
 ---
 apiVersion: grafana.integreatly.org/v1beta1
 kind: GrafanaAlertRuleGroup
