@@ -1,21 +1,95 @@
 name: Kustomize Diff
 
-# Posts a rendered-kustomize diff as a PR comment (reuses the same dis-way reusable
-# workflow that gitops-manifests uses). Review aid: a new dashboard shows up as an added
-# ConfigMap + GrafanaDashboard; an orphaned JSON shows NO new rendered output.
-# NOTE: the Altinn org Actions policy must allow the `dis-way/actions` reusable workflow.
-# If the job fails with a "not allowed" error, allow-list it under repo/org
-# Settings -> Actions -> "Allow specified actions and reusable workflows".
+# Posts a rendered-kustomize diff as a PR comment: builds the repo-root kustomize aggregate
+# (which pulls in dashboards/ + every products/*/alerting) on both the PR and the base
+# branch and comments the delta. Self-contained — no external reusable workflow, so it
+# needs no org action allow-listing and works on the bootstrap PR too (when the root
+# kustomization is brand-new the base renders nothing and the diff shows it all as added).
 
 on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: kustomize-diff-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 jobs:
   kustomize-diff:
-    uses: dis-way/actions/.github/workflows/kustomize-diff.yml@22c5df1f11f27332501a9073f63b6febdada279e # main
-    with:
-      build-paths: "dashboards,products/*/alerting"
-    permissions:
-      contents: read
-      pull-requests: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (full history, for the base render)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install kustomize
+        run: |
+          set -euo pipefail
+          ver="5.4.3"
+          curl -fsSL -o kustomize.tar.gz \
+            "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv${ver}/kustomize_v${ver}_linux_amd64.tar.gz"
+          tar -xzf kustomize.tar.gz
+          sudo install -m 0755 kustomize /usr/local/bin/kustomize
+          kustomize version
+
+      - name: Render base + PR and post the diff
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+
+          render() {
+            # $1 = output file; build the repo-root aggregate if a root kustomization exists
+            local out="$1"
+            if [ -f kustomization.yaml ]; then
+              kustomize build . > "$out" 2>/dev/null || echo "# kustomize build failed" > "$out"
+            else
+              : > "$out"
+            fi
+          }
+
+          render "$RUNNER_TEMP/pr.yaml"
+
+          git worktree add --quiet --detach "$RUNNER_TEMP/base-src" "$BASE_SHA"
+          ( cd "$RUNNER_TEMP/base-src" && render "$RUNNER_TEMP/base.yaml" )
+          git worktree remove --force "$RUNNER_TEMP/base-src"
+
+          diff -u "$RUNNER_TEMP/base.yaml" "$RUNNER_TEMP/pr.yaml" > "$RUNNER_TEMP/diff.txt" || true
+
+          marker="<!-- kustomize-diff -->"
+          {
+            echo "$marker"
+            echo "## Kustomize diff (rendered \`kustomize build .\`)"
+            echo
+            if [ ! -s "$RUNNER_TEMP/diff.txt" ]; then
+              echo "_No change to the rendered output._"
+            else
+              echo "<details><summary>Rendered output changed — expand</summary>"
+              echo
+              echo '```diff'
+              head -c 60000 "$RUNNER_TEMP/diff.txt"
+              if [ "$(wc -c < "$RUNNER_TEMP/diff.txt")" -gt 60000 ]; then
+                printf '\n... (diff truncated — see the full render in the CI logs)\n'
+              fi
+              echo '```'
+              echo
+              echo "</details>"
+            fi
+          } > "$RUNNER_TEMP/comment.md"
+
+          existing="$(gh api "repos/{owner}/{repo}/issues/${PR_NUMBER}/comments" --paginate \
+            -q "map(select(.body | startswith(\"$marker\"))) | .[0].id // empty" | head -1)"
+          if [ -n "$existing" ]; then
+            gh api "repos/{owner}/{repo}/issues/comments/${existing}" -X PATCH \
+              -f body="$(cat "$RUNNER_TEMP/comment.md")" >/dev/null
+            echo "updated existing comment $existing"
+          else
+            gh pr comment "$PR_NUMBER" --body-file "$RUNNER_TEMP/comment.md"
+          fi
