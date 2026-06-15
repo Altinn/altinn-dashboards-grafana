@@ -13,7 +13,7 @@ Usage: scripts/publish-grafana-artifact-manual.sh [options]
 
 Publishes the repo-root kustomize aggregate (dashboards + products/*/alerting) as a
 Flux OCI artifact: oci://<registry>/<repo>:<tag>. Flux pulls it via an OCIRepository
-and applies the CRs into the `grafana` namespace (see docs/flux-repo-wiring.md).
+and applies the CRs into the `grafana` namespace.
 
 Options:
   --acr-login        Run `az acr login` before pushing

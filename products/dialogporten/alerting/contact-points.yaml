@@ -4,7 +4,7 @@
 # The Slack incoming-webhook URL is NOT stored here (this is a public repo). It is read at
 # reconcile time from the `grafana-slack-webhooks` Secret in the `grafana` namespace, which
 # is created in-cluster from the Flux repo (External Secrets / Sealed Secrets). See
-# docs/flux-repo-wiring.md and the README "Secrets" section.
+# the README "Secrets" section.
 apiVersion: grafana.integreatly.org/v1beta1
 kind: GrafanaContactPoint
 metadata:

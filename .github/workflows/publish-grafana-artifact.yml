@@ -4,7 +4,7 @@ name: Publish grafana artifact
 # a Flux OCI artifact and pushes it to ACR. The aggregate pulls in the self-contained
 # dashboard CRs (configMapRef) under dashboards/ and every products/*/alerting overlay.
 # Flux in the cluster pulls it via an OCIRepository and applies the CRs into the
-# `grafana` namespace. See docs/flux-repo-wiring.md.
+# `grafana` namespace.
 #
 # This mirrors the OCI publishing pattern used by Altinn/dialogporten-manifests
 # (.github/workflows/publish-flux-artifacts.yml) — same reusable build-push action,
@@ -33,8 +33,8 @@ on:
 # ACR repository the artifact is pushed to. The registry host is fixed by the
 # build-push-image action (it derives `${acr_name}.azurecr.io`, default acr_name
 # `altinncr`), so the published ref is oci://altinncr.azurecr.io/${ARTIFACT_NAME}.
-# NOTE: confirm ARTIFACT_NAME with the platform team before first publish (see the
-#       "TODO / confirm before first publish" note in docs/flux-repo-wiring.md).
+# NOTE: confirm ARTIFACT_NAME before first publish (confirm with the platform team
+#       before first publish).
 env:
   ARTIFACT_NAME: monitoring/grafana
 

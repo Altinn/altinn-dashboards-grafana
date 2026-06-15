@@ -1,7 +1,7 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 # All Dialogporten alerting operator CRs (grafana.integreatly.org/v1beta1).
-# Applied into the `grafana` namespace by the Flux repo (see docs/flux-repo-wiring.md).
+# Applied into the `grafana` namespace by the consumer Flux repo (gitops-manifests).
 resources:
   - folder.yaml            # remove if the folder is defined in the Flux repo instead
   - contact-points.yaml

@@ -30,7 +30,6 @@ products/                       # one folder per product, owning its dashboards 
 schemas/                        # vendored, version-pinned CRD JSON schemas for CI (regenerate.py)
 kustomization.yaml              # repo-root aggregator: dashboards/ + each products/*/alerting overlay
 scripts/publish-grafana-artifact-manual.sh    # manual `flux push artifact` (mirrors CI)
-docs/flux-repo-wiring.md        # copy-paste OCIRepository + Kustomization + Secret for the consumer repo
 .github/workflows/validate-alerting.yml        # offline CI: kustomize + kubeconform + linters
 .github/workflows/publish-grafana-artifact.yml # publishes the unified OCI artifact to ACR (main/release)
 ```
@@ -133,8 +132,8 @@ self-contained `GrafanaDashboard` CRs (`spec.configMapRef` → a wrapped-JSON `C
 [Repository Structure](#repository-structure)), and the alert CRs (`GrafanaAlertRuleGroup`,
 `GrafanaContactPoint`, `GrafanaNotificationPolicy*`) have **no `spec.url`** at all. CI publishes
 the whole repo-root aggregate as a single **OCI artifact** to ACR, and `gitops-manifests` points
-at that artifact with one `OCIRepository` + `Kustomization` (named `grafana-content`) —
-see **[docs/flux-repo-wiring.md](docs/flux-repo-wiring.md)** and [Delivery](#delivery-oci-artifact).
+at that artifact with one `OCIRepository` + `Kustomization` (named `grafana-content`) in the
+`gitops-manifests` repo — see [Delivery](#delivery-oci-artifact).
 
 The central Grafana (`instanceSelector dashboards=external-grafana`, namespace `grafana`,
 Azure Monitor datasource `azure-monitor-oob`) monitors all environments via Azure Monitor.
@@ -186,7 +185,7 @@ want centralized grouping / mute-timings / inheritance, the platform team owns o
 `GrafanaContactPoint.valuesFrom` reads the webhook from the `grafana-slack-webhooks` Secret
 in the `grafana` namespace — **one key per product**. The Secret is created in-cluster from
 the Flux repo (External Secrets → Azure Key Vault, or SealedSecrets). It is **never committed
-here** (public repo). See [docs/flux-repo-wiring.md](docs/flux-repo-wiring.md).
+here** (public repo).
 
 ### Add a new product
 
@@ -251,13 +250,12 @@ by URL. `gitops-manifests` consumes it through one `OCIRepository` + `Kustomizat
   (`--acr-login --tag release`, `--dry-run` to preview the `flux push artifact` command).
 - **Pull (cluster):** an `OCIRepository` (`provider: azure`, `tag: release`) + `Kustomization`
   (`path: ./`, `targetNamespace: grafana`), both named `grafana-content`, in `gitops-manifests`
-  — copy-paste ready in [docs/flux-repo-wiring.md](docs/flux-repo-wiring.md).
+  — implemented in the `gitops-manifests` repo under `oci/grafana-operator/grafana-manifests/base/`.
 
 > **Before the first publish**, confirm the ACR repository name (`ARTIFACT_NAME` in the
 > workflow, `monitoring/grafana`) and provision the Azure OIDC repo secrets
 > (`AZURE_SUBSCRIPTION_ID`, `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`) for an app registration with
-> a federated credential on this repo and the `AcrPush` role. Details in
-> [docs/flux-repo-wiring.md](docs/flux-repo-wiring.md).
+> a federated credential on this repo and the `AcrPush` role.
 
 ## Contributing
 
