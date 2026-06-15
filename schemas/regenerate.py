@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 """Regenerate the vendored grafana-operator CRD JSON schemas used by CI (kubeconform).
 
-Pinned to OPERATOR_VERSION; bump it and re-run when the cluster's grafana-operator upgrades.
+Pinned to OPERATOR_VERSION; Renovate bumps it and the regenerate-schemas workflow
+refreshes the vendored JSON to match.
 """
 import json
 import subprocess
 
-OPERATOR_VERSION = "v5.23.0"  # keep in sync with the cluster's grafana-operator
+# renovate: datasource=github-releases depName=grafana/grafana-operator
+OPERATOR_VERSION = "v5.23.0"
 
 KINDS = {
     "GrafanaAlertRuleGroup": "grafanaalertrulegroups",
