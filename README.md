@@ -26,6 +26,11 @@ products/                       # one folder per product, owning its dashboards 
         ├── folder.yaml             # GrafanaFolder
         ├── contact-points.yaml     # GrafanaContactPoint (Slack)
         └── rules-exceptions.yaml   # GrafanaAlertRuleGroup
+platform/                       # platform-team infrastructure CRs
+└── secrets/                    #   Slack-webhook Key Vault wiring
+    ├── application-identity.yaml  # ApplicationIdentity (DIS identity operator)
+    ├── vault.yaml                 # Vault (DIS vault operator) + managed SecretStore
+    └── external-secret.yaml       # ExternalSecret → grafana-slack-webhooks Secret
 schemas/                        # vendored, version-pinned CRD JSON schemas for CI (regenerate.py)
 kustomization.yaml              # repo-root aggregator: dashboards/ + each products/*/alerting
 scripts/publish-grafana-artifact-manual.sh    # manual `flux push artifact` (mirrors CI)
@@ -83,8 +88,11 @@ drop-in later. There can be only one root policy per instance, so confirm before
 ### Secrets
 
 `GrafanaContactPoint.valuesFrom` reads the Slack webhook from the `grafana-slack-webhooks` Secret
-in the `grafana` namespace (one key per product). The Secret is created in-cluster from the Flux
-repo (External Secrets / SealedSecrets) and is **never committed here** (public repo).
+in the `grafana` namespace (one key per product). The webhook value is stored in the
+`grafana-alerting` Azure Key Vault — provisioned in-repo by the DIS Vault operator via
+`platform/secrets/vault.yaml` — and synced into the `grafana-slack-webhooks` Secret by the
+ExternalSecret (ESO) in `platform/secrets/external-secret.yaml`. The value is **never in git or
+the artifact** (public repo).
 
 ### Add a new product
 
@@ -94,7 +102,9 @@ repo (External Secrets / SealedSecrets) and is **never committed here** (public 
    one exists), `rules-*.yaml` (`GrafanaAlertRuleGroup`(s) with `Product`/`Env` labels, `for: 0s`,
    and `notificationSettings.receiver`), and a `kustomization.yaml` listing them.
 3. Add `products/<name>/alerting` to the repo-root `kustomization.yaml`.
-4. Add the product's Slack webhook key to the Flux repo's `ExternalSecret`.
+4. The platform team adds the product's webhook to the `grafana-alerting` Key Vault as
+   `slack-webhook-<product>` and adds a matching `data` entry (secretKey `<product>`) to
+   `platform/secrets/external-secret.yaml`.
 5. Dashboards: drop JSON in `products/<name>/dashboards/`, wrap it into a `ConfigMap`, and add a
    self-contained `GrafanaDashboard` CR. `scripts/validate-dashboards.py` fails if a JSON is added
    without its `configMapGenerator` entry + CR.
