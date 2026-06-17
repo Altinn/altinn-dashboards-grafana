@@ -1,0 +1,16 @@
+name: Kustomize Diff
+
+# Reuses the dis-way reusable workflow; may need org allow-listing under Settings -> Actions.
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  kustomize-diff:
+    uses: dis-way/actions/.github/workflows/kustomize-diff.yml@22c5df1f11f27332501a9073f63b6febdada279e # main
+    with:
+      build-paths: "dashboards,products/*/alerting"
+    permissions:
+      contents: read
+      pull-requests: write

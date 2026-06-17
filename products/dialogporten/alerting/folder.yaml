@@ -1,0 +1,10 @@
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaFolder
+metadata:
+  name: external-grafana-dialogporten
+  namespace: grafana
+spec:
+  title: Dialogporten
+  instanceSelector:
+    matchLabels:
+      dashboards: external-grafana

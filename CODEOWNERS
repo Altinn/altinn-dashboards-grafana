@@ -1,4 +1,8 @@
 # Owners for the whole repo (will be added to all PRs)
 *       @Altinn/team-platform
 
-# Add specific ownership for further needs here
+# Per-product ownership: every product team owns its entire folder under products/.
+# Add one line per product as it is onboarded. Keep the trailing slash so the whole
+# folder (dashboards/, alerting/, …) is covered recursively — a `products/<name>/*`
+# glob would not match nested subdirectories.
+/products/dialogporten/    @Altinn/team-dialogporten-infra

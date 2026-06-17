@@ -1,0 +1,63 @@
+name: Regenerate CRD schemas
+
+# When Renovate bumps OPERATOR_VERSION in schemas/regenerate.py, regenerate the vendored
+# JSON schemas to match, commit them back onto the PR, and validate — so the offline
+# vendored schemas stay in sync with the pinned grafana-operator version with no manual step.
+
+on:
+  pull_request:
+    paths:
+      - "schemas/regenerate.py"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  regenerate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+
+      - name: Install kustomize + kubeconform
+        run: |
+          set -euo pipefail
+          kver="5.4.3"
+          kcver="0.6.7"
+          curl -fsSL -o kustomize.tar.gz \
+            "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv${kver}/kustomize_v${kver}_linux_amd64.tar.gz"
+          tar -xzf kustomize.tar.gz
+          sudo install -m 0755 kustomize /usr/local/bin/kustomize
+          curl -fsSL -o kubeconform.tar.gz \
+            "https://github.com/yannh/kubeconform/releases/download/v${kcver}/kubeconform-linux-amd64.tar.gz"
+          tar -xzf kubeconform.tar.gz kubeconform
+          sudo install -m 0755 kubeconform /usr/local/bin/kubeconform
+
+      - name: Regenerate vendored schemas
+        run: |
+          set -euo pipefail
+          python3 -m pip install --quiet pyyaml
+          python3 schemas/regenerate.py
+
+      - name: Commit regenerated schemas if changed
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- schemas/; then
+            echo "Vendored schemas already match the pinned version."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add schemas/
+          git commit -m "ci: regenerate vendored CRD schemas"
+          git push
+
+      - name: Validate against the regenerated schemas
+        run: |
+          set -euo pipefail
+          SCHEMA_LOC='schemas/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json'
+          kustomize build . | kubeconform -strict -ignore-missing-schemas -summary \
+            -schema-location default -schema-location "$SCHEMA_LOC" -

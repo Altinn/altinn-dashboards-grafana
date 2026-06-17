@@ -1,0 +1,69 @@
+name: Publish grafana artifact
+
+# Packages the repo-root kustomize aggregate (dashboards + all product alerts) as a Flux
+# OCI artifact and pushes it to ACR on push to main/release.
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches:
+      - main
+      - release
+    paths:
+      - "dashboards/**"
+      - "products/**"
+      - "platform/**"
+      - "schemas/**"
+      - "kustomization.yaml"
+      - ".github/workflows/publish-grafana-artifact.yml"
+
+env:
+  ARTIFACT_NAME: monitoring/grafana
+
+# id-token: write is required to mint the Azure workload-identity OIDC token.
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: publish-grafana-artifact-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Build + push grafana OCI artifact
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install kustomize
+        run: |
+          set -euo pipefail
+          ver="5.4.3"
+          curl -fsSL -o kustomize.tar.gz \
+            "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv${ver}/kustomize_v${ver}_linux_amd64.tar.gz"
+          tar -xzf kustomize.tar.gz
+          sudo install -m 0755 kustomize /usr/local/bin/kustomize
+          kustomize version
+
+      - name: Validate the aggregate builds before publishing
+        run: |
+          set -euo pipefail
+          if [ ! -f kustomization.yaml ]; then
+            echo "::error::repo-root kustomization.yaml not found — nothing to publish"
+            exit 1
+          fi
+          kustomize build . >/dev/null
+          echo "root aggregate builds OK"
+
+      - name: Build and push grafana artifact
+        # Also pushes an immutable :<short-commit-sha> tag alongside the branch tag below.
+        uses: Altinn/altinn-platform/actions/flux/build-push-image@fb059cc61cdd200c0bd89bb9af106b16c066e4cd # main
+        with:
+          image_name: ${{ env.ARTIFACT_NAME }}
+          tag: ${{ github.ref_name }}
+          workdir: .
+          azure_subscription_id: ${{ secrets.DIS_SYNCROOT_AZURE_SUBSCRIPTION_ID }}
+          azure_app_id: ${{ secrets.DIS_SYNCROOT_AZURE_CLIENT_ID }}
+          azure_tenant_id: ${{ secrets.DIS_SYNCROOT_AZURE_TENANT_ID }}
