@@ -6,3 +6,4 @@
 # folder (dashboards/, alerting/, …) is covered recursively — a `products/<name>/*`
 # glob would not match nested subdirectories.
 /products/dialogporten/    @Altinn/team-dialogporten-infra
+/products/infoportal/      @Altinn/team-infoportal
