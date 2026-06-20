@@ -12,10 +12,15 @@ spec:
   resyncPeriod: 10m0s
   receivers:
     - type: slack
-      disableResolveMessage: false
+      disableResolveMessage: true
       settings:
-        title: '{{ template "default.title" . }}'
-        text: '{{ template "default.message" . }}'
+        title: 'Infoportal exceptions — {{ .CommonLabels.Env }} ({{ len .Alerts }} firing)'
+        text: |
+          {{ if .CommonAnnotations.AppInsightsURL }}<{{ .CommonAnnotations.AppInsightsURL }}|Open in Application Insights>{{ end }}
+          {{ range .Alerts }}──────────────
+          {{ if .Labels.Type }}{{ .Labels.Type }} · {{ end }}count {{ .Annotations.Count }}
+          {{ .Labels.Details }}
+          {{ end }}
       valuesFrom:
         - targetPath: url
           valueFrom:
