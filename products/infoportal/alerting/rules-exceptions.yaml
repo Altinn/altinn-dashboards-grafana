@@ -1,0 +1,91 @@
+# Hand-authored alert rule (not a Grafana UI export). If you later build/edit this in the
+# Grafana UI and re-export, keep the existing `uid` so the rule is updated, not duplicated.
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaAlertRuleGroup
+metadata:
+  name: infoportal-exceptions
+  namespace: grafana
+spec:
+  name: Exception
+  folderRef: external-grafana-infoportal
+  instanceSelector:
+    matchLabels:
+      dashboards: external-grafana
+  interval: 5m
+  rules:
+  - uid: infoportal-exceptions-prod
+    title: Exceptions Prod
+    condition: C
+    for: 0s
+    noDataState: OK
+    execErrState: KeepLast
+    labels:
+      AlertType: Exception
+      Env: Prod
+      Product: Infoportal
+    annotations:
+      summary: Infoportal exceptions detected in prod
+      Count: '{{ $values.A.Value }}'
+      AppInsightsURL: https://portal.azure.com#@cd0026d8-283b-4a55-9bfa-d0ef4a8ba21c/blade/Microsoft_OperationsManagementSuite_Workspace/Logs.ReactView/resourceId/%2Fsubscriptions%2Ff272e0dd-c13f-413a-a5d7-a6a7cf4a8622%2FresourceGroups%2Fdis-core-prod-monitor-rg%2Fproviders%2Fmicrosoft.insights%2Fcomponents%2Fdis-core-prod-products-ai/source/LogsBlade.AnalyticsShareLinkToQuery/q/H4sIAAAAAAAAA42NuwrCQBBFe79iSJMEQhrrWMVOLcRORJbNJA7si52JJuDHu6iIdlbD5d5zRqLSyIs73C4YEbTxY3fee4M7ZRGaBjJyvQ8%252BijLZZ8Z4xUgyb9I1sGpgmSqcBF0H6%252Bkwh4SCeJZIbij0yOJtSxYdk3dcH3OcNAZJoZY0zk%252FlN7%252Fl4W%252FcIrMafg0tiiLDyUF9XxA7L2iDzMVTXVavFxW82fIBvt%252Fl3gQBAAA%253D/timespan/P7D/limit/1000
+    notificationSettings:
+      receiver: Infoportal Slack Exceptions
+    data:
+    - refId: A
+      queryType: Azure Log Analytics
+      relativeTimeRange:
+        from: 300
+        to: 0
+      datasourceUid: azure-monitor-oob
+      model:
+        azureLogAnalytics:
+          dashboardTime: true
+          query: |-
+            traces
+            | where cloud_RoleName == "infoportal"
+            | where severityLevel >= 3
+            | extend ExType = tostring(customDimensions.['exception.type'])
+            | extend ExMsg = tostring(customDimensions.['exception.message'])
+            | extend Details = iff(isnotempty(ExMsg), ExMsg, message)
+            | summarize Count = count() by Type = ExType, Details = substring(Details, 0, 200)
+            | project Type, Details, Count
+          resources:
+          - /subscriptions/f272e0dd-c13f-413a-a5d7-a6a7cf4a8622/resourceGroups/dis-core-prod-monitor-rg/providers/Microsoft.Insights/components/dis-core-prod-products-ai
+          resultFormat: logs
+          timeColumn: timestamp
+          workspace: ''
+        datasource:
+          type: grafana-azure-monitor-datasource
+          uid: azure-monitor-oob
+        intervalMs: 1000
+        maxDataPoints: 43200
+        queryType: Azure Log Analytics
+        refId: A
+    - refId: C
+      relativeTimeRange:
+        from: 300
+        to: 0
+      datasourceUid: __expr__
+      model:
+        conditions:
+        - evaluator:
+            params:
+            - 0
+            type: gt
+          operator:
+            type: and
+          query:
+            params:
+            - C
+          reducer:
+            params: []
+            type: last
+          type: query
+        datasource:
+          type: __expr__
+          uid: __expr__
+        expression: A
+        intervalMs: 1000
+        maxDataPoints: 43200
+        refId: C
+        type: threshold

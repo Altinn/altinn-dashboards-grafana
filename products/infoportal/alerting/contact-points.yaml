@@ -1,0 +1,29 @@
+# Slack webhook is injected from the grafana-slack-webhooks Secret at reconcile time — never commit it.
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaContactPoint
+metadata:
+  name: infoportal-slack-exceptions
+  namespace: grafana
+spec:
+  name: "Infoportal Slack Exceptions"
+  instanceSelector:
+    matchLabels:
+      dashboards: external-grafana
+  resyncPeriod: 10m0s
+  receivers:
+    - type: slack
+      disableResolveMessage: true
+      settings:
+        title: 'Infoportal exceptions — {{ .CommonLabels.Env }} ({{ len .Alerts }} firing)'
+        text: |
+          {{ if .CommonAnnotations.AppInsightsURL }}<{{ .CommonAnnotations.AppInsightsURL }}|Open in Application Insights>{{ end }}
+          {{ range .Alerts }}──────────────
+          {{ if .Labels.Type }}{{ .Labels.Type }} · {{ end }}count {{ .Annotations.Count }}
+          {{ .Labels.Details }}
+          {{ end }}
+      valuesFrom:
+        - targetPath: url
+          valueFrom:
+            secretKeyRef:
+              name: grafana-slack-webhooks
+              key: infoportal
