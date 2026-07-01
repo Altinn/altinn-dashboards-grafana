@@ -1,0 +1,26 @@
+exclusions:
+  target-instance-rule:
+    reason: >-
+      Fleet-wide SLA overview: panels intentionally match every instance by
+      domain regex (*.apps.altinn.no / *.apps.tt02.altinn.no) and break down
+      per customer. There is no single-$instance drill-down by design.
+    entries:
+      - dashboard: SLA - Altinn Uptime
+  target-job-rule:
+    reason: >-
+      Queries read the recording rule altinn:probe_success:max_by_instance,
+      which is aggregated across jobs; a $job matcher is not applicable.
+    entries:
+      - dashboard: SLA - Altinn Uptime
+  template-instance-rule:
+    reason: >-
+      Overview dashboard has no per-instance filter variable by design (see
+      target-instance-rule).
+    entries:
+      - dashboard: SLA - Altinn Uptime
+  template-job-rule:
+    reason: >-
+      Overview dashboard has no per-job filter variable by design (see
+      target-job-rule).
+    entries:
+      - dashboard: SLA - Altinn Uptime
