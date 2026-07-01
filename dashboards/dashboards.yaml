@@ -57,6 +57,20 @@ spec:
 apiVersion: grafana.integreatly.org/v1beta1
 kind: GrafanaDashboard
 metadata:
+  name: external-grafana-altinn-uptime-sla
+  namespace: grafana
+spec:
+  folderRef: external-grafana-altinn-uptime
+  instanceSelector:
+    matchLabels:
+      dashboards: "external-grafana"
+  configMapRef:
+    name: dashboard-altinn-uptime-sla
+    key: sla.json
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
   name: external-grafana-fluxcd-flux-cluster-stats
   namespace: grafana
 spec:

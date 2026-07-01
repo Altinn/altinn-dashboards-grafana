@@ -19,6 +19,9 @@ configMapGenerator:
   - name: dashboard-altinn-traefik-official
     files:
       - altinn/traefik-official.json
+  - name: dashboard-altinn-uptime-sla
+    files:
+      - altinn-uptime/sla.json
   - name: dashboard-fluxcd-flux-cluster-stats
     files:
       - fluxcd/flux-cluster-stats.json
