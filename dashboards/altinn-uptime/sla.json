@@ -15,7 +15,7 @@
       }
     ]
   },
-  "editable": true,
+  "editable": false,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
   "links": [],
@@ -36,7 +36,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "pS6ZuGV7z"
+        "uid": "${datasource}"
       },
       "description": "Prod SLA: availability across all hours. Green = meets 99.9% SLA.",
       "fieldConfig": {
@@ -172,7 +172,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "pS6ZuGV7z"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "expr": "label_replace(\n  avg_over_time(\n    altinn:probe_success:max_by_instance{\n      instance=~\"^[^.]+[.]apps[.]altinn[.]no$\"\n    }[$__range]\n  ) * 100,\n  \"customer\",\n  \"$1\",\n  \"instance\",\n  \"^([^.]+)[.]apps[.]altinn[.]no$\"\n)",
@@ -185,7 +185,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "pS6ZuGV7z"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "expr": "label_replace(\n  (1 - avg_over_time(\n    altinn:probe_success:max_by_instance{\n      instance=~\"^[^.]+[.]apps[.]altinn[.]no$\"\n    }[$__range]\n  )) * ($__range_ms / 60000),\n  \"customer\",\n  \"$1\",\n  \"instance\",\n  \"^([^.]+)[.]apps[.]altinn[.]no$\"\n)",
@@ -251,7 +251,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "pS6ZuGV7z"
+        "uid": "${datasource}"
       },
       "description": "Availability % over selected period for tt02 targets.\n\nNOTE: Business hours filtering (Mon–Fri 07:00–20:00 Oslo) cannot be applied accurately without a Prometheus recording rule. This shows overall uptime % — actual business-hours SLA will be equal or better than shown here since off-hours downtime is included in the denominator.",
       "fieldConfig": {
@@ -387,7 +387,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "pS6ZuGV7z"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "expr": "label_replace(\n  avg_over_time(\n    altinn:probe_success:max_by_instance{\n      instance=~\"^[^.]+[.]apps[.]tt02[.]altinn[.]no$\"\n    }[$__range]\n  ) * 100,\n  \"customer\",\n  \"$1\",\n  \"instance\",\n  \"^([^.]+)[.]apps[.]tt02[.]altinn[.]no$\"\n)",
@@ -400,7 +400,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "pS6ZuGV7z"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "expr": "label_replace(\n  (1 - avg_over_time(\n    altinn:probe_success:max_by_instance{\n      instance=~\"^[^.]+[.]apps[.]tt02[.]altinn[.]no$\"\n    }[$__range]\n  )) * ($__range_ms / 60000),\n  \"customer\",\n  \"$1\",\n  \"instance\",\n  \"^([^.]+)[.]apps[.]tt02[.]altinn[.]no$\"\n)",
@@ -460,7 +460,22 @@
     "sla"
   ],
   "templating": {
-    "list": []
+    "list": [
+      {
+        "current": {
+          "text": "default",
+          "value": "default"
+        },
+        "hide": 0,
+        "label": "Data source",
+        "name": "datasource",
+        "options": [],
+        "query": "prometheus",
+        "refresh": 1,
+        "regex": "",
+        "type": "datasource"
+      }
+    ]
   },
   "time": {
     "from": "now-30d",
