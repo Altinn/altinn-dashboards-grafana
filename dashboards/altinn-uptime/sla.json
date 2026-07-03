@@ -472,7 +472,7 @@
         "options": [],
         "query": "prometheus",
         "refresh": 1,
-        "regex": "",
+        "regex": "/admin-.*-obs-amw/",
         "type": "datasource"
       }
     ]
