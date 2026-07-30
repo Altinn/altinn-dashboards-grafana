@@ -27,3 +27,31 @@ spec:
             secretKeyRef:
               name: grafana-slack-webhooks
               key: infoportal
+# Availability alert (rules-availability.yaml) posts to the SAME infoportal Slack webhook, but needs
+# its own contact point: the template above is exception-shaped and would render wrong for a probe alert.
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaContactPoint
+metadata:
+  name: infoportal-slack-availability
+  namespace: grafana
+spec:
+  name: "Infoportal Slack Availability"
+  instanceSelector:
+    matchLabels:
+      dashboards: external-grafana
+  resyncPeriod: 10m0s
+  receivers:
+    - type: slack
+      disableResolveMessage: false
+      settings:
+        title: 'Infoportal health check {{ if eq .Status "firing" }}:red_circle: DOWN{{ else }}:large_green_circle: recovered{{ end }} — {{ .CommonLabels.Env }}'
+        text: |
+          {{ range .Alerts }}{{ .Labels.instance }} — health check {{ .Status }}
+          {{ end }}{{ with (index .Alerts 0).PanelURL }}<{{ . }}|Open health-check panel>{{ end }}
+      valuesFrom:
+        - targetPath: url
+          valueFrom:
+            secretKeyRef:
+              name: grafana-slack-webhooks
+              key: infoportal
