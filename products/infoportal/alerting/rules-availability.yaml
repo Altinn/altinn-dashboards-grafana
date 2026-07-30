@@ -1,0 +1,81 @@
+# Hand-authored alert rule (not a Grafana UI export). Unlike rules-exceptions.yaml (Azure Log
+# Analytics / App Insights), this queries blackbox-exporter `probe_success` over the Prometheus
+# datasource `admin-prod-obs-amw` on dis-grafana-prod — the deep /health probe of info.altinn.no.
+# Keep the `uid` stable on edits; regenerating it duplicates the rule in Grafana.
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaAlertRuleGroup
+metadata:
+  name: infoportal-availability
+  namespace: grafana
+spec:
+  name: Availability
+  folderRef: external-grafana-infoportal
+  instanceSelector:
+    matchLabels:
+      dashboards: external-grafana
+  interval: 1m
+  rules:
+  - uid: infoportal-availability-prod
+    title: Availability Prod
+    condition: C
+    for: 5m
+    noDataState: NoData
+    execErrState: OK
+    labels:
+      AlertType: Availability
+      Env: Prod
+      Product: Infoportal
+      Severity: Critical
+    annotations:
+      summary: Infoportal health check failing in prod (info.altinn.no/health)
+      description: 'probe_success=0 for {{ $labels.instance }} — /health did not return HTTP 200 + status:Healthy'
+      __dashboardUid__: altinn-sla-002
+      __panelId__: "3"
+    notificationSettings:
+      receiver: Infoportal Slack Availability
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 600
+        to: 0
+      datasourceUid: admin-prod-obs-amw
+      model:
+        datasource:
+          type: prometheus
+          uid: admin-prod-obs-amw
+        editorMode: code
+        expr: 'max by (instance) (probe_success{job=~"blackbox-http-ipv[46]-health-check", instance="info.altinn.no"})'
+        instant: true
+        range: false
+        intervalMs: 1000
+        maxDataPoints: 43200
+        refId: A
+    - refId: C
+      relativeTimeRange:
+        from: 600
+        to: 0
+      datasourceUid: __expr__
+      model:
+        conditions:
+        - evaluator:
+            params:
+            - 1
+            type: lt
+          operator:
+            type: and
+          query:
+            params:
+            - C
+          reducer:
+            params: []
+            type: last
+          type: query
+        datasource:
+          type: __expr__
+          uid: __expr__
+        expression: A
+        intervalMs: 1000
+        maxDataPoints: 43200
+        refId: C
+        type: threshold

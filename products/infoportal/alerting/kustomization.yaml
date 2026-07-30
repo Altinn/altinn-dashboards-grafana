@@ -4,3 +4,4 @@ resources:
   - folder.yaml
   - contact-points.yaml
   - rules-exceptions.yaml
+  - rules-availability.yaml
