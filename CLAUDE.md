@@ -187,6 +187,14 @@ have no vendored schema, which is expected (`-ignore-missing-schemas`).
 - **`severityLevel` is numeric.** Use `severityLevel >= 3`, not `== "3"` — a string compare can
   silently match nothing.
 - **`for: 0s` is mandatory.** The CRD rejects a rule without it; Grafana UI exports omit it.
+- **A firing alert re-notifies every 4h by default.** Nothing here defines a
+  `GrafanaNotificationPolicy`, so every rule inherits the central Grafana root policy
+  (`group_wait 30s`, `group_interval 5m`, **`repeat_interval 4h`**). A long incident re-posts the
+  *same* firing message every 4h, which reads like repeated independent failures. For state-style
+  alerts (availability/probe) where one firing + one resolve is the whole story, set
+  `notificationSettings.repeat_interval` explicitly — the CRD field is **snake_case**
+  (`repeat_interval`, not `repeatInterval`; `additionalProperties: false` rejects the camelCase
+  spelling). Grafana caps it at **120h** and coerces it to a multiple of `group_interval`.
 - **Never regenerate a rule `uid`.** Reuse it on every edit.
 - **Azure resource IDs are case-insensitive but use canonical casing** (`resourceGroups`,
   `Microsoft.Insights`) for consistency with existing rules — Azure Portal exports often

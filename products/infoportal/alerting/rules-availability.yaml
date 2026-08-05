@@ -34,6 +34,12 @@ spec:
       __panelId__: "3"
     notificationSettings:
       receiver: Infoportal Slack Availability
+      # Without this, the rule inherits the root policy's 4h repeat_interval and re-posts the same
+      # "DOWN" message every 4h for as long as the probe stays red — the real ~9h45m outage on
+      # 2026-08-04 read as three separate failures in Slack. 24h keeps one daily reminder that a
+      # Critical availability alert is still open, without the 4h nagging. Must be a multiple of
+      # the root group_interval (5m); 24h = 288 x 5m. Grafana's max is 120h.
+      repeat_interval: 24h
     data:
     - refId: A
       relativeTimeRange:
