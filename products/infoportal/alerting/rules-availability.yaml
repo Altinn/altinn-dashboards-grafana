@@ -30,8 +30,11 @@ spec:
     annotations:
       summary: Infoportal health check failing in prod (info.altinn.no/health)
       description: 'probe_success=0 for {{ $labels.instance }} — /health did not return HTTP 200 + status:Healthy'
-      __dashboardUid__: altinn-sla-002
-      __panelId__: "3"
+      # "Open health-check panel" in Slack lands on the Infoportal dashboard's probe
+      # state-timeline (panel 8), which shows this exact series plus the shallow HTTP
+      # probes for contrast. Previously pointed at the fleet-wide Altinn Uptime SLA table.
+      __dashboardUid__: infoportal-health-001
+      __panelId__: "8"
     notificationSettings:
       receiver: Infoportal Slack Availability
       # Without this, the rule inherits the root policy's 4h repeat_interval and re-posts the same

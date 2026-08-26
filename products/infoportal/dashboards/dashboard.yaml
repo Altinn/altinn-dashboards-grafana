@@ -1,0 +1,16 @@
+# Product-owned dashboard. It lands in the same Grafana folder as the Infoportal alert
+# rules (external-grafana-infoportal, defined in ../alerting/folder.yaml) so the alerts and
+# their drill-down live together.
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: external-grafana-infoportal-service-health
+  namespace: grafana
+spec:
+  folderRef: external-grafana-infoportal
+  instanceSelector:
+    matchLabels:
+      dashboards: external-grafana
+  configMapRef:
+    name: dashboard-infoportal-service-health
+    key: service-health.json
