@@ -35,7 +35,7 @@ jobs:
     name: kustomize build + kubeconform (-strict)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install kustomize
         run: |
@@ -91,7 +91,7 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -132,7 +132,7 @@ jobs:
     name: yamllint (relaxed)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: yamllint
         run: |
           set -euo pipefail
@@ -145,7 +145,7 @@ jobs:
     name: dashboard JSON wired to ConfigMap + CR
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Validate every dashboard JSON is wired into a ConfigMap + CR
         run: |
           set -euo pipefail
