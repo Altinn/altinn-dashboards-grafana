@@ -10,17 +10,6 @@ jobs:
   kustomize-diff:
     uses: dis-way/actions/.github/workflows/kustomize-diff.yml@22c5df1f11f27332501a9073f63b6febdada279e # main
     with:
-      # products/*/* (not just */alerting) so every product overlay is diffed — dashboards
-      # today, and any overlay kind added later without someone remembering to edit this line.
-      # Dirs without a kustomization.yaml (e.g. products/dialogporten/dashboards) are skipped
-      # by the reusable workflow, so the glob is safe to widen.
-      #
-      # NB: a dashboard overlay builds a ConfigMap with the whole dashboard JSON embedded
-      # (~72 KB for one dashboard, ~366 KB for dashboards/), and the comment renders a
-      # full-context diff. That exceeds GitHub's 65,536-char comment limit, so on a
-      # dashboard PR the comment is auto-truncated with a "[Comment body truncated]" marker
-      # — it is cut off, not dropped, and the job still passes. Review dashboard JSON in the
-      # Files changed tab; what this diff is really for is the CR/ConfigMap wiring.
       build-paths: "dashboards,products/*/*"
     permissions:
       contents: read

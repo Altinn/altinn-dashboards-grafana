@@ -11,9 +11,7 @@ Grafana **dashboards and alerting-as-code**, entirely as
 (`grafana.integreatly.org/v1beta1`). There is **no live Grafana API access from here** — you
 edit YAML, CI validates it offline, and the whole repo-root kustomize aggregate is published as
 **one Flux OCI artifact** (`oci://altinncr.azurecr.io/monitoring/grafana`) that `gitops-manifests`
-applies into the `grafana` namespace. Nothing is imported by hand. The *datasources behind*
-Grafana are nonetheless queryable with `az`, and every query you write should be verified that
-way before committing — see [Verify queries against live data](#verify-queries-against-live-data).
+applies into the `grafana` namespace. Nothing is imported by hand.
 
 A single **central Grafana** instance renders everything. Every CR binds to it with the same
 instance selector and lives in the same namespace:
@@ -201,30 +199,6 @@ have no vendored schema, which is expected (`-ignore-missing-schemas`).
 
 Also run `python3 scripts/validate-dashboards.py` if you touched any dashboard wiring.
 
-### Verify queries against live data before committing them
-
-There is no Grafana API from here, but the **underlying datasources are reachable with `az`** —
-so never ship a hand-written KQL or PromQL expression unverified. Both checks below need an
-`az login` with Monitoring Reader on the target subscription.
-
-```bash
-# App Insights (KQL). --offset is REQUIRED; it defaults to 1h.
-AI=/subscriptions/f272e0dd-c13f-413a-a5d7-a6a7cf4a8622/resourceGroups/dis-core-prod-monitor-rg/providers/Microsoft.Insights/components/dis-core-prod-products-ai
-az monitor app-insights query --offset 30d \
-  --subscription f272e0dd-c13f-413a-a5d7-a6a7cf4a8622 --app "$AI" \
-  --analytics-query 'requests | where cloud_RoleName == "infoportal" | summarize count() by resultCode'
-
-# Azure Managed Prometheus (PromQL)
-TOKEN=$(az account get-access-token --resource https://prometheus.monitor.azure.com --query accessToken -o tsv)
-EP=https://admin-prod-obs-amw-gmcfc7e0d3a9gmcc.norwayeast.prometheus.monitor.azure.com
-curl -sG "$EP/api/v1/query" -H "Authorization: Bearer $TOKEN" \
-  --data-urlencode 'query=max by (instance) (probe_success{instance="info.altinn.no"})'
-```
-
-Best practice: extract the queries **out of the generated JSON** and run those exact strings
-(substituting `$__interval` → e.g. `15m`, `$__range` → `24h`), so you are testing what ships
-rather than what you meant to write.
-
 ## Gotchas
 
 - **`severityLevel` is numeric.** Use `severityLevel >= 3`, not `== "3"` — a string compare can
@@ -254,13 +228,5 @@ rather than what you meant to write.
   churn, so `avg_over_time(probe_success[...])` then `max` lets a short-lived replica mask an
   outage. Use a subquery instead:
   `avg_over_time((max by (instance) (probe_success{...}))[$__range:1m])`.
-- **Infoportal exceptions live in `traces`, not `exceptions`.** The App Insights `exceptions`,
-  `pageViews`, `customEvents` and `browserTimings` tables are all empty for
-  `cloud_RoleName == "infoportal"`; the OTel exporter writes exception records into `traces` with
-  `customDimensions['exception.type']`. Check which tables actually hold data before writing a
-  query against a table you assumed exists.
-- **`az monitor app-insights query` defaults to `--offset 1h`.** Without an explicit
-  `--offset 30d` every table looks like it only has one hour of history, which reads exactly like
-  a retention or ingestion failure. Always pass `--offset` when checking data availability.
 - **One OCI artifact, no partial apply.** A broken CR can block the whole artifact — keep
   `kustomize build .` green.
