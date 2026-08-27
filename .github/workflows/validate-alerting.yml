@@ -55,14 +55,17 @@ jobs:
           sudo install -m 0755 kubeconform /usr/local/bin/kubeconform
           kubeconform -v
 
-      - name: Validate every alerting overlay + the root aggregate
+      - name: Validate every product overlay + the root aggregate
         run: |
           set -euo pipefail
           # Schema filenames are lowercase because kubeconform lowercases {{.ResourceKind}}.
           SCHEMA_LOC='schemas/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json'
           targets=()
+          # Both alerting/ and dashboards/ overlays; dirs without a kustomization.yaml
+          # (e.g. a dashboards/ holding only .gitkeep) are skipped by the loop below.
           while IFS= read -r d; do targets+=("$d"); done < <(
-            find products -mindepth 2 -maxdepth 2 -type d -name alerting | sort
+            find products -mindepth 2 -maxdepth 2 -type d \
+              \( -name alerting -o -name dashboards \) | sort
           )
           if [ -f platform/alerting/kustomization.yaml ]; then targets+=("platform/alerting"); fi
           targets+=(".")   # root aggregator

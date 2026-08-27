@@ -19,20 +19,26 @@ dashboards/                     # platform dashboards (self-contained configMapR
 ├── fluxcd/                     #   FluxCD dashboard JSON
 └── linkerd/                    #   Linkerd dashboard JSON
 products/                       # one folder per product, owning its dashboards + alerts
-└── dialogporten/
-    ├── dashboards/             #   product dashboard JSON
-    └── alerting/               #   operator CRs
-        ├── kustomization.yaml
-        ├── folder.yaml             # GrafanaFolder
-        ├── contact-points.yaml     # GrafanaContactPoint (Slack)
-        └── rules-exceptions.yaml   # GrafanaAlertRuleGroup
+├── dialogporten/
+│   ├── dashboards/             #   product dashboard JSON
+│   └── alerting/               #   operator CRs
+│       ├── kustomization.yaml
+│       ├── folder.yaml             # GrafanaFolder
+│       ├── contact-points.yaml     # GrafanaContactPoint (Slack)
+│       └── rules-exceptions.yaml   # GrafanaAlertRuleGroup
+└── infoportal/
+    ├── dashboards/             #   self-contained overlay: JSON + ConfigMap + CR
+    │   ├── kustomization.yaml      # configMapGenerator (disableNameSuffixHash)
+    │   ├── dashboard.yaml          # GrafanaDashboard → folderRef external-grafana-infoportal
+    │   └── service-health.json
+    └── alerting/
 platform/                       # platform-team infrastructure CRs
 └── secrets/                    #   Slack-webhook Key Vault wiring
     ├── application-identity.yaml  # ApplicationIdentity (DIS identity operator)
     ├── vault.yaml                 # Vault (DIS vault operator) + managed SecretStore
     └── external-secret.yaml       # ExternalSecret → grafana-slack-webhooks Secret
 schemas/                        # vendored, version-pinned CRD JSON schemas for CI (regenerate.py)
-kustomization.yaml              # repo-root aggregator: dashboards/ + each products/*/alerting
+kustomization.yaml              # repo-root aggregator: dashboards/ + each products/*/{alerting,dashboards}
 scripts/publish-grafana-artifact-manual.sh    # manual `flux push artifact` (mirrors CI)
 .github/workflows/              # offline validation CI + OCI publish
 ```
@@ -53,6 +59,16 @@ scripts/publish-grafana-artifact-manual.sh    # manual `flux push artifact` (mir
 **Linkerd** (`dashboards/linkerd/`)
 - `daemonset.json` — DaemonSet monitoring and metrics
 - `deployment.json` — Deployment health and performance
+
+**Infoportal** (`products/infoportal/dashboards/`) — product-owned, lands in the `Infoportal`
+folder beside that product's alert rules
+- `service-health.json` — availability, traffic, latency, 404 attribution, exceptions and
+  dependencies for info.altinn.no. Blends the blackbox probes in `admin-prod-obs-amw` with
+  Application Insights (`dis-core-prod-products-ai`, `cloud_RoleName=infoportal`). Datasource
+  UIDs are pinned rather than templated, so panels can't silently bind to the wrong Prometheus.
+  The 404 row attributes the flood of calls to retired Altinn II endpoints back to the legacy
+  clients still making them (by `user_agent.original` — SAP NetWeaver, `python-requests`,
+  Apache-HttpClient, named municipality clients), and separates those from scanner noise.
 
 ## Alerting-as-Code (operator CRs)
 
@@ -105,9 +121,13 @@ the artifact** (public repo).
 4. The platform team adds the product's webhook to the `grafana-alerting` Key Vault as
    `slack-webhook-<product>` and adds a matching `data` entry (secretKey `<product>`) to
    `platform/secrets/external-secret.yaml`.
-5. Dashboards: drop JSON in `products/<name>/dashboards/`, wrap it into a `ConfigMap`, and add a
-   self-contained `GrafanaDashboard` CR. `scripts/validate-dashboards.py` fails if a JSON is added
-   without its `configMapGenerator` entry + CR.
+5. Dashboards: drop JSON in `products/<name>/dashboards/` and give that directory its own
+   `kustomization.yaml` (`configMapGenerator` + `generatorOptions.disableNameSuffixHash: true`)
+   and a self-contained `GrafanaDashboard` CR, then add `products/<name>/dashboards` to the
+   repo-root `kustomization.yaml`. Copy `products/infoportal/dashboards/` as the template.
+   `scripts/validate-dashboards.py` fails if a JSON is added without its `configMapGenerator`
+   entry + CR, if the CR's `folderRef` doesn't resolve, or if the overlay isn't registered at
+   the repo root.
 6. Add the ownership line to `CODEOWNERS` — `/products/<name>/    @Altinn/team-<name>`.
 7. Open a PR → CI validates → merge → promote `main → release`.
 

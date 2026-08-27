@@ -4,4 +4,5 @@ resources:
   - dashboards
   - products/dialogporten/alerting
   - products/infoportal/alerting
+  - products/infoportal/dashboards
   - platform/secrets

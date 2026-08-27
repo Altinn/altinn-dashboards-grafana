@@ -31,7 +31,10 @@ Prometheus. Environments are modelled as **separate rules**, not separate instan
 ```
 dashboards/                       # platform dashboards (shared, not product-owned)
 products/<product>/
-├── dashboards/                   # product dashboard JSON (optional)
+├── dashboards/                   # product dashboards (optional) — own kustomize overlay
+│   ├── kustomization.yaml        # configMapGenerator + disableNameSuffixHash: true
+│   ├── dashboard.yaml            # GrafanaDashboard CR (folderRef = the product folder)
+│   └── <name>.json
 └── alerting/
     ├── kustomization.yaml        # lists the files below
     ├── folder.yaml               # GrafanaFolder  external-grafana-<product>
@@ -151,10 +154,22 @@ traces
 - **Add another alert type** (e.g. latency, a specific exception): add a new rule to the group, or
   a new `rules-<topic>.yaml` file listed in the product's `kustomization.yaml`. Give it
   `Severity`/`AlertType` labels so routing/grouping stays meaningful.
-- **Add a dashboard**: drop JSON in `products/<product>/dashboards/`, wrap it into a `ConfigMap`
-  (`configMapGenerator`) and add a self-contained `GrafanaDashboard` CR pointing at it via
-  `spec.configMapRef`. `scripts/validate-dashboards.py` (a CI gate) **fails if a dashboard JSON is
-  not wired into both a ConfigMap and a CR**.
+- **Add a dashboard**: drop JSON in `products/<product>/dashboards/` and give that directory its
+  own overlay — `kustomization.yaml` (`configMapGenerator` + `generatorOptions.
+  disableNameSuffixHash: true`, so the CR can reference the ConfigMap by a stable name) and a
+  self-contained `GrafanaDashboard` CR pointing at it via `spec.configMapRef`, with
+  `folderRef: external-grafana-<product>` so it lands beside the product's alerts. Then register
+  `products/<product>/dashboards` in the repo-root `kustomization.yaml`.
+  **Copy `products/infoportal/dashboards/`** — it is the reference implementation.
+  `scripts/validate-dashboards.py` (a CI gate) covers both `dashboards/*/*.json` and
+  `products/*/dashboards/*.json`, and **fails if a dashboard JSON is not wired into both a
+  ConfigMap and a CR**, if a `folderRef` doesn't resolve, or if a product overlay is missing from
+  the root kustomization.
+- **Pin datasource UIDs in dashboard JSON** (`azure-monitor-oob`, `admin-prod-obs-amw`) rather
+  than using a `${datasource}` template variable. The variable saves the value `default`, the
+  default datasource is Azure Monitor rather than Prometheus, and Grafana then silently falls
+  back to the *first* Prometheus datasource — which in `dis-grafana-prod` is a `dis-core` AMW
+  holding no probe data. Panels render empty with no error.
 - **Edit an existing rule**: keep the `uid`. Changing it orphans the old rule and creates a
   duplicate in Grafana.
 
@@ -182,6 +197,8 @@ yamllint -d relaxed products platform dashboards kustomization.yaml
 `ExternalSecret`, `Vault`, and `ApplicationIdentity` show as **skipped** in kubeconform — they
 have no vendored schema, which is expected (`-ignore-missing-schemas`).
 
+Also run `python3 scripts/validate-dashboards.py` if you touched any dashboard wiring.
+
 ## Gotchas
 
 - **`severityLevel` is numeric.** Use `severityLevel >= 3`, not `== "3"` — a string compare can
@@ -202,5 +219,14 @@ have no vendored schema, which is expected (`-ignore-missing-schemas`).
 - **The webhook secret name may be environment-suffixed** in the vault
   (`slack-webhook-<product>-prod`). Match the actual vault name in `remoteRef.key`; the
   `secretKey`/contact-point `key` stays the short `<product>`.
+- **Anchor PromQL label regexes explicitly.** In Azure Managed Prometheus,
+  `job=~"blackbox-http-ipv[46]"` also matched `blackbox-http-ipv4-health-check` — do not rely on
+  `=~` being fully anchored. Write `job=~"blackbox-http-ipv[46]$"` when you mean the shallow
+  probes only. Verified 2026-08-26; the deep and shallow probes report very different numbers, so
+  getting this wrong silently mixes them.
+- **Collapse prober pods before averaging over time.** Blackbox runs on two replicas and pods
+  churn, so `avg_over_time(probe_success[...])` then `max` lets a short-lived replica mask an
+  outage. Use a subquery instead:
+  `avg_over_time((max by (instance) (probe_success{...}))[$__range:1m])`.
 - **One OCI artifact, no partial apply.** A broken CR can block the whole artifact — keep
   `kustomize build .` green.
