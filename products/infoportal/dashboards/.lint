@@ -7,12 +7,14 @@ exclusions:
       dis-grafana-prod is Azure Monitor rather than Prometheus, so Grafana
       silently falls back to the first Prometheus datasource -- a dis-core AMW
       that holds no probe data -- and the availability panels render empty with
-      no error. The dashboard also mixes two datasources in one view, which a
+      no error. Both dashboards also mix two datasources in one view, which a
       single template variable cannot express.
     entries:
       - dashboard: "Infoportal — Service Health (Prod)"
+      - dashboard: "Infoportal — All Environments"
   template-datasource-rule:
     reason: >-
       No datasource template variable by design; see panel-datasource-rule.
     entries:
       - dashboard: "Infoportal — Service Health (Prod)"
+      - dashboard: "Infoportal — All Environments"

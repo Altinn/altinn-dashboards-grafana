@@ -29,8 +29,10 @@ products/                       # one folder per product, owning its dashboards 
 └── infoportal/
     ├── dashboards/             #   self-contained overlay: JSON + ConfigMap + CR
     │   ├── kustomization.yaml      # configMapGenerator (disableNameSuffixHash)
-    │   ├── dashboard.yaml          # GrafanaDashboard → folderRef external-grafana-infoportal
-    │   └── service-health.json
+    │   ├── service-health.yaml     # GrafanaDashboard → folderRef external-grafana-infoportal
+    │   ├── service-health.json
+    │   ├── all-environments.yaml   # GrafanaDashboard → folderRef external-grafana-infoportal
+    │   └── all-environments.json
     └── alerting/
 platform/                       # platform-team infrastructure CRs
 └── secrets/                    #   Slack-webhook Key Vault wiring
@@ -69,6 +71,14 @@ folder beside that product's alert rules
   The 404 row attributes the flood of calls to retired Altinn II endpoints back to the legacy
   clients still making them (by `user_agent.original` — SAP NetWeaver, `python-requests`,
   Apache-HttpClient, named municipality clients), and separates those from scanner noise.
+- `all-environments.json` — cross-environment overview: AT22, AT23, TT02 and PROD side by side
+  in every panel, with no environment variable, so a regression can be watched moving up the
+  promotion path. The Application Insights panels are a single cross-resource query over the
+  four `dis-core-<env>-products-ai` components with the environment derived from `_ResourceId`;
+  availability comes from the same `admin-prod-obs-amw` probes, which only cover PROD
+  (`info.altinn.no`) and AT22 (`info.at22.altinn.cloud`) — AT23 and TT02 have no blackbox
+  target. Latency excludes 404s and the `/umbraco/serverEventHub` long-poll stream, which is
+  minutes-long by design and otherwise puts P95 in the millions of milliseconds.
 
 ## Alerting-as-Code (operator CRs)
 
