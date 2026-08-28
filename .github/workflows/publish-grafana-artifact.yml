@@ -35,7 +35,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Install kustomize
         run: |
@@ -59,7 +59,7 @@ jobs:
 
       - name: Build and push grafana artifact
         # Also pushes an immutable :<short-commit-sha> tag alongside the branch tag below.
-        uses: Altinn/altinn-platform/actions/flux/build-push-image@fb059cc61cdd200c0bd89bb9af106b16c066e4cd # main
+        uses: Altinn/altinn-platform/actions/flux/build-push-image@523f141da4f116fdd7331585396d83a5d7ade7ea # main
         with:
           image_name: ${{ env.ARTIFACT_NAME }}
           tag: ${{ github.ref_name }}
