@@ -1,0 +1,2359 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "Cross-environment overview of the Altinn information portal (Umbraco). Every panel shows AT22, AT23, TT02 and PROD side by side — there is deliberately no environment variable, so a fault can be seen moving up the promotion path without switching views. Environment colours are fixed and identical in every panel.\n\nApplication Insights panels are one cross-resource query over the four `dis-core-<env>-products-ai` components (`cloud_RoleName = infoportal`), with the environment derived from `_ResourceId`. Availability comes from the blackbox-exporter probes in `admin-prod-obs-amw`, which only cover PROD (`info.altinn.no`) and AT22 (`info.at22.altinn.cloud`) — AT23 and TT02 have no probe target.\n\nDatasource UIDs are pinned rather than templated: a `${datasource}` variable saves the value `default`, the default datasource here is Azure Monitor rather than Prometheus, and Grafana then silently binds the probe panels to a Prometheus that holds no probe data.\n\nFor a PROD-only deep dive — endpoint tables, 404 attribution by caller, dependency detail — see *Infoportal — Service Health (Prod)*.",
+  "editable": false,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "links": [
+    {
+      "asDropdown": false,
+      "icon": "external link",
+      "includeVars": false,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "Infoportal — Service Health (Prod)",
+      "tooltip": "PROD-only deep dive: endpoints, 404 attribution, dependencies",
+      "type": "link",
+      "url": "/d/infoportal-health-001"
+    }
+  ],
+  "panels": [
+    {
+      "id": 1,
+      "type": "row",
+      "title": "Availability — blackbox /health probes (PROD and AT22 only)",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "/health probe — now",
+      "description": "Deep health check: HTTP 200 **and** a JSON body of `status: Healthy`. For PROD this is the exact series the `Availability Prod` alert evaluates.\n\nOnly these two hosts are probed — **AT23 and TT02 have no blackbox target**, so their availability cannot be shown here. Their liveness has to be read off the traffic and error panels below instead.",
+      "gridPos": {
+        "h": 4,
+        "w": 8,
+        "x": 0,
+        "y": 1
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "admin-prod-obs-amw"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "admin-prod-obs-amw"
+          },
+          "editorMode": "code",
+          "expr": "max by (instance) (probe_success{job=~\"blackbox-http-ipv[46]-health-check\", instance=\"info.altinn.no\"})",
+          "instant": true,
+          "range": false,
+          "legendFormat": "PROD — info.altinn.no"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "admin-prod-obs-amw"
+          },
+          "editorMode": "code",
+          "expr": "max by (instance) (probe_success{job=~\"blackbox-http-ipv[46]-health-check\", instance=\"info.at22.altinn.cloud\"})",
+          "instant": true,
+          "range": false,
+          "legendFormat": "AT22 — info.at22.altinn.cloud"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "color": "red",
+                  "index": 0,
+                  "text": "DOWN"
+                },
+                "1": {
+                  "color": "green",
+                  "index": 1,
+                  "text": "UP"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value_and_name",
+        "wideLayout": true
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "/health availability — selected range",
+      "description": "Fraction of the selected range where the deep /health probe passed. Prober pods are collapsed with `max by (instance)` **before** averaging over time, so a short-lived replica cannot mask an outage.\n\nAT22 is a test environment and is routinely torn down or redeployed — red here is normal and is not comparable to red on PROD.",
+      "gridPos": {
+        "h": 4,
+        "w": 8,
+        "x": 8,
+        "y": 1
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "admin-prod-obs-amw"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "admin-prod-obs-amw"
+          },
+          "editorMode": "code",
+          "expr": "avg_over_time((max by (instance) (probe_success{job=~\"blackbox-http-ipv[46]-health-check\", instance=\"info.altinn.no\"}))[$__range:1m]) * 100",
+          "instant": true,
+          "range": false,
+          "legendFormat": "PROD — info.altinn.no"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "admin-prod-obs-amw"
+          },
+          "editorMode": "code",
+          "expr": "avg_over_time((max by (instance) (probe_success{job=~\"blackbox-http-ipv[46]-health-check\", instance=\"info.at22.altinn.cloud\"}))[$__range:1m]) * 100",
+          "instant": true,
+          "range": false,
+          "legendFormat": "AT22 — info.at22.altinn.cloud"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 99
+              },
+              {
+                "color": "green",
+                "value": 99.9
+              }
+            ]
+          },
+          "unit": "percent",
+          "decimals": 3
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value_and_name",
+        "wideLayout": true
+      }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "TLS certificate expires in",
+      "description": "Days until the earliest certificate in each host's chain expires.",
+      "gridPos": {
+        "h": 4,
+        "w": 8,
+        "x": 16,
+        "y": 1
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "admin-prod-obs-amw"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "admin-prod-obs-amw"
+          },
+          "editorMode": "code",
+          "expr": "min by (instance) (probe_ssl_earliest_cert_expiry{instance=\"info.altinn.no\"} - time()) / 86400",
+          "instant": true,
+          "range": false,
+          "legendFormat": "PROD — info.altinn.no"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "admin-prod-obs-amw"
+          },
+          "editorMode": "code",
+          "expr": "min by (instance) (probe_ssl_earliest_cert_expiry{instance=\"info.at22.altinn.cloud\"} - time()) / 86400",
+          "instant": true,
+          "range": false,
+          "legendFormat": "AT22 — info.at22.altinn.cloud"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 14
+              },
+              {
+                "color": "green",
+                "value": 30
+              }
+            ]
+          },
+          "unit": "d",
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value_and_name",
+        "wideLayout": true
+      }
+    },
+    {
+      "id": 5,
+      "type": "state-timeline",
+      "title": "/health probe status over time",
+      "description": "Up/Down bands for the deep health probe. Outages read as contiguous red blocks; a gap (no band) means the probe itself stopped reporting, which is a different failure from a failing probe.",
+      "gridPos": {
+        "h": 6,
+        "w": 16,
+        "x": 0,
+        "y": 5
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "admin-prod-obs-amw"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "admin-prod-obs-amw"
+          },
+          "editorMode": "code",
+          "expr": "max (probe_success{job=~\"blackbox-http-ipv[46]-health-check\", instance=\"info.altinn.no\"})",
+          "instant": false,
+          "range": true,
+          "legendFormat": "PROD — info.altinn.no"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "admin-prod-obs-amw"
+          },
+          "editorMode": "code",
+          "expr": "max (probe_success{job=~\"blackbox-http-ipv[46]-health-check\", instance=\"info.at22.altinn.cloud\"})",
+          "instant": false,
+          "range": true,
+          "legendFormat": "AT22 — info.at22.altinn.cloud"
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "admin-prod-obs-amw"
+          },
+          "editorMode": "code",
+          "expr": "max (probe_success{job=~\"blackbox-http-ipv[46]$\", instance=\"info.altinn.no\"})",
+          "instant": false,
+          "range": true,
+          "legendFormat": "PROD — shallow HTTP (front page)"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "fillOpacity": 80,
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineWidth": 0,
+            "spanNulls": false
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "color": "red",
+                  "index": 0,
+                  "text": "DOWN"
+                },
+                "1": {
+                  "color": "green",
+                  "index": 1,
+                  "text": "UP"
+                }
+              }
+            }
+          ],
+          "max": 1,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "alignValue": "center",
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "mergeValues": true,
+        "perPage": 10,
+        "rowHeight": 0.9,
+        "showValue": "never",
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      }
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "/health probe duration",
+      "description": "Wall-clock time of the deep health probe. The deep check runs the full application health pipeline, so it is expected to be slower than a shallow HTTP probe; a rising trend is an early warning that the app is degrading before the probe outright fails.",
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 16,
+        "y": 5
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "admin-prod-obs-amw"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "admin-prod-obs-amw"
+          },
+          "editorMode": "code",
+          "expr": "max by (instance) (probe_duration_seconds{job=~\"blackbox-http-ipv[46]-health-check\", instance=\"info.altinn.no\"})",
+          "instant": false,
+          "range": true,
+          "legendFormat": "PROD — info.altinn.no"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "admin-prod-obs-amw"
+          },
+          "editorMode": "code",
+          "expr": "max by (instance) (probe_duration_seconds{job=~\"blackbox-http-ipv[46]-health-check\", instance=\"info.at22.altinn.cloud\"})",
+          "instant": false,
+          "range": true,
+          "legendFormat": "AT22 — info.at22.altinn.cloud"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 8,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          },
+          "unit": "s",
+          "min": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "PROD — info.altinn.no"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#FF9830",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "AT22 — info.at22.altinn.cloud"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#8AB8FF",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 7,
+      "type": "row",
+      "title": "Environment scorecard — Application Insights",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 11
+      },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 8,
+      "type": "table",
+      "title": "All environments at a glance (selected range)",
+      "description": "One row per environment, ordered AT22 → AT23 → TT02 → PROD (the promotion path). `Err5xx` is the only column that means *broken*: `NotFound` is tracked separately because 404s are the dominant traffic class on this service and would otherwise swamp the error signal, and `P95ms` excludes both 404s and the `/umbraco/serverEventHub` long-poll stream. `Exceptions` counts `traces` at `severityLevel >= 3` — the App Insights `exceptions` table is empty for this service. An environment missing entirely from this table served no requests at all in the selected range.",
+      "gridPos": {
+        "h": 6,
+        "w": 24,
+        "x": 0,
+        "y": 12
+      },
+      "datasource": {
+        "type": "grafana-azure-monitor-datasource",
+        "uid": "azure-monitor-oob"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-azure-monitor-datasource",
+            "uid": "azure-monitor-oob"
+          },
+          "queryType": "Azure Log Analytics",
+          "azureLogAnalytics": {
+            "dashboardTime": true,
+            "timeColumn": "timestamp",
+            "query": "let envOf = (r: string) { case(\n    r has \"dis-core-at22\", \"AT22\",\n    r has \"dis-core-at23\", \"AT23\",\n    r has \"dis-core-tt02\", \"TT02\",\n    r has \"dis-core-prod\", \"PROD\",\n    \"unknown\") };\nlet reqs = requests\n| where cloud_RoleName == \"infoportal\"\n| extend Env = envOf(_ResourceId)\n| summarize\n    Requests = count(),\n    Err5xx   = countif(toint(resultCode) >= 500),\n    NotFound = countif(toint(resultCode) == 404),\n    P95ms    = round(percentile(iff(toint(resultCode) != 404 and name !has \"serverEventHub\", duration, real(null)), 95), 1)\n  by Env;\nlet errs = traces\n| where cloud_RoleName == \"infoportal\" and severityLevel >= 3\n| extend Env = envOf(_ResourceId)\n| summarize Exceptions = count() by Env;\nreqs\n| join kind=leftouter errs on Env\n| extend Exceptions = coalesce(Exceptions, 0)\n| extend\n    Err5xxPct   = round(100.0 * Err5xx / Requests, 3),\n    NotFoundPct = round(100.0 * NotFound / Requests, 1)\n| extend EnvOrder = case(Env == \"AT22\", 1, Env == \"AT23\", 2, Env == \"TT02\", 3, Env == \"PROD\", 4, 9)\n| project EnvOrder, Env, Requests, Err5xx, Err5xxPct, Exceptions, NotFound, NotFoundPct, P95ms\n| order by EnvOrder asc\n| project-away EnvOrder",
+            "resources": [
+              "/subscriptions/3be00243-992b-41a2-8bb5-34ed04f7d653/resourceGroups/dis-core-at22-monitor-rg/providers/Microsoft.Insights/components/dis-core-at22-products-ai",
+              "/subscriptions/3be00243-992b-41a2-8bb5-34ed04f7d653/resourceGroups/dis-core-at23-monitor-rg/providers/Microsoft.Insights/components/dis-core-at23-products-ai",
+              "/subscriptions/b946eabe-2509-4652-abfc-6aa3b991fe25/resourceGroups/dis-core-tt02-monitor-rg/providers/Microsoft.Insights/components/dis-core-tt02-products-ai",
+              "/subscriptions/f272e0dd-c13f-413a-a5d7-a6a7cf4a8622/resourceGroups/dis-core-prod-monitor-rg/providers/Microsoft.Insights/components/dis-core-prod-products-ai"
+            ],
+            "resultFormat": "table"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true,
+            "inspect": true
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Env"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 90
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "text"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Requests"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "short"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Err5xx"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background",
+                  "mode": "basic"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "thresholds"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "red",
+                      "value": 1
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Err5xxPct"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "thresholds"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "orange",
+                      "value": 0.1
+                    },
+                    {
+                      "color": "red",
+                      "value": 1
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Exceptions"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background",
+                  "mode": "basic"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "thresholds"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "orange",
+                      "value": 1
+                    },
+                    {
+                      "color": "red",
+                      "value": 100
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "NotFound"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "text",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "NotFoundPct"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "text",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "P95ms"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "ms"
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "thresholds"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "yellow",
+                      "value": 200
+                    },
+                    {
+                      "color": "red",
+                      "value": 1000
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true,
+        "sortBy": []
+      }
+    },
+    {
+      "id": 9,
+      "type": "row",
+      "title": "Traffic, errors and latency by environment",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 18
+      },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "Requests per interval",
+      "description": "Log scale: PROD runs two to three orders of magnitude above the test environments, and a linear axis would flatten AT22/AT23/TT02 onto the zero line. A line dropping out entirely means that environment stopped serving traffic.",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 19
+      },
+      "datasource": {
+        "type": "grafana-azure-monitor-datasource",
+        "uid": "azure-monitor-oob"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-azure-monitor-datasource",
+            "uid": "azure-monitor-oob"
+          },
+          "queryType": "Azure Log Analytics",
+          "azureLogAnalytics": {
+            "dashboardTime": true,
+            "timeColumn": "timestamp",
+            "query": "let envOf = (r: string) { case(\n    r has \"dis-core-at22\", \"AT22\",\n    r has \"dis-core-at23\", \"AT23\",\n    r has \"dis-core-tt02\", \"TT02\",\n    r has \"dis-core-prod\", \"PROD\",\n    \"unknown\") };\nrequests\n| where cloud_RoleName == \"infoportal\"\n| extend Env = envOf(_ResourceId)\n| summarize Requests = count() by bin(timestamp, $__interval), Env\n| order by timestamp asc",
+            "resources": [
+              "/subscriptions/3be00243-992b-41a2-8bb5-34ed04f7d653/resourceGroups/dis-core-at22-monitor-rg/providers/Microsoft.Insights/components/dis-core-at22-products-ai",
+              "/subscriptions/3be00243-992b-41a2-8bb5-34ed04f7d653/resourceGroups/dis-core-at23-monitor-rg/providers/Microsoft.Insights/components/dis-core-at23-products-ai",
+              "/subscriptions/b946eabe-2509-4652-abfc-6aa3b991fe25/resourceGroups/dis-core-tt02-monitor-rg/providers/Microsoft.Insights/components/dis-core-tt02-products-ai",
+              "/subscriptions/f272e0dd-c13f-413a-a5d7-a6a7cf4a8622/resourceGroups/dis-core-prod-monitor-rg/providers/Microsoft.Insights/components/dis-core-prod-products-ai"
+            ],
+            "resultFormat": "time_series"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 8,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "log",
+              "log": 10
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "AT22"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#8AB8FF",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "AT23"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#5794F2",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "TT02"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#B877D9",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "PROD"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#FF9830",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "sum"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "Server error rate (5xx)",
+      "description": "Share of requests returning 5xx, which is comparable across environments in a way that raw counts are not. 404s are deliberately left in the denominator here; because they dominate, this reads low — use the scorecard's `Err5xx` count to judge absolute volume.",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 19
+      },
+      "datasource": {
+        "type": "grafana-azure-monitor-datasource",
+        "uid": "azure-monitor-oob"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-azure-monitor-datasource",
+            "uid": "azure-monitor-oob"
+          },
+          "queryType": "Azure Log Analytics",
+          "azureLogAnalytics": {
+            "dashboardTime": true,
+            "timeColumn": "timestamp",
+            "query": "let envOf = (r: string) { case(\n    r has \"dis-core-at22\", \"AT22\",\n    r has \"dis-core-at23\", \"AT23\",\n    r has \"dis-core-tt02\", \"TT02\",\n    r has \"dis-core-prod\", \"PROD\",\n    \"unknown\") };\nrequests\n| where cloud_RoleName == \"infoportal\"\n| extend Env = envOf(_ResourceId)\n| summarize ErrorRatePct = round(100.0 * countif(toint(resultCode) >= 500) / count(), 3)\n    by bin(timestamp, $__interval), Env\n| order by timestamp asc",
+            "resources": [
+              "/subscriptions/3be00243-992b-41a2-8bb5-34ed04f7d653/resourceGroups/dis-core-at22-monitor-rg/providers/Microsoft.Insights/components/dis-core-at22-products-ai",
+              "/subscriptions/3be00243-992b-41a2-8bb5-34ed04f7d653/resourceGroups/dis-core-at23-monitor-rg/providers/Microsoft.Insights/components/dis-core-at23-products-ai",
+              "/subscriptions/b946eabe-2509-4652-abfc-6aa3b991fe25/resourceGroups/dis-core-tt02-monitor-rg/providers/Microsoft.Insights/components/dis-core-tt02-products-ai",
+              "/subscriptions/f272e0dd-c13f-413a-a5d7-a6a7cf4a8622/resourceGroups/dis-core-prod-monitor-rg/providers/Microsoft.Insights/components/dis-core-prod-products-ai"
+            ],
+            "resultFormat": "time_series"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 8,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          },
+          "unit": "percent",
+          "min": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "AT22"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#8AB8FF",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "AT23"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#5794F2",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "TT02"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#B877D9",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "PROD"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#FF9830",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 12,
+      "type": "timeseries",
+      "title": "P95 latency (404s and long-poll excluded)",
+      "description": "Server-side P95. Two exclusions matter: 404s never reach application code and would drag the percentile down, and `/umbraco/serverEventHub` is a SignalR stream whose requests last minutes by design — leaving it in puts P95 in the millions of milliseconds. Log scale keeps a single slow environment from flattening the rest.",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 19
+      },
+      "datasource": {
+        "type": "grafana-azure-monitor-datasource",
+        "uid": "azure-monitor-oob"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-azure-monitor-datasource",
+            "uid": "azure-monitor-oob"
+          },
+          "queryType": "Azure Log Analytics",
+          "azureLogAnalytics": {
+            "dashboardTime": true,
+            "timeColumn": "timestamp",
+            "query": "let envOf = (r: string) { case(\n    r has \"dis-core-at22\", \"AT22\",\n    r has \"dis-core-at23\", \"AT23\",\n    r has \"dis-core-tt02\", \"TT02\",\n    r has \"dis-core-prod\", \"PROD\",\n    \"unknown\") };\nrequests\n| where cloud_RoleName == \"infoportal\" and toint(resultCode) != 404 and name !has \"serverEventHub\"\n| extend Env = envOf(_ResourceId)\n| summarize P95ms = round(percentile(duration, 95), 1) by bin(timestamp, $__interval), Env\n| order by timestamp asc",
+            "resources": [
+              "/subscriptions/3be00243-992b-41a2-8bb5-34ed04f7d653/resourceGroups/dis-core-at22-monitor-rg/providers/Microsoft.Insights/components/dis-core-at22-products-ai",
+              "/subscriptions/3be00243-992b-41a2-8bb5-34ed04f7d653/resourceGroups/dis-core-at23-monitor-rg/providers/Microsoft.Insights/components/dis-core-at23-products-ai",
+              "/subscriptions/b946eabe-2509-4652-abfc-6aa3b991fe25/resourceGroups/dis-core-tt02-monitor-rg/providers/Microsoft.Insights/components/dis-core-tt02-products-ai",
+              "/subscriptions/f272e0dd-c13f-413a-a5d7-a6a7cf4a8622/resourceGroups/dis-core-prod-monitor-rg/providers/Microsoft.Insights/components/dis-core-prod-products-ai"
+            ],
+            "resultFormat": "time_series"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 8,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "log",
+              "log": 10
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          },
+          "unit": "ms"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "AT22"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#8AB8FF",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "AT23"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#5794F2",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "TT02"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#B877D9",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "PROD"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#FF9830",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 13,
+      "type": "timeseries",
+      "title": "Not found (404) — share of traffic",
+      "description": "Tracked apart from errors on purpose. On PROD this sits near 98%: a blanket redirect funnels dead Altinn 2 REST API paths at this host, and CMS content lookups miss frequently. It is a content-quality and legacy-integration signal, not an outage signal — but a sudden change in the shape of this line is worth chasing.",
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 0,
+        "y": 27
+      },
+      "datasource": {
+        "type": "grafana-azure-monitor-datasource",
+        "uid": "azure-monitor-oob"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-azure-monitor-datasource",
+            "uid": "azure-monitor-oob"
+          },
+          "queryType": "Azure Log Analytics",
+          "azureLogAnalytics": {
+            "dashboardTime": true,
+            "timeColumn": "timestamp",
+            "query": "let envOf = (r: string) { case(\n    r has \"dis-core-at22\", \"AT22\",\n    r has \"dis-core-at23\", \"AT23\",\n    r has \"dis-core-tt02\", \"TT02\",\n    r has \"dis-core-prod\", \"PROD\",\n    \"unknown\") };\nrequests\n| where cloud_RoleName == \"infoportal\"\n| extend Env = envOf(_ResourceId)\n| summarize NotFoundPct = round(100.0 * countif(toint(resultCode) == 404) / count(), 1)\n    by bin(timestamp, $__interval), Env\n| order by timestamp asc",
+            "resources": [
+              "/subscriptions/3be00243-992b-41a2-8bb5-34ed04f7d653/resourceGroups/dis-core-at22-monitor-rg/providers/Microsoft.Insights/components/dis-core-at22-products-ai",
+              "/subscriptions/3be00243-992b-41a2-8bb5-34ed04f7d653/resourceGroups/dis-core-at23-monitor-rg/providers/Microsoft.Insights/components/dis-core-at23-products-ai",
+              "/subscriptions/b946eabe-2509-4652-abfc-6aa3b991fe25/resourceGroups/dis-core-tt02-monitor-rg/providers/Microsoft.Insights/components/dis-core-tt02-products-ai",
+              "/subscriptions/f272e0dd-c13f-413a-a5d7-a6a7cf4a8622/resourceGroups/dis-core-prod-monitor-rg/providers/Microsoft.Insights/components/dis-core-prod-products-ai"
+            ],
+            "resultFormat": "time_series"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 8,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          },
+          "unit": "percent",
+          "min": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "AT22"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#8AB8FF",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "AT23"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#5794F2",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "TT02"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#B877D9",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "PROD"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#FF9830",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 14,
+      "type": "timeseries",
+      "title": "Exceptions (severity ≥ 3)",
+      "description": "`traces` at `severityLevel >= 3`, the same grouping the `Exceptions Prod` alert fires on. This service writes exceptions into `traces` with OpenTelemetry `customDimensions['exception.type' / 'exception.message']`; the App Insights `exceptions` table is empty.",
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 12,
+        "y": 27
+      },
+      "datasource": {
+        "type": "grafana-azure-monitor-datasource",
+        "uid": "azure-monitor-oob"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-azure-monitor-datasource",
+            "uid": "azure-monitor-oob"
+          },
+          "queryType": "Azure Log Analytics",
+          "azureLogAnalytics": {
+            "dashboardTime": true,
+            "timeColumn": "timestamp",
+            "query": "let envOf = (r: string) { case(\n    r has \"dis-core-at22\", \"AT22\",\n    r has \"dis-core-at23\", \"AT23\",\n    r has \"dis-core-tt02\", \"TT02\",\n    r has \"dis-core-prod\", \"PROD\",\n    \"unknown\") };\ntraces\n| where cloud_RoleName == \"infoportal\" and severityLevel >= 3\n| extend Env = envOf(_ResourceId)\n| summarize Errors = count() by bin(timestamp, $__interval), Env\n| order by timestamp asc",
+            "resources": [
+              "/subscriptions/3be00243-992b-41a2-8bb5-34ed04f7d653/resourceGroups/dis-core-at22-monitor-rg/providers/Microsoft.Insights/components/dis-core-at22-products-ai",
+              "/subscriptions/3be00243-992b-41a2-8bb5-34ed04f7d653/resourceGroups/dis-core-at23-monitor-rg/providers/Microsoft.Insights/components/dis-core-at23-products-ai",
+              "/subscriptions/b946eabe-2509-4652-abfc-6aa3b991fe25/resourceGroups/dis-core-tt02-monitor-rg/providers/Microsoft.Insights/components/dis-core-tt02-products-ai",
+              "/subscriptions/f272e0dd-c13f-413a-a5d7-a6a7cf4a8622/resourceGroups/dis-core-prod-monitor-rg/providers/Microsoft.Insights/components/dis-core-prod-products-ai"
+            ],
+            "resultFormat": "time_series"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 8,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "AT22"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#8AB8FF",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "AT23"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#5794F2",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "TT02"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#B877D9",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "PROD"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#FF9830",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "sum"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 15,
+      "type": "row",
+      "title": "What is failing",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 34
+      },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 16,
+      "type": "table",
+      "title": "Top exceptions — all environments",
+      "description": "Grouped exactly as the `Exceptions Prod` alert groups them (Type / Details), with the environment carried alongside so a fault can be seen moving up the promotion path. `Details` is the OpenTelemetry `exception.message` where present, otherwise the raw trace message, truncated to 200 characters.",
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 35
+      },
+      "datasource": {
+        "type": "grafana-azure-monitor-datasource",
+        "uid": "azure-monitor-oob"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-azure-monitor-datasource",
+            "uid": "azure-monitor-oob"
+          },
+          "queryType": "Azure Log Analytics",
+          "azureLogAnalytics": {
+            "dashboardTime": true,
+            "timeColumn": "timestamp",
+            "query": "let envOf = (r: string) { case(\n    r has \"dis-core-at22\", \"AT22\",\n    r has \"dis-core-at23\", \"AT23\",\n    r has \"dis-core-tt02\", \"TT02\",\n    r has \"dis-core-prod\", \"PROD\",\n    \"unknown\") };\ntraces\n| where cloud_RoleName == \"infoportal\" and severityLevel >= 3\n| extend Env = envOf(_ResourceId)\n| extend ExType = tostring(customDimensions[\"exception.type\"])\n| extend ExMsg  = tostring(customDimensions[\"exception.message\"])\n| extend Details = substring(iff(isnotempty(ExMsg), ExMsg, message), 0, 200)\n| summarize Count = count(), LastSeen = max(timestamp) by Env, Type = ExType, Details\n| order by Count desc\n| take 40",
+            "resources": [
+              "/subscriptions/3be00243-992b-41a2-8bb5-34ed04f7d653/resourceGroups/dis-core-at22-monitor-rg/providers/Microsoft.Insights/components/dis-core-at22-products-ai",
+              "/subscriptions/3be00243-992b-41a2-8bb5-34ed04f7d653/resourceGroups/dis-core-at23-monitor-rg/providers/Microsoft.Insights/components/dis-core-at23-products-ai",
+              "/subscriptions/b946eabe-2509-4652-abfc-6aa3b991fe25/resourceGroups/dis-core-tt02-monitor-rg/providers/Microsoft.Insights/components/dis-core-tt02-products-ai",
+              "/subscriptions/f272e0dd-c13f-413a-a5d7-a6a7cf4a8622/resourceGroups/dis-core-prod-monitor-rg/providers/Microsoft.Insights/components/dis-core-prod-products-ai"
+            ],
+            "resultFormat": "table"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true,
+            "inspect": true
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Env"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 80
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Type"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 260
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Details"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 620
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "LastSeen"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "dateTimeAsIso"
+              },
+              {
+                "id": "custom.width",
+                "value": 190
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Count"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background",
+                  "mode": "basic"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "thresholds"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "orange",
+                      "value": 1
+                    },
+                    {
+                      "color": "red",
+                      "value": 100
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "Count"
+          }
+        ]
+      }
+    },
+    {
+      "id": 17,
+      "type": "table",
+      "title": "Endpoints with 5xx or high latency",
+      "description": "Only endpoints that actually misbehaved: at least one 5xx, or P95 above one second. Org numbers and GUIDs are normalised to `{orgnr}` / `{guid}` so un-routed paths do not explode into thousands of one-off rows. 404s and the `/umbraco/serverEventHub` long-poll stream are excluded — neither is a fault.",
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 44
+      },
+      "datasource": {
+        "type": "grafana-azure-monitor-datasource",
+        "uid": "azure-monitor-oob"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-azure-monitor-datasource",
+            "uid": "azure-monitor-oob"
+          },
+          "queryType": "Azure Log Analytics",
+          "azureLogAnalytics": {
+            "dashboardTime": true,
+            "timeColumn": "timestamp",
+            "query": "let envOf = (r: string) { case(\n    r has \"dis-core-at22\", \"AT22\",\n    r has \"dis-core-at23\", \"AT23\",\n    r has \"dis-core-tt02\", \"TT02\",\n    r has \"dis-core-prod\", \"PROD\",\n    \"unknown\") };\nrequests\n| where cloud_RoleName == \"infoportal\" and toint(resultCode) != 404 and name !has \"serverEventHub\"\n| extend Env = envOf(_ResourceId)\n| extend Endpoint = replace_regex(\n    replace_regex(name, @\"/\\d{6,}\", \"/{orgnr}\"),\n    @\"/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\",\n    \"/{guid}\")\n| summarize\n    Count  = count(),\n    Err5xx = countif(toint(resultCode) >= 500),\n    P95ms  = round(percentile(duration, 95), 1)\n  by Env, Endpoint\n| extend Err5xxPct = round(100.0 * Err5xx / Count, 1)\n| where Err5xx > 0 or P95ms > 1000\n| project Env, Endpoint, Count, Err5xx, Err5xxPct, P95ms\n| order by Err5xx desc, P95ms desc\n| take 30",
+            "resources": [
+              "/subscriptions/3be00243-992b-41a2-8bb5-34ed04f7d653/resourceGroups/dis-core-at22-monitor-rg/providers/Microsoft.Insights/components/dis-core-at22-products-ai",
+              "/subscriptions/3be00243-992b-41a2-8bb5-34ed04f7d653/resourceGroups/dis-core-at23-monitor-rg/providers/Microsoft.Insights/components/dis-core-at23-products-ai",
+              "/subscriptions/b946eabe-2509-4652-abfc-6aa3b991fe25/resourceGroups/dis-core-tt02-monitor-rg/providers/Microsoft.Insights/components/dis-core-tt02-products-ai",
+              "/subscriptions/f272e0dd-c13f-413a-a5d7-a6a7cf4a8622/resourceGroups/dis-core-prod-monitor-rg/providers/Microsoft.Insights/components/dis-core-prod-products-ai"
+            ],
+            "resultFormat": "table"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true,
+            "inspect": true
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Env"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 80
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Endpoint"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 400
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Err5xx"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background",
+                  "mode": "basic"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "thresholds"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "red",
+                      "value": 1
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Err5xxPct"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "thresholds"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "orange",
+                      "value": 1
+                    },
+                    {
+                      "color": "red",
+                      "value": 10
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "P95ms"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "ms"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "Err5xx"
+          }
+        ]
+      }
+    },
+    {
+      "id": 18,
+      "type": "table",
+      "title": "Outbound dependencies",
+      "description": "Every outbound call the portal makes, per environment. `InProc` rows are in-process Umbraco handlers rather than network calls — the `HTTP` rows (mail relay, Microsoft Graph, the site search backend) are the ones that can fail on their own and take the portal with them.",
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 44
+      },
+      "datasource": {
+        "type": "grafana-azure-monitor-datasource",
+        "uid": "azure-monitor-oob"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-azure-monitor-datasource",
+            "uid": "azure-monitor-oob"
+          },
+          "queryType": "Azure Log Analytics",
+          "azureLogAnalytics": {
+            "dashboardTime": true,
+            "timeColumn": "timestamp",
+            "query": "let envOf = (r: string) { case(\n    r has \"dis-core-at22\", \"AT22\",\n    r has \"dis-core-at23\", \"AT23\",\n    r has \"dis-core-tt02\", \"TT02\",\n    r has \"dis-core-prod\", \"PROD\",\n    \"unknown\") };\ndependencies\n| where cloud_RoleName == \"infoportal\"\n| extend Env = envOf(_ResourceId)\n| summarize\n    Calls  = count(),\n    Failed = countif(success == false),\n    P95ms  = round(percentile(duration, 95), 1)\n  by Env, Target = target, Type = type\n| extend FailPct = round(100.0 * Failed / Calls, 1)\n| project Env, Target, Type, Calls, Failed, FailPct, P95ms\n| order by Failed desc, Calls desc\n| take 30",
+            "resources": [
+              "/subscriptions/3be00243-992b-41a2-8bb5-34ed04f7d653/resourceGroups/dis-core-at22-monitor-rg/providers/Microsoft.Insights/components/dis-core-at22-products-ai",
+              "/subscriptions/3be00243-992b-41a2-8bb5-34ed04f7d653/resourceGroups/dis-core-at23-monitor-rg/providers/Microsoft.Insights/components/dis-core-at23-products-ai",
+              "/subscriptions/b946eabe-2509-4652-abfc-6aa3b991fe25/resourceGroups/dis-core-tt02-monitor-rg/providers/Microsoft.Insights/components/dis-core-tt02-products-ai",
+              "/subscriptions/f272e0dd-c13f-413a-a5d7-a6a7cf4a8622/resourceGroups/dis-core-prod-monitor-rg/providers/Microsoft.Insights/components/dis-core-prod-products-ai"
+            ],
+            "resultFormat": "table"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true,
+            "inspect": true
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Env"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 80
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Target"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 340
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Type"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 80
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Failed"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background",
+                  "mode": "basic"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "thresholds"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "red",
+                      "value": 1
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FailPct"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "thresholds"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "red",
+                      "value": 1
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "P95ms"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "ms"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "Failed"
+          }
+        ]
+      }
+    }
+  ],
+  "preload": false,
+  "refresh": "5m",
+  "schemaVersion": 42,
+  "tags": [
+    "infoportal",
+    "multi-env",
+    "overview",
+    "appinsights",
+    "blackbox-exporter"
+  ],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Infoportal — All Environments",
+  "uid": "infoportal-allenv-001",
+  "weekStart": ""
+}

@@ -1,0 +1,16 @@
+# Product-owned dashboard. Cross-environment overview (AT22 / AT23 / TT02 / PROD in one view);
+# the PROD-only deep dive lives in service-health.yaml. Lands in the same Grafana folder as the
+# Infoportal alert rules (external-grafana-infoportal, defined in ../alerting/folder.yaml).
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: external-grafana-infoportal-all-environments
+  namespace: grafana
+spec:
+  folderRef: external-grafana-infoportal
+  instanceSelector:
+    matchLabels:
+      dashboards: external-grafana
+  configMapRef:
+    name: dashboard-infoportal-all-environments
+    key: all-environments.json

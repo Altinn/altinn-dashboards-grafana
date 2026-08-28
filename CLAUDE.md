@@ -33,8 +33,8 @@ dashboards/                       # platform dashboards (shared, not product-own
 products/<product>/
 ├── dashboards/                   # product dashboards (optional) — own kustomize overlay
 │   ├── kustomization.yaml        # configMapGenerator + disableNameSuffixHash: true
-│   ├── dashboard.yaml            # GrafanaDashboard CR (folderRef = the product folder)
-│   └── <name>.json
+│   ├── <name>.yaml               # GrafanaDashboard CR (folderRef = the product folder)
+│   └── <name>.json               # one CR file per dashboard, named after its JSON
 └── alerting/
     ├── kustomization.yaml        # lists the files below
     ├── folder.yaml               # GrafanaFolder  external-grafana-<product>
@@ -170,6 +170,16 @@ traces
   default datasource is Azure Monitor rather than Prometheus, and Grafana then silently falls
   back to the *first* Prometheus datasource — which in `dis-grafana-prod` is a `dis-core` AMW
   holding no probe data. Panels render empty with no error.
+  Also add the dashboard's **title** to `products/<product>/dashboards/.lint` under
+  `panel-datasource-rule` and `template-datasource-rule`, or the `dashboard-linter --strict`
+  CI job fails on the pinned UIDs.
+- **Show every environment in one dashboard** rather than behind an env variable: give the
+  Azure Logs target **all four** `resources[]` at once and derive the environment from
+  `_ResourceId` in KQL. `dis-grafana-prod`'s identity has `Monitoring Reader` on each
+  `dis-core` subscription **and** `Log Analytics Reader` on each `dis-core-<env>-products-law`,
+  so the cross-resource query is authorised for at22/at23/tt02/prod (verified 2026-08-28).
+  Mirror **both** grants when a new environment is added.
+  `products/infoportal/dashboards/all-environments.json` is the reference implementation.
 - **Edit an existing rule**: keep the `uid`. Changing it orphans the old rule and creates a
   duplicate in Grafana.
 
@@ -203,6 +213,14 @@ Also run `python3 scripts/validate-dashboards.py` if you touched any dashboard w
 
 - **`severityLevel` is numeric.** Use `severityLevel >= 3`, not `== "3"` — a string compare can
   silently match nothing.
+- **`percentileif()` is rejected by the App Insights query API** (`BadArgumentError`, no hint as
+  to which function). To take a percentile over a subset, null out the rows you don't want:
+  `percentile(iff(<cond>, duration, real(null)), 95)`. Verified 2026-08-28.
+- **`_ResourceId` comes back lowercased** from a cross-resource query, so match it with `has`
+  (case-insensitive) rather than a case-sensitive regex when deriving an environment name.
+- **Exclude `/umbraco/serverEventHub` from infoportal latency percentiles.** It is a SignalR
+  long-poll stream whose requests last minutes by design; left in, P95 reads in the millions of
+  milliseconds and hides real latency. Exclude 404s too — they never reach application code.
 - **`for: 0s` is mandatory.** The CRD rejects a rule without it; Grafana UI exports omit it.
 - **A firing alert re-notifies every 4h by default.** Nothing here defines a
   `GrafanaNotificationPolicy`, so every rule inherits the central Grafana root policy
