@@ -55,3 +55,16 @@ spec:
             secretKeyRef:
               name: grafana-slack-webhooks
               key: infoportal
+    - type: slack
+      disableResolveMessage: false
+      settings:
+        title: 'Infoportal health check {{ if eq .Status "firing" }}:red_circle: DOWN{{ else }}:large_green_circle: recovered{{ end }} — {{ .CommonLabels.Env }}'
+        text: |
+          {{ range .Alerts }}{{ .Labels.instance }} — health check {{ .Status }}
+          {{ end }}{{ with (index .Alerts 0).PanelURL }}<{{ . }}|Open health-check panel>{{ end }}
+      valuesFrom:
+        - targetPath: url
+          valueFrom:
+            secretKeyRef:
+              name: grafana-slack-webhooks
+              key: infoportal-critical
