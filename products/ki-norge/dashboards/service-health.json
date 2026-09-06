@@ -1,0 +1,2617 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "Operational health of KI Norge in PROD and TT02. Availability comes from the blackbox-exporter HTTP probes of the public Astro frontends (ki.norge.no, ki.test.norge.no) in admin-prod-obs-amw; traffic, latency, errors and dependencies come from the headless Umbraco CMS behind them (Application Insights, dis-core-{prod,tt02}-products-ai, cloud_RoleName=kinorgeportal). Both environments are queried in a single cross-resource target and told apart by _ResourceId, so there is no environment variable to switch. Unlike info.altinn.no there is no deep /health probe — ki.norge.no does not expose one — so availability here means 'the site answered HTTP 200', not 'the app reported itself healthy'. Datasource UIDs are pinned rather than templated so the panels cannot silently bind to the wrong datasource.",
+  "editable": false,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "links": [],
+  "preload": false,
+  "refresh": "5m",
+  "schemaVersion": 42,
+  "tags": [
+    "ki-norge",
+    "prod",
+    "tt02",
+    "appinsights",
+    "blackbox-exporter"
+  ],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "KI Norge — Service Health",
+  "uid": "ki-norge-health-001",
+  "weekStart": "",
+  "panels": [
+    {
+      "id": 1,
+      "type": "row",
+      "title": "Availability — blackbox HTTP probes of the public site",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "panels": []
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Probe right now",
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 0,
+        "y": 1
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "admin-prod-obs-amw"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "admin-prod-obs-amw"
+          },
+          "editorMode": "code",
+          "expr": "max by (instance) (probe_success{job=~\"^blackbox-http-ipv[46]$\", instance=~\"^(ki\\\\.norge\\\\.no|ki\\\\.test\\\\.norge\\\\.no)$\"})",
+          "legendFormat": "{{instance}}",
+          "instant": true,
+          "range": false,
+          "intervalMs": 1000,
+          "maxDataPoints": 43200
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "color": "red",
+                  "index": 0,
+                  "text": "DOWN"
+                },
+                "1": {
+                  "color": "green",
+                  "index": 1,
+                  "text": "UP"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "description": "Green only if the site answered on at least one IP family from at least one prober pod — the same collapse the `Availability Prod` / `Availability TT02` alert rules use. `ki.norge.no` is PROD, `ki.test.norge.no` is TT02."
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Availability — selected range",
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 6,
+        "y": 1
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "admin-prod-obs-amw"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "admin-prod-obs-amw"
+          },
+          "editorMode": "code",
+          "expr": "avg_over_time((max by (instance) (probe_success{job=~\"^blackbox-http-ipv[46]$\", instance=~\"^(ki\\\\.norge\\\\.no|ki\\\\.test\\\\.norge\\\\.no)$\"}))[$__range:1m]) * 100",
+          "legendFormat": "{{instance}}",
+          "instant": true,
+          "range": false,
+          "intervalMs": 1000,
+          "maxDataPoints": 43200
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 99
+              },
+              {
+                "color": "green",
+                "value": 99.9
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "description": "The pod collapse happens *inside* the subquery on purpose: averaging raw `probe_success` first and taking the max after would let a short-lived prober replica mask an outage."
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "TLS certificate expires in",
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 12,
+        "y": 1
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "admin-prod-obs-amw"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "admin-prod-obs-amw"
+          },
+          "editorMode": "code",
+          "expr": "min by (instance) (probe_ssl_earliest_cert_expiry{job=~\"^blackbox-http-ipv[46]$\", instance=~\"^(ki\\\\.norge\\\\.no|ki\\\\.test\\\\.norge\\\\.no)$\"} - time()) / 86400",
+          "legendFormat": "{{instance}}",
+          "instant": true,
+          "range": false,
+          "intervalMs": 1000,
+          "maxDataPoints": 43200
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 14
+              },
+              {
+                "color": "green",
+                "value": 30
+              }
+            ]
+          },
+          "unit": "d"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "description": "Both hosts sit behind Cloudflare, so this is Cloudflare's edge certificate and normally renews itself. A number falling below ~14 days without recovering is worth chasing."
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Probe duration — now",
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 18,
+        "y": 1
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "admin-prod-obs-amw"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "admin-prod-obs-amw"
+          },
+          "editorMode": "code",
+          "expr": "max by (instance) (probe_duration_seconds{job=~\"^blackbox-http-ipv[46]$\", instance=~\"^(ki\\\\.norge\\\\.no|ki\\\\.test\\\\.norge\\\\.no)$\"})",
+          "legendFormat": "{{instance}}",
+          "instant": true,
+          "range": false,
+          "intervalMs": 1000,
+          "maxDataPoints": 43200
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 2
+              },
+              {
+                "color": "red",
+                "value": 5
+              }
+            ]
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "description": "Slowest of the two IP families, per host. Baseline is roughly 0.1–0.4 s from the admin-prod-aks probers."
+    },
+    {
+      "id": 6,
+      "type": "state-timeline",
+      "title": "Probe status over time — PROD and TT02, IPv4 and IPv6",
+      "gridPos": {
+        "h": 7,
+        "w": 24,
+        "x": 0,
+        "y": 6
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "admin-prod-obs-amw"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "admin-prod-obs-amw"
+          },
+          "editorMode": "code",
+          "expr": "max (probe_success{job=\"blackbox-http-ipv4\", instance=\"ki.norge.no\"})",
+          "legendFormat": "PROD ipv4",
+          "instant": false,
+          "range": true,
+          "intervalMs": 1000,
+          "maxDataPoints": 43200
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "admin-prod-obs-amw"
+          },
+          "editorMode": "code",
+          "expr": "max (probe_success{job=\"blackbox-http-ipv6\", instance=\"ki.norge.no\"})",
+          "legendFormat": "PROD ipv6",
+          "instant": false,
+          "range": true,
+          "intervalMs": 1000,
+          "maxDataPoints": 43200
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "admin-prod-obs-amw"
+          },
+          "editorMode": "code",
+          "expr": "max (probe_success{job=\"blackbox-http-ipv4\", instance=\"ki.test.norge.no\"})",
+          "legendFormat": "TT02 ipv4",
+          "instant": false,
+          "range": true,
+          "intervalMs": 1000,
+          "maxDataPoints": 43200
+        },
+        {
+          "refId": "D",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "admin-prod-obs-amw"
+          },
+          "editorMode": "code",
+          "expr": "max (probe_success{job=\"blackbox-http-ipv6\", instance=\"ki.test.norge.no\"})",
+          "legendFormat": "TT02 ipv6",
+          "instant": false,
+          "range": true,
+          "intervalMs": 1000,
+          "maxDataPoints": 43200
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "fillOpacity": 80,
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineWidth": 0,
+            "spanNulls": false
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "color": "red",
+                  "index": 0,
+                  "text": "DOWN"
+                },
+                "1": {
+                  "color": "green",
+                  "index": 1,
+                  "text": "UP"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "alignValue": "center",
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "mergeValues": true,
+        "perPage": 10,
+        "rowHeight": 0.9,
+        "showValue": "never",
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "description": "The panel the Slack availability alert links to. The alert collapses these four series into one and fires only when all of them are down, so this is where you see whether an incident was one IP family or the whole site. Job names are matched exactly here rather than by regex — Azure Managed Prometheus does not anchor `=~`, so a loose matcher would pull in the unrelated `-health-check` and `-kuberneteswrapper` jobs."
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Probe duration by host and IP family",
+      "gridPos": {
+        "h": 7,
+        "w": 24,
+        "x": 0,
+        "y": 13
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "admin-prod-obs-amw"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "admin-prod-obs-amw"
+          },
+          "editorMode": "code",
+          "expr": "max by (instance, job) (probe_duration_seconds{job=~\"^blackbox-http-ipv[46]$\", instance=~\"^(ki\\\\.norge\\\\.no|ki\\\\.test\\\\.norge\\\\.no)$\"})",
+          "legendFormat": "{{instance}} {{job}}",
+          "instant": false,
+          "range": true,
+          "intervalMs": 1000,
+          "maxDataPoints": 43200
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          },
+          "unit": "s",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "description": "Splits what the stat above collapses. A gap here means the probe failed rather than returned slowly."
+    },
+    {
+      "id": 8,
+      "type": "row",
+      "title": "Overview — Application Insights (cloud_RoleName = kinorgeportal)",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 20
+      },
+      "panels": []
+    },
+    {
+      "id": 9,
+      "type": "table",
+      "title": "Environment scorecard (selected range)",
+      "gridPos": {
+        "h": 6,
+        "w": 24,
+        "x": 0,
+        "y": 21
+      },
+      "datasource": {
+        "type": "grafana-azure-monitor-datasource",
+        "uid": "azure-monitor-oob"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-azure-monitor-datasource",
+            "uid": "azure-monitor-oob"
+          },
+          "queryType": "Azure Log Analytics",
+          "azureLogAnalytics": {
+            "dashboardTime": true,
+            "timeColumn": "timestamp",
+            "query": "let envOf = (r: string) { case(\n    r has \"dis-core-tt02\", \"TT02\",\n    r has \"dis-core-prod\", \"PROD\",\n    \"unknown\") };\nlet reqs = requests\n| where cloud_RoleName == \"kinorgeportal\"\n| extend Env = envOf(_ResourceId)\n| summarize\n    Requests = count(),\n    Ok       = countif(toint(resultCode) between (200 .. 399)),\n    Err5xx   = countif(toint(resultCode) >= 500),\n    NotFound = countif(toint(resultCode) == 404),\n    P95ms    = round(percentile(iff(not(name has_any (\"serverEventHub\", \"PreviewHub\")) and toint(resultCode) != 404, duration, real(null)), 95), 1)\n  by Env;\nlet errs = traces\n| where cloud_RoleName == \"kinorgeportal\" and severityLevel >= 3\n| where not(tostring(customDimensions.['message_template.text']) startswith \"uSync-import ENDRET skjema\")\n| extend Env = envOf(_ResourceId)\n| summarize Errors = count() by Env;\nreqs\n| join kind=leftouter errs on Env\n| extend Errors = coalesce(Errors, 0)\n| extend\n    Err5xxPct   = round(100.0 * Err5xx / Requests, 3),\n    NotFoundPct = round(100.0 * NotFound / Requests, 1)\n| extend EnvOrder = case(Env == \"TT02\", 1, Env == \"PROD\", 2, 9)\n| project EnvOrder, Env, Requests, Ok, Err5xx, Err5xxPct, Errors, NotFound, NotFoundPct, P95ms\n| order by EnvOrder asc\n| project-away EnvOrder",
+            "resources": [
+              "/subscriptions/b946eabe-2509-4652-abfc-6aa3b991fe25/resourceGroups/dis-core-tt02-monitor-rg/providers/Microsoft.Insights/components/dis-core-tt02-products-ai",
+              "/subscriptions/f272e0dd-c13f-413a-a5d7-a6a7cf4a8622/resourceGroups/dis-core-prod-monitor-rg/providers/Microsoft.Insights/components/dis-core-prod-products-ai"
+            ],
+            "resultFormat": "table"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true,
+            "inspect": true
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Err5xx"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background",
+                  "mode": "basic"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "thresholds"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "red",
+                      "value": 1
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Err5xxPct"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Errors"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background",
+                  "mode": "basic"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "thresholds"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "orange",
+                      "value": 1
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "NotFoundPct"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "text",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "NotFound"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "text",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "P95ms"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "ms"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true,
+        "sortBy": []
+      },
+      "description": "One row per environment, for the CMS backend behind the probed frontend. `Errors` counts severity>=3 traces with the routine uSync schema-import notices filtered out — the exact population the exception alert rules fire on. `NotFound` is reported apart from `Err5xx` because 404s are ~94% of all traffic here (almost all of it bot scanning) and would otherwise swamp the real error signal. `P95ms` excludes both 404s and the Umbraco SignalR long-poll hubs."
+    },
+    {
+      "id": 10,
+      "type": "row",
+      "title": "Traffic, errors and latency by environment",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 27
+      },
+      "panels": []
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "Requests per interval",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 28
+      },
+      "datasource": {
+        "type": "grafana-azure-monitor-datasource",
+        "uid": "azure-monitor-oob"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-azure-monitor-datasource",
+            "uid": "azure-monitor-oob"
+          },
+          "queryType": "Azure Log Analytics",
+          "azureLogAnalytics": {
+            "dashboardTime": true,
+            "timeColumn": "timestamp",
+            "query": "let envOf = (r: string) { case(\n    r has \"dis-core-tt02\", \"TT02\",\n    r has \"dis-core-prod\", \"PROD\",\n    \"unknown\") };\nrequests\n| where cloud_RoleName == \"kinorgeportal\"\n| extend Env = envOf(_ResourceId)\n| summarize Requests = count() by bin(timestamp, $__interval), Env\n| order by timestamp asc",
+            "resources": [
+              "/subscriptions/b946eabe-2509-4652-abfc-6aa3b991fe25/resourceGroups/dis-core-tt02-monitor-rg/providers/Microsoft.Insights/components/dis-core-tt02-products-ai",
+              "/subscriptions/f272e0dd-c13f-413a-a5d7-a6a7cf4a8622/resourceGroups/dis-core-prod-monitor-rg/providers/Microsoft.Insights/components/dis-core-prod-products-ai"
+            ],
+            "resultFormat": "time_series"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "PROD"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "red",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "TT02"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "blue",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "sum"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "description": "Total request volume including 404s. Spikes are usually scanner bursts rather than real user traffic — cross-check against the 404 breakdown below."
+    },
+    {
+      "id": 12,
+      "type": "timeseries",
+      "title": "Server errors (5xx)",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 28
+      },
+      "datasource": {
+        "type": "grafana-azure-monitor-datasource",
+        "uid": "azure-monitor-oob"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-azure-monitor-datasource",
+            "uid": "azure-monitor-oob"
+          },
+          "queryType": "Azure Log Analytics",
+          "azureLogAnalytics": {
+            "dashboardTime": true,
+            "timeColumn": "timestamp",
+            "query": "let envOf = (r: string) { case(\n    r has \"dis-core-tt02\", \"TT02\",\n    r has \"dis-core-prod\", \"PROD\",\n    \"unknown\") };\nrequests\n| where cloud_RoleName == \"kinorgeportal\" and toint(resultCode) >= 500\n| extend Env = envOf(_ResourceId)\n| summarize Err5xx = count() by bin(timestamp, $__interval), Env\n| order by timestamp asc",
+            "resources": [
+              "/subscriptions/b946eabe-2509-4652-abfc-6aa3b991fe25/resourceGroups/dis-core-tt02-monitor-rg/providers/Microsoft.Insights/components/dis-core-tt02-products-ai",
+              "/subscriptions/f272e0dd-c13f-413a-a5d7-a6a7cf4a8622/resourceGroups/dis-core-prod-monitor-rg/providers/Microsoft.Insights/components/dis-core-prod-products-ai"
+            ],
+            "resultFormat": "time_series"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "PROD"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "red",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "TT02"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "blue",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "sum"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "description": "Flat and empty is the expected state: this service served zero 5xx in its first 30 days. Any line at all here is worth looking at."
+    },
+    {
+      "id": 13,
+      "type": "timeseries",
+      "title": "P95 latency (404s and SignalR long-poll excluded)",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 36
+      },
+      "datasource": {
+        "type": "grafana-azure-monitor-datasource",
+        "uid": "azure-monitor-oob"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-azure-monitor-datasource",
+            "uid": "azure-monitor-oob"
+          },
+          "queryType": "Azure Log Analytics",
+          "azureLogAnalytics": {
+            "dashboardTime": true,
+            "timeColumn": "timestamp",
+            "query": "let envOf = (r: string) { case(\n    r has \"dis-core-tt02\", \"TT02\",\n    r has \"dis-core-prod\", \"PROD\",\n    \"unknown\") };\nrequests\n| where cloud_RoleName == \"kinorgeportal\" and toint(resultCode) != 404\n| where not(name has_any (\"serverEventHub\", \"PreviewHub\"))\n| extend Env = envOf(_ResourceId)\n| summarize P95ms = round(percentile(duration, 95), 1) by bin(timestamp, $__interval), Env\n| order by timestamp asc",
+            "resources": [
+              "/subscriptions/b946eabe-2509-4652-abfc-6aa3b991fe25/resourceGroups/dis-core-tt02-monitor-rg/providers/Microsoft.Insights/components/dis-core-tt02-products-ai",
+              "/subscriptions/f272e0dd-c13f-413a-a5d7-a6a7cf4a8622/resourceGroups/dis-core-prod-monitor-rg/providers/Microsoft.Insights/components/dis-core-prod-products-ai"
+            ],
+            "resultFormat": "time_series"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          },
+          "unit": "ms",
+          "min": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "PROD"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "red",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "TT02"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "blue",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "sum"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "description": "`/umbraco/serverEventHub` and `/umbraco/PreviewHub` are SignalR streams held open for minutes to hours by design — leaving them in takes the observed max from ~3 s to ~2.2 h and makes every latency reading meaningless. 404s are excluded too; they never reach application code."
+    },
+    {
+      "id": 14,
+      "type": "timeseries",
+      "title": "Errors — severity >= 3 traces (uSync notices excluded)",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 36
+      },
+      "datasource": {
+        "type": "grafana-azure-monitor-datasource",
+        "uid": "azure-monitor-oob"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-azure-monitor-datasource",
+            "uid": "azure-monitor-oob"
+          },
+          "queryType": "Azure Log Analytics",
+          "azureLogAnalytics": {
+            "dashboardTime": true,
+            "timeColumn": "timestamp",
+            "query": "let envOf = (r: string) { case(\n    r has \"dis-core-tt02\", \"TT02\",\n    r has \"dis-core-prod\", \"PROD\",\n    \"unknown\") };\ntraces\n| where cloud_RoleName == \"kinorgeportal\" and severityLevel >= 3\n| where not(tostring(customDimensions.['message_template.text']) startswith \"uSync-import ENDRET skjema\")\n| extend Env = envOf(_ResourceId)\n| summarize Errors = count() by bin(timestamp, $__interval), Env\n| order by timestamp asc",
+            "resources": [
+              "/subscriptions/b946eabe-2509-4652-abfc-6aa3b991fe25/resourceGroups/dis-core-tt02-monitor-rg/providers/Microsoft.Insights/components/dis-core-tt02-products-ai",
+              "/subscriptions/f272e0dd-c13f-413a-a5d7-a6a7cf4a8622/resourceGroups/dis-core-prod-monitor-rg/providers/Microsoft.Insights/components/dis-core-prod-products-ai"
+            ],
+            "resultFormat": "time_series"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "PROD"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "red",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "TT02"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "blue",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "sum"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "description": "The exact series the `Exceptions Prod` and `Exceptions TT02` alert rules evaluate. The `exceptions` table is empty for this service — errors surface as severity>=3 `traces`, which is why both the alerts and this panel query traces."
+    },
+    {
+      "id": 15,
+      "type": "row",
+      "title": "Not found (404) — 94% of all requests; only one slice is actionable",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 44
+      },
+      "panels": []
+    },
+    {
+      "id": 16,
+      "type": "timeseries",
+      "title": "404s by category",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 45
+      },
+      "datasource": {
+        "type": "grafana-azure-monitor-datasource",
+        "uid": "azure-monitor-oob"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-azure-monitor-datasource",
+            "uid": "azure-monitor-oob"
+          },
+          "queryType": "Azure Log Analytics",
+          "azureLogAnalytics": {
+            "dashboardTime": true,
+            "timeColumn": "timestamp",
+            "query": "let envOf = (r: string) { case(\n    r has \"dis-core-tt02\", \"TT02\",\n    r has \"dis-core-prod\", \"PROD\",\n    \"unknown\") };\nlet bucket = (n: string) { case(\n    n has \"/umbraco/\", \"Content or API miss\",\n    n has_any (\"robots.txt\", \"sitemap.xml\", \"favicon.ico\", \"apple-touch-icon\", \".well-known\"), \"Crawler / browser asset\",\n    \"Scanner probe\") };\nrequests\n| where cloud_RoleName == \"kinorgeportal\" and toint(resultCode) == 404\n| summarize Count = count() by bin(timestamp, $__interval), Category = bucket(name)\n| order by timestamp asc",
+            "resources": [
+              "/subscriptions/b946eabe-2509-4652-abfc-6aa3b991fe25/resourceGroups/dis-core-tt02-monitor-rg/providers/Microsoft.Insights/components/dis-core-tt02-products-ai",
+              "/subscriptions/f272e0dd-c13f-413a-a5d7-a6a7cf4a8622/resourceGroups/dis-core-prod-monitor-rg/providers/Microsoft.Insights/components/dis-core-prod-products-ai"
+            ],
+            "resultFormat": "time_series"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Scanner probe"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "text",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Crawler / browser asset"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "blue",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Content or API miss"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "orange",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "sum"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "description": "Both environments combined, split by what the caller was after. **Scanner probe** is internet background noise (`/wp-login.php`, `/.env.*`, `/actuator/env`) and needs no action. **Crawler / browser asset** is `robots.txt`, `sitemap.xml`, `favicon.ico` and friends — worth fixing once, cosmetically. **Content or API miss** is a real request to `/umbraco/...` that found nothing, and is the only band that should ever prompt work."
+    },
+    {
+      "id": 17,
+      "type": "table",
+      "title": "Content and API misses — the actionable 404s",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 45
+      },
+      "datasource": {
+        "type": "grafana-azure-monitor-datasource",
+        "uid": "azure-monitor-oob"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-azure-monitor-datasource",
+            "uid": "azure-monitor-oob"
+          },
+          "queryType": "Azure Log Analytics",
+          "azureLogAnalytics": {
+            "dashboardTime": true,
+            "timeColumn": "timestamp",
+            "query": "let envOf = (r: string) { case(\n    r has \"dis-core-tt02\", \"TT02\",\n    r has \"dis-core-prod\", \"PROD\",\n    \"unknown\") };\nrequests\n| where cloud_RoleName == \"kinorgeportal\" and toint(resultCode) == 404\n| where name has \"/umbraco/\"\n| extend Env = envOf(_ResourceId)\n| summarize Count = count(), LastSeen = max(timestamp) by Env, Endpoint = name\n| project Env, Endpoint, Count, LastSeen\n| order by Count desc\n| take 30",
+            "resources": [
+              "/subscriptions/b946eabe-2509-4652-abfc-6aa3b991fe25/resourceGroups/dis-core-tt02-monitor-rg/providers/Microsoft.Insights/components/dis-core-tt02-products-ai",
+              "/subscriptions/f272e0dd-c13f-413a-a5d7-a6a7cf4a8622/resourceGroups/dis-core-prod-monitor-rg/providers/Microsoft.Insights/components/dis-core-prod-products-ai"
+            ],
+            "resultFormat": "table"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true,
+            "inspect": true
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Endpoint"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 420
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Count"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background",
+                  "mode": "basic"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "thresholds"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "orange",
+                      "value": 1
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "Count"
+          }
+        ]
+      },
+      "description": "A 404 on the Umbraco Delivery API means the Astro frontend at ki.norge.no asked for content that is not published. Usually a broken content reference or a page unpublished without a redirect. Empty is the healthy state."
+    },
+    {
+      "id": 18,
+      "type": "table",
+      "title": "Top scanner probes (noise — shown so it can be recognised, not acted on)",
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 53
+      },
+      "datasource": {
+        "type": "grafana-azure-monitor-datasource",
+        "uid": "azure-monitor-oob"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-azure-monitor-datasource",
+            "uid": "azure-monitor-oob"
+          },
+          "queryType": "Azure Log Analytics",
+          "azureLogAnalytics": {
+            "dashboardTime": true,
+            "timeColumn": "timestamp",
+            "query": "requests\n| where cloud_RoleName == \"kinorgeportal\" and toint(resultCode) == 404\n| where not(name has \"/umbraco/\")\n| where not(name has_any (\"robots.txt\", \"sitemap.xml\", \"favicon.ico\", \"apple-touch-icon\", \".well-known\"))\n| summarize Count = count(), Callers = dcount(client_IP) by Path = name\n| project Path, Count, Callers\n| order by Count desc\n| take 25",
+            "resources": [
+              "/subscriptions/b946eabe-2509-4652-abfc-6aa3b991fe25/resourceGroups/dis-core-tt02-monitor-rg/providers/Microsoft.Insights/components/dis-core-tt02-products-ai",
+              "/subscriptions/f272e0dd-c13f-413a-a5d7-a6a7cf4a8622/resourceGroups/dis-core-prod-monitor-rg/providers/Microsoft.Insights/components/dis-core-prod-products-ai"
+            ],
+            "resultFormat": "table"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true,
+            "inspect": true
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Path"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 520
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Count"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "text",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "Count"
+          }
+        ]
+      },
+      "description": "Commodity vulnerability scanning against a host that runs none of the software being probed. Listed here so a spike in the 404 chart can be dismissed quickly. If this ever becomes expensive, the fix is a WAF rule upstream, not application code."
+    },
+    {
+      "id": 19,
+      "type": "row",
+      "title": "Endpoints",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 61
+      },
+      "panels": []
+    },
+    {
+      "id": 20,
+      "type": "table",
+      "title": "Endpoints — volume, outcome and latency",
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 62
+      },
+      "datasource": {
+        "type": "grafana-azure-monitor-datasource",
+        "uid": "azure-monitor-oob"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-azure-monitor-datasource",
+            "uid": "azure-monitor-oob"
+          },
+          "queryType": "Azure Log Analytics",
+          "azureLogAnalytics": {
+            "dashboardTime": true,
+            "timeColumn": "timestamp",
+            "query": "let envOf = (r: string) { case(\n    r has \"dis-core-tt02\", \"TT02\",\n    r has \"dis-core-prod\", \"PROD\",\n    \"unknown\") };\nrequests\n| where cloud_RoleName == \"kinorgeportal\"\n| extend Env = envOf(_ResourceId)\n| extend Endpoint = replace_regex(name, @\"/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\", \"/{guid}\")\n| summarize\n    Count  = count(),\n    Ok     = countif(toint(resultCode) between (200 .. 399)),\n    NotFound = countif(toint(resultCode) == 404),\n    Err5xx = countif(toint(resultCode) >= 500),\n    P95ms  = round(percentile(iff(not(name has_any (\"serverEventHub\", \"PreviewHub\")), duration, real(null)), 95), 1),\n    P99ms  = round(percentile(iff(not(name has_any (\"serverEventHub\", \"PreviewHub\")), duration, real(null)), 99), 1)\n  by Env, Endpoint\n| extend OkPct = round(100.0 * Ok / Count, 1)\n| project Env, Endpoint, Count, OkPct, NotFound, Err5xx, P95ms, P99ms\n| order by Count desc\n| take 40",
+            "resources": [
+              "/subscriptions/b946eabe-2509-4652-abfc-6aa3b991fe25/resourceGroups/dis-core-tt02-monitor-rg/providers/Microsoft.Insights/components/dis-core-tt02-products-ai",
+              "/subscriptions/f272e0dd-c13f-413a-a5d7-a6a7cf4a8622/resourceGroups/dis-core-prod-monitor-rg/providers/Microsoft.Insights/components/dis-core-prod-products-ai"
+            ],
+            "resultFormat": "table"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true,
+            "inspect": true
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Endpoint"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 460
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Env"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 80
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "OkPct"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "thresholds"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": null
+                    },
+                    {
+                      "color": "orange",
+                      "value": 50
+                    },
+                    {
+                      "color": "green",
+                      "value": 99
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Err5xx"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background",
+                  "mode": "basic"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "thresholds"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "red",
+                      "value": 1
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "NotFound"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "text",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "P95ms"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "ms"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "P99ms"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "ms"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "Count"
+          }
+        ]
+      },
+      "description": "GUIDs are normalised to `{guid}` so the Delivery API item route collapses into one row instead of thousands. Latency percentiles null out the SignalR long-poll hubs rather than filtering the rows, so their request counts still show. Sort by P99ms to find slow endpoints."
+    },
+    {
+      "id": 21,
+      "type": "row",
+      "title": "Logs — the same grouping the alert rules use",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 72
+      },
+      "panels": []
+    },
+    {
+      "id": 22,
+      "type": "timeseries",
+      "title": "Trace volume by severity",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 73
+      },
+      "datasource": {
+        "type": "grafana-azure-monitor-datasource",
+        "uid": "azure-monitor-oob"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-azure-monitor-datasource",
+            "uid": "azure-monitor-oob"
+          },
+          "queryType": "Azure Log Analytics",
+          "azureLogAnalytics": {
+            "dashboardTime": true,
+            "timeColumn": "timestamp",
+            "query": "traces\n| where cloud_RoleName == \"kinorgeportal\"\n| extend Severity = case(\n    severityLevel >= 4, \"4 Critical\",\n    severityLevel == 3, \"3 Error\",\n    severityLevel == 2, \"2 Warning\",\n    severityLevel == 1, \"1 Information\",\n    \"0 Verbose\")\n| summarize Count = count() by bin(timestamp, $__interval), Severity\n| order by timestamp asc",
+            "resources": [
+              "/subscriptions/b946eabe-2509-4652-abfc-6aa3b991fe25/resourceGroups/dis-core-tt02-monitor-rg/providers/Microsoft.Insights/components/dis-core-tt02-products-ai",
+              "/subscriptions/f272e0dd-c13f-413a-a5d7-a6a7cf4a8622/resourceGroups/dis-core-prod-monitor-rg/providers/Microsoft.Insights/components/dis-core-prod-products-ai"
+            ],
+            "resultFormat": "time_series"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "4 Critical"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "dark-red",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "3 Error"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "red",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "2 Warning"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "orange",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "1 Information"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "text",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "sum"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "description": "Both environments combined. Severity 3 and 4 are what the alert rules watch; note that the uSync schema-import notices are logged at severity 3 despite being routine, which is why the rules filter them out by message template."
+    },
+    {
+      "id": 23,
+      "type": "table",
+      "title": "Errors the alerts fire on (Type / Details / Count)",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 73
+      },
+      "datasource": {
+        "type": "grafana-azure-monitor-datasource",
+        "uid": "azure-monitor-oob"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-azure-monitor-datasource",
+            "uid": "azure-monitor-oob"
+          },
+          "queryType": "Azure Log Analytics",
+          "azureLogAnalytics": {
+            "dashboardTime": true,
+            "timeColumn": "timestamp",
+            "query": "let envOf = (r: string) { case(\n    r has \"dis-core-tt02\", \"TT02\",\n    r has \"dis-core-prod\", \"PROD\",\n    \"unknown\") };\ntraces\n| where cloud_RoleName == \"kinorgeportal\"\n| where severityLevel >= 3\n| where not(tostring(customDimensions.['message_template.text']) startswith \"uSync-import ENDRET skjema\")\n| extend Env = envOf(_ResourceId)\n| extend ExType = tostring(customDimensions.['exception.type'])\n| extend ExMsg = tostring(customDimensions.['exception.message'])\n| extend Details = iff(isnotempty(ExMsg), ExMsg, message)\n| summarize Count = count() by Env, Type = ExType, Details = substring(Details, 0, 200)\n| project Env, Type, Details, Count\n| order by Count desc\n| take 30",
+            "resources": [
+              "/subscriptions/b946eabe-2509-4652-abfc-6aa3b991fe25/resourceGroups/dis-core-tt02-monitor-rg/providers/Microsoft.Insights/components/dis-core-tt02-products-ai",
+              "/subscriptions/f272e0dd-c13f-413a-a5d7-a6a7cf4a8622/resourceGroups/dis-core-prod-monitor-rg/providers/Microsoft.Insights/components/dis-core-prod-products-ai"
+            ],
+            "resultFormat": "table"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true,
+            "inspect": true
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Details"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 460
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Env"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 80
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Count"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background",
+                  "mode": "basic"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "thresholds"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "orange",
+                      "value": 1
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "Count"
+          }
+        ]
+      },
+      "description": "Byte-for-byte the grouping in `rules-exceptions.yaml`, so a Slack alert can be matched to a row here. Each row in the alert query becomes its own alert instance, with `Type` and `Details` riding along as labels into the Slack message."
+    },
+    {
+      "id": 24,
+      "type": "table",
+      "title": "Suppressed by the alert filter — uSync schema-import notices",
+      "gridPos": {
+        "h": 7,
+        "w": 24,
+        "x": 0,
+        "y": 81
+      },
+      "datasource": {
+        "type": "grafana-azure-monitor-datasource",
+        "uid": "azure-monitor-oob"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-azure-monitor-datasource",
+            "uid": "azure-monitor-oob"
+          },
+          "queryType": "Azure Log Analytics",
+          "azureLogAnalytics": {
+            "dashboardTime": true,
+            "timeColumn": "timestamp",
+            "query": "let envOf = (r: string) { case(\n    r has \"dis-core-tt02\", \"TT02\",\n    r has \"dis-core-prod\", \"PROD\",\n    \"unknown\") };\ntraces\n| where cloud_RoleName == \"kinorgeportal\"\n| where severityLevel >= 3\n| where not(not(tostring(customDimensions.['message_template.text']) startswith \"uSync-import ENDRET skjema\"))\n| extend Env = envOf(_ResourceId)\n| summarize Count = count(), LastSeen = max(timestamp) by Env, Summary = tostring(customDimensions.Summary)\n| project Env, Summary, Count, LastSeen\n| order by Count desc\n| take 20",
+            "resources": [
+              "/subscriptions/b946eabe-2509-4652-abfc-6aa3b991fe25/resourceGroups/dis-core-tt02-monitor-rg/providers/Microsoft.Insights/components/dis-core-tt02-products-ai",
+              "/subscriptions/f272e0dd-c13f-413a-a5d7-a6a7cf4a8622/resourceGroups/dis-core-prod-monitor-rg/providers/Microsoft.Insights/components/dis-core-prod-products-ai"
+            ],
+            "resultFormat": "table"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true,
+            "inspect": true
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Summary"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 460
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Env"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 80
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Count"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "text",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "Count"
+          }
+        ]
+      },
+      "description": "Umbraco's uSync logs \"skjema ENDRET\" at severity 3 (`Log4NetLevel: ERROR`) on every content-type sync, which is routine. The alert rules exclude it by message template so the Slack channel stays trustworthy — it is surfaced here so the suppression is visible rather than silent. A sustained rise means the deployed uSync files disagree with the database and is worth a look, just not a page."
+    },
+    {
+      "id": 25,
+      "type": "row",
+      "title": "Dependencies — outbound and in-process calls",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 88
+      },
+      "panels": []
+    },
+    {
+      "id": 26,
+      "type": "table",
+      "title": "Dependencies by target",
+      "gridPos": {
+        "h": 7,
+        "w": 24,
+        "x": 0,
+        "y": 89
+      },
+      "datasource": {
+        "type": "grafana-azure-monitor-datasource",
+        "uid": "azure-monitor-oob"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-azure-monitor-datasource",
+            "uid": "azure-monitor-oob"
+          },
+          "queryType": "Azure Log Analytics",
+          "azureLogAnalytics": {
+            "dashboardTime": true,
+            "timeColumn": "timestamp",
+            "query": "let envOf = (r: string) { case(\n    r has \"dis-core-tt02\", \"TT02\",\n    r has \"dis-core-prod\", \"PROD\",\n    \"unknown\") };\ndependencies\n| where cloud_RoleName == \"kinorgeportal\"\n| extend Env = envOf(_ResourceId)\n| summarize\n    Count  = count(),\n    Failed = countif(success == false),\n    P95ms  = round(percentile(duration, 95), 1)\n  by Env, Type = type, Target = target\n| extend FailPct = round(100.0 * Failed / Count, 2)\n| project Env, Type, Target, Count, Failed, FailPct, P95ms\n| order by Count desc\n| take 30",
+            "resources": [
+              "/subscriptions/b946eabe-2509-4652-abfc-6aa3b991fe25/resourceGroups/dis-core-tt02-monitor-rg/providers/Microsoft.Insights/components/dis-core-tt02-products-ai",
+              "/subscriptions/f272e0dd-c13f-413a-a5d7-a6a7cf4a8622/resourceGroups/dis-core-prod-monitor-rg/providers/Microsoft.Insights/components/dis-core-prod-products-ai"
+            ],
+            "resultFormat": "table"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true,
+            "inspect": true
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Target"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 520
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Env"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 80
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FailPct"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Failed"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background",
+                  "mode": "basic"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "thresholds"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "red",
+                      "value": 1
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "P95ms"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "ms"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "Count"
+          }
+        ]
+      },
+      "description": "Everything here is currently `InProc` SignalR hub lifecycle — this CMS makes no outbound HTTP or SQL calls that App Insights records. A new `HTTP` or `SQL` row appearing is a change in the service's shape and worth knowing about."
+    }
+  ]
+}

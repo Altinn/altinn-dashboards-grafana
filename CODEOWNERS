@@ -7,3 +7,4 @@
 # glob would not match nested subdirectories.
 /products/dialogporten/    @Altinn/team-dialogporten-infra
 /products/infoportal/      @Altinn/team-portal
+/products/ki-norge/        @Altinn/team-ai-lab

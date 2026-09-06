@@ -1,0 +1,18 @@
+exclusions:
+  panel-datasource-rule:
+    reason: >-
+      Datasource UIDs are pinned on purpose (azure-monitor-oob for Application
+      Insights, admin-prod-obs-amw for the blackbox probes). A ${datasource}
+      variable saves the value "default"; the default datasource in
+      dis-grafana-prod is Azure Monitor rather than Prometheus, so Grafana
+      silently falls back to the first Prometheus datasource -- a dis-core AMW
+      that holds no probe data -- and the availability panels render empty with
+      no error. This dashboard also mixes two datasources in one view, which a
+      single template variable cannot express. See CLAUDE.md.
+    entries:
+      - dashboard: "KI Norge — Service Health"
+  template-datasource-rule:
+    reason: >-
+      No datasource template variable by design; see panel-datasource-rule.
+    entries:
+      - dashboard: "KI Norge — Service Health"

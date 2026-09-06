@@ -1,0 +1,171 @@
+# Hand-authored alert rules (not a Grafana UI export). Unlike rules-exceptions.yaml (Azure Log
+# Analytics / App Insights), these query blackbox-exporter `probe_success` over the Prometheus
+# datasource `admin-prod-obs-amw`. Keep the `uid`s stable on edits; regenerating one duplicates
+# the rule in Grafana.
+#
+# KI Norge's public frontend is a Cloudflare-hosted Astro site, so unlike info.altinn.no there is
+# no deep /health endpoint to probe (it returns 404) — only the shallow HTTP probes exist:
+#   ki.norge.no        target extra-ki-norge-no        jobs blackbox-http-ipv4 / -ipv6   (PROD)
+#   ki.test.norge.no   target extra-ki-test-norge-no   jobs blackbox-http-ipv4 / -ipv6   (TT02)
+# These probes are NOT covered by the `altinn:probe_success:max_by_instance` recording rule (that
+# one is scoped to *.apps.altinn.no), so the rules below query raw `probe_success`.
+#
+# The job matcher is fully anchored on purpose. Azure Managed Prometheus does not anchor `=~`,
+# so `job=~"blackbox-http-ipv[46]"` also matches `blackbox-http-ipv4-health-check` and
+# `blackbox-http-ipv4-kuberneteswrapper` — 768 series instead of 69, mixing unrelated targets
+# into the alert. Verified 2026-09-06.
+#
+# `max by (instance)` collapses the three blackbox-exporter replicas *and* the two IP families,
+# so the alert fires only when the site answers on no path at all. That deliberately does not
+# page for an IPv6-only failure; the state-timeline panel on the dashboard breaks the families
+# apart if you need to see which one dropped.
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaAlertRuleGroup
+metadata:
+  name: ki-norge-availability
+  namespace: grafana
+spec:
+  name: Availability
+  folderRef: external-grafana-ki-norge
+  instanceSelector:
+    matchLabels:
+      dashboards: external-grafana
+  interval: 1m
+  rules:
+  - uid: ki-norge-availability-prod
+    title: Availability Prod
+    condition: C
+    for: 5m
+    noDataState: NoData
+    execErrState: OK
+    labels:
+      AlertType: Availability
+      Env: Prod
+      Product: KI Norge
+      Severity: Critical
+    annotations:
+      summary: KI Norge is unreachable in prod (ki.norge.no)
+      description: 'probe_success=0 for {{ $labels.instance }} — the blackbox HTTP probe failed on both IPv4 and IPv6'
+      # "Open probe panel" in Slack lands on the KI Norge dashboard's probe state-timeline
+      # (panel 6), which splits PROD/TT02 and IPv4/IPv6 so the blast radius is visible.
+      __dashboardUid__: ki-norge-health-001
+      __panelId__: "6"
+    notificationSettings:
+      receiver: KI Norge Slack Availability
+      # Without this the rule inherits the root policy's 4h repeat_interval and re-posts the same
+      # "DOWN" message every 4h for as long as the probe stays red, which reads like repeated
+      # independent outages. 24h keeps one daily reminder that a Critical alert is still open.
+      # Must be a multiple of the root group_interval (5m); 24h = 288 x 5m. Grafana's max is 120h.
+      repeat_interval: 24h
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 600
+        to: 0
+      datasourceUid: admin-prod-obs-amw
+      model:
+        datasource:
+          type: prometheus
+          uid: admin-prod-obs-amw
+        editorMode: code
+        expr: 'max by (instance) (probe_success{job=~"^blackbox-http-ipv[46]$", instance="ki.norge.no"})'
+        instant: true
+        range: false
+        intervalMs: 1000
+        maxDataPoints: 43200
+        refId: A
+    - refId: C
+      relativeTimeRange:
+        from: 600
+        to: 0
+      datasourceUid: __expr__
+      model:
+        conditions:
+        - evaluator:
+            params:
+            - 1
+            type: lt
+          operator:
+            type: and
+          query:
+            params:
+            - C
+          reducer:
+            params: []
+            type: last
+          type: query
+        datasource:
+          type: __expr__
+          uid: __expr__
+        expression: A
+        intervalMs: 1000
+        maxDataPoints: 43200
+        refId: C
+        type: threshold
+  - uid: ki-norge-availability-tt02
+    title: Availability TT02
+    condition: C
+    for: 10m
+    noDataState: NoData
+    execErrState: OK
+    labels:
+      AlertType: Availability
+      Env: TT02
+      Product: KI Norge
+      # Warning rather than Critical: a test environment being down is not a production
+      # incident. The longer `for` also rides out routine tt02 redeploys without notifying.
+      Severity: Warning
+    annotations:
+      summary: KI Norge is unreachable in tt02 (ki.test.norge.no)
+      description: 'probe_success=0 for {{ $labels.instance }} — the blackbox HTTP probe failed on both IPv4 and IPv6'
+      __dashboardUid__: ki-norge-health-001
+      __panelId__: "6"
+    notificationSettings:
+      receiver: KI Norge Slack Availability
+      repeat_interval: 24h
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 600
+        to: 0
+      datasourceUid: admin-prod-obs-amw
+      model:
+        datasource:
+          type: prometheus
+          uid: admin-prod-obs-amw
+        editorMode: code
+        expr: 'max by (instance) (probe_success{job=~"^blackbox-http-ipv[46]$", instance="ki.test.norge.no"})'
+        instant: true
+        range: false
+        intervalMs: 1000
+        maxDataPoints: 43200
+        refId: A
+    - refId: C
+      relativeTimeRange:
+        from: 600
+        to: 0
+      datasourceUid: __expr__
+      model:
+        conditions:
+        - evaluator:
+            params:
+            - 1
+            type: lt
+          operator:
+            type: and
+          query:
+            params:
+            - C
+          reducer:
+            params: []
+            type: last
+          type: query
+        datasource:
+          type: __expr__
+          uid: __expr__
+        expression: A
+        intervalMs: 1000
+        maxDataPoints: 43200
+        refId: C
+        type: threshold
