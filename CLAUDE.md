@@ -262,8 +262,21 @@ Also run `python3 scripts/validate-dashboards.py` if you touched any dashboard w
   `probe_success` lives in `admin-prod-obs-amw` (subscription `a6e9ee7d-…`, AdminServices-Prod).
   Query it directly rather than inferring coverage from where a service runs: `ki.norge.no` is
   Cloudflare-hosted outside dis-core yet *is* probed, while it has no deep `/health` job because
-  `/health` 404s. Also check whether the host is covered by the
-  `altinn:probe_success:max_by_instance` recording rule — that rule is scoped to
-  `*.apps.altinn.no`, so ki-norge's rules query raw `probe_success` instead.
+  `/health` 404s. Three job families exist and they measure different things — don't mix them
+  (measured 2026-09-06):
+
+  | family | jobs | hosts | recording rule |
+  |---|---|---|---|
+  | kubernetes wrapper | `blackbox-http-ipv[46]-kuberneteswrapper` | 113 Altinn app hosts | **yes** — `altinn:probe_success:max_by_instance` |
+  | deep health | `blackbox-http-ipv[46]-health-check` | 5 (`info.*`, an APIM) | no |
+  | shallow HTTP | `blackbox-http-ipv4` / `-ipv6` | 13 (`ki.norge.no`, `info.altinn.no`, `altinn.studio`, `altinncdn.no`, the dis-core edges …) | no |
+
+  `altinn:probe_success:max_by_instance` is scoped **by job** (`-kuberneteswrapper`), not by
+  hostname — the `*.apps.altinn.no` filtering people associate with it lives in
+  `dashboards/altinn-uptime/sla.json`'s `label_replace`, not in the rule. So no shallow-probed
+  host has a recording rule, and both infoportal's and ki-norge's availability rules query raw
+  `probe_success`. Those rule groups are ARM `Microsoft.AlertsManagement/prometheusRuleGroups`
+  resources in `admin-prod-obs-rg`, managed from `github.com/dis-way/adminservices`
+  (submodule `observability`) — **not from this repo.**
 - **One OCI artifact, no partial apply.** A broken CR can block the whole artifact — keep
   `kustomize build .` green.
