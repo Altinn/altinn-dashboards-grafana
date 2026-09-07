@@ -1,0 +1,10 @@
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaFolder
+metadata:
+  name: external-grafana-ki-norge
+  namespace: grafana
+spec:
+  title: KI Norge
+  instanceSelector:
+    matchLabels:
+      dashboards: external-grafana

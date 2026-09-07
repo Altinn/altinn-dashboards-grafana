@@ -1,0 +1,62 @@
+# Slack webhook is injected from the grafana-slack-webhooks Secret at reconcile time — never commit it.
+# The `ki-norge` key is fed from the Key Vault secret `slack-webhook-ki-norge-prod`; see
+# platform/secrets/external-secret.yaml. One webhook serves both environments — the Prod and TT02
+# rules notify the same receiver and are told apart by the Env label in the title.
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaContactPoint
+metadata:
+  name: ki-norge-slack-exceptions
+  namespace: grafana
+spec:
+  name: "KI Norge Slack Exceptions"
+  instanceSelector:
+    matchLabels:
+      dashboards: external-grafana
+  resyncPeriod: 10m0s
+  receivers:
+    - type: slack
+      disableResolveMessage: true
+      settings:
+        title: 'KI Norge exceptions — {{ .CommonLabels.Env }} ({{ len .Alerts }} firing)'
+        text: |
+          {{ if .CommonAnnotations.AppInsightsURL }}<{{ .CommonAnnotations.AppInsightsURL }}|Open in Application Insights>{{ end }}
+          {{ range .Alerts }}──────────────
+          {{ if .Labels.Type }}{{ .Labels.Type }} · {{ end }}count {{ .Annotations.Count }}
+          {{ .Labels.Details }}
+          {{ end }}
+      valuesFrom:
+        - targetPath: url
+          valueFrom:
+            secretKeyRef:
+              name: grafana-slack-webhooks
+              key: ki-norge
+# The availability rules (rules-availability.yaml) post to the SAME KI Norge Slack webhook, but
+# need their own contact point: the template above is exception-shaped (Type / Details / Count)
+# and would render empty for a probe alert. disableResolveMessage is false here because a
+# recovery notice is half the story for a state-style alert.
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaContactPoint
+metadata:
+  name: ki-norge-slack-availability
+  namespace: grafana
+spec:
+  name: "KI Norge Slack Availability"
+  instanceSelector:
+    matchLabels:
+      dashboards: external-grafana
+  resyncPeriod: 10m0s
+  receivers:
+    - type: slack
+      disableResolveMessage: false
+      settings:
+        title: 'KI Norge {{ if eq .Status "firing" }}:red_circle: DOWN{{ else }}:large_green_circle: recovered{{ end }} — {{ .CommonLabels.Env }}'
+        text: |
+          {{ range .Alerts }}{{ .Labels.instance }} — HTTP probe {{ .Status }}
+          {{ end }}{{ with (index .Alerts 0).PanelURL }}<{{ . }}|Open probe panel>{{ end }}
+      valuesFrom:
+        - targetPath: url
+          valueFrom:
+            secretKeyRef:
+              name: grafana-slack-webhooks
+              key: ki-norge

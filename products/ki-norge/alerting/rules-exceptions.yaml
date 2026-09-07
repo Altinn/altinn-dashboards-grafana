@@ -1,0 +1,173 @@
+# Hand-authored alert rules (not a Grafana UI export). If you later build/edit these in the
+# Grafana UI and re-export, keep the existing `uid`s so the rules are updated, not duplicated.
+#
+# KI Norge is a headless Umbraco CMS (cloud_RoleName `kinorgeportal`) serving the Astro frontend
+# at ki.norge.no. It reports into the same shared dis-core App Insights components as infoportal.
+# These rules cover the CMS backend; reachability of the public frontend is covered separately by
+# rules-availability.yaml, which queries the blackbox probes over Prometheus.
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaAlertRuleGroup
+metadata:
+  name: ki-norge-exceptions
+  namespace: grafana
+spec:
+  name: Exception
+  folderRef: external-grafana-ki-norge
+  instanceSelector:
+    matchLabels:
+      dashboards: external-grafana
+  interval: 5m
+  rules:
+  - uid: ki-norge-exceptions-prod
+    title: Exceptions Prod
+    condition: C
+    for: 0s
+    noDataState: OK
+    execErrState: KeepLast
+    labels:
+      AlertType: Exception
+      Env: Prod
+      Product: KI Norge
+    annotations:
+      summary: KI Norge exceptions detected in prod
+      Count: '{{ $values.A.Value }}'
+      AppInsightsURL: https://portal.azure.com#@cd0026d8-283b-4a55-9bfa-d0ef4a8ba21c/blade/Microsoft_OperationsManagementSuite_Workspace/Logs.ReactView/resourceId/%2Fsubscriptions%2Ff272e0dd-c13f-413a-a5d7-a6a7cf4a8622%2FresourceGroups%2Fdis-core-prod-monitor-rg%2Fproviders%2FMicrosoft.Insights%2Fcomponents%2Fdis-core-prod-products-ai/source/LogsBlade.AnalyticsShareLinkToQuery/q/H4sIAAAAAAACE42PvU7DQBCEe55i5Sa2FNxQm8ruIEVIF6HodJk4R%252B7Hul0ntsTDs0AUQYOoVqudmW9WsrHgu3e6HJFB1qdxv1snj5UJoKah4uRiyj2GlMX44qZknJGdzE86PT029HA7xSSlJJbsYl%252FakSWF1gVEdilyvV0EMJseO0EYvBHUgkkWrxWxmCx8cXKkYnyZo7134ZNL3apddxvi0xuCKSolqQNxT920mQftSX%252FxMFkMokstKlbQT%252F8z9%252F%252B2X4v%252FSmghxnnWDHc4lI71eX1L5vIrulp%252BI5Z09VYflNnM0HEBAAA%253D/timespan/P7D/limit/1000
+    notificationSettings:
+      receiver: KI Norge Slack Exceptions
+    data:
+    - refId: A
+      queryType: Azure Log Analytics
+      relativeTimeRange:
+        from: 300
+        to: 0
+      datasourceUid: azure-monitor-oob
+      model:
+        azureLogAnalytics:
+          dashboardTime: true
+          query: |-
+            traces
+            | where cloud_RoleName == "kinorgeportal"
+            | where severityLevel >= 3
+            | where not(tostring(customDimensions.['message_template.text']) startswith "uSync-import ENDRET skjema")
+            | extend ExType = tostring(customDimensions.['exception.type'])
+            | extend ExMsg = tostring(customDimensions.['exception.message'])
+            | extend Details = iff(isnotempty(ExMsg), ExMsg, message)
+            | summarize Count = count() by Type = ExType, Details = substring(Details, 0, 200)
+            | project Type, Details, Count
+          resources:
+          - /subscriptions/f272e0dd-c13f-413a-a5d7-a6a7cf4a8622/resourceGroups/dis-core-prod-monitor-rg/providers/Microsoft.Insights/components/dis-core-prod-products-ai
+          resultFormat: logs
+          timeColumn: timestamp
+          workspace: ''
+        datasource:
+          type: grafana-azure-monitor-datasource
+          uid: azure-monitor-oob
+        intervalMs: 1000
+        maxDataPoints: 43200
+        queryType: Azure Log Analytics
+        refId: A
+    - refId: C
+      relativeTimeRange:
+        from: 300
+        to: 0
+      datasourceUid: __expr__
+      model:
+        conditions:
+        - evaluator:
+            params:
+            - 0
+            type: gt
+          operator:
+            type: and
+          query:
+            params:
+            - C
+          reducer:
+            params: []
+            type: last
+          type: query
+        datasource:
+          type: __expr__
+          uid: __expr__
+        expression: A
+        intervalMs: 1000
+        maxDataPoints: 43200
+        refId: C
+        type: threshold
+  - uid: ki-norge-exceptions-tt02
+    title: Exceptions TT02
+    condition: C
+    for: 0s
+    noDataState: OK
+    execErrState: KeepLast
+    labels:
+      AlertType: Exception
+      Env: TT02
+      Product: KI Norge
+    annotations:
+      summary: KI Norge exceptions detected in tt02
+      Count: '{{ $values.A.Value }}'
+      AppInsightsURL: https://portal.azure.com#@cd0026d8-283b-4a55-9bfa-d0ef4a8ba21c/blade/Microsoft_OperationsManagementSuite_Workspace/Logs.ReactView/resourceId/%2Fsubscriptions%2Fb946eabe-2509-4652-abfc-6aa3b991fe25%2FresourceGroups%2Fdis-core-tt02-monitor-rg%2Fproviders%2FMicrosoft.Insights%2Fcomponents%2Fdis-core-tt02-products-ai/source/LogsBlade.AnalyticsShareLinkToQuery/q/H4sIAAAAAAACE42PvU7DQBCEe55i5Sa2FNxQm8ruIEVIF6HodJk4R%252B7Hul0ntsTDs0AUQYOoVqudmW9WsrHgu3e6HJFB1qdxv1snj5UJoKah4uRiyj2GlMX44qZknJGdzE86PT029HA7xSSlJJbsYl%252FakSWF1gVEdilyvV0EMJseO0EYvBHUgkkWrxWxmCx8cXKkYnyZo7134ZNL3apddxvi0xuCKSolqQNxT920mQftSX%252FxMFkMokstKlbQT%252F8z9%252F%252B2X4v%252FSmghxnnWDHc4lI71eX1L5vIrulp%252BI5Z09VYflNnM0HEBAAA%253D/timespan/P7D/limit/1000
+    notificationSettings:
+      receiver: KI Norge Slack Exceptions
+    data:
+    - refId: A
+      queryType: Azure Log Analytics
+      relativeTimeRange:
+        from: 300
+        to: 0
+      datasourceUid: azure-monitor-oob
+      model:
+        azureLogAnalytics:
+          dashboardTime: true
+          query: |-
+            traces
+            | where cloud_RoleName == "kinorgeportal"
+            | where severityLevel >= 3
+            | where not(tostring(customDimensions.['message_template.text']) startswith "uSync-import ENDRET skjema")
+            | extend ExType = tostring(customDimensions.['exception.type'])
+            | extend ExMsg = tostring(customDimensions.['exception.message'])
+            | extend Details = iff(isnotempty(ExMsg), ExMsg, message)
+            | summarize Count = count() by Type = ExType, Details = substring(Details, 0, 200)
+            | project Type, Details, Count
+          resources:
+          - /subscriptions/b946eabe-2509-4652-abfc-6aa3b991fe25/resourceGroups/dis-core-tt02-monitor-rg/providers/Microsoft.Insights/components/dis-core-tt02-products-ai
+          resultFormat: logs
+          timeColumn: timestamp
+          workspace: ''
+        datasource:
+          type: grafana-azure-monitor-datasource
+          uid: azure-monitor-oob
+        intervalMs: 1000
+        maxDataPoints: 43200
+        queryType: Azure Log Analytics
+        refId: A
+    - refId: C
+      relativeTimeRange:
+        from: 300
+        to: 0
+      datasourceUid: __expr__
+      model:
+        conditions:
+        - evaluator:
+            params:
+            - 0
+            type: gt
+          operator:
+            type: and
+          query:
+            params:
+            - C
+          reducer:
+            params: []
+            type: last
+          type: query
+        datasource:
+          type: __expr__
+          uid: __expr__
+        expression: A
+        intervalMs: 1000
+        maxDataPoints: 43200
+        refId: C
+        type: threshold

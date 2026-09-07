@@ -1,0 +1,17 @@
+# Product-owned dashboard. Lands in the same Grafana folder as the KI Norge alert rules
+# (external-grafana-ki-norge, defined in ../alerting/folder.yaml) so the alerts and their
+# drill-down live together. Covers PROD and TT02 in one view — see the dashboard description
+# for why there is no environment variable.
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: external-grafana-ki-norge-service-health
+  namespace: grafana
+spec:
+  folderRef: external-grafana-ki-norge
+  instanceSelector:
+    matchLabels:
+      dashboards: external-grafana
+  configMapRef:
+    name: dashboard-ki-norge-service-health
+    key: service-health.json

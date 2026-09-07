@@ -58,7 +58,7 @@ machinery.**
 | Namespace | `grafana` |
 | Instance binding | `instanceSelector: { matchLabels: { dashboards: external-grafana } }` |
 | Folder | `folderRef: external-grafana-<product>` (rules + dashboards share it) |
-| Labels on every rule | `Product`, `Env` (`Test`/`YT01`/`Staging`/`Prod`), plus `AlertType`/`Severity` as needed |
+| Labels on every rule | `Product`, `Env`, plus `AlertType`/`Severity` as needed. Use the environment names the product's own platform uses — Dialogporten's own Azure envs are `Test`/`YT01`/`Staging`/`Prod`; products hosted in dis-core (infoportal, ki-norge) use `AT22`/`AT23`/`TT02`/`Prod`, matching the dashboards and how the teams speak |
 | Contact point | human name in `spec.name` (rules reference this string); DNS-safe `metadata.name` |
 | Routing | per-rule `notificationSettings.receiver: "<human contact-point name>"` (Option A) |
 | Rule `for` | **required by the CRD** on every rule. UI export omits it → add `for: 0s` |
@@ -213,14 +213,24 @@ Also run `python3 scripts/validate-dashboards.py` if you touched any dashboard w
 
 - **`severityLevel` is numeric.** Use `severityLevel >= 3`, not `== "3"` — a string compare can
   silently match nothing.
+- **`severityLevel >= 3` is not the same as "an error" in Umbraco.** uSync logs routine
+  content-schema syncs at severity 3 (`Log4NetLevel: ERROR`), so a verbatim exceptions rule pages
+  the team for normal content edits. Filter on the **message template**, not the rendered message
+  — `customDimensions.['message_template.text']` is invariant, while `message` has `{Count}` /
+  `{Summary}` already interpolated and differs per occurrence. `products/ki-norge/` does this;
+  check for the same noise before copying the rule to another Umbraco product. Verified
+  2026-09-06 in prod and tt02.
 - **`percentileif()` is rejected by the App Insights query API** (`BadArgumentError`, no hint as
   to which function). To take a percentile over a subset, null out the rows you don't want:
   `percentile(iff(<cond>, duration, real(null)), 95)`. Verified 2026-08-28.
 - **`_ResourceId` comes back lowercased** from a cross-resource query, so match it with `has`
   (case-insensitive) rather than a case-sensitive regex when deriving an environment name.
-- **Exclude `/umbraco/serverEventHub` from infoportal latency percentiles.** It is a SignalR
-  long-poll stream whose requests last minutes by design; left in, P95 reads in the millions of
-  milliseconds and hides real latency. Exclude 404s too — they never reach application code.
+- **Exclude the Umbraco SignalR hubs from latency percentiles.** `/umbraco/serverEventHub` (and
+  `/umbraco/PreviewHub`, which ki-norge also serves) are long-poll streams whose requests last
+  minutes to hours by design; left in, percentiles read in the millions of milliseconds and hide
+  real latency — on ki-norge they take the observed max from ~3 s to ~2.2 h. Exclude 404s too:
+  they never reach application code. Applies to every Umbraco product, so check for both hubs
+  when onboarding one.
 - **`for: 0s` is mandatory.** The CRD rejects a rule without it; Grafana UI exports omit it.
 - **A firing alert re-notifies every 4h by default.** Nothing here defines a
   `GrafanaNotificationPolicy`, so every rule inherits the central Grafana root policy
@@ -239,12 +249,34 @@ Also run `python3 scripts/validate-dashboards.py` if you touched any dashboard w
   `secretKey`/contact-point `key` stays the short `<product>`.
 - **Anchor PromQL label regexes explicitly.** In Azure Managed Prometheus,
   `job=~"blackbox-http-ipv[46]"` also matched `blackbox-http-ipv4-health-check` — do not rely on
-  `=~` being fully anchored. Write `job=~"blackbox-http-ipv[46]$"` when you mean the shallow
-  probes only. Verified 2026-08-26; the deep and shallow probes report very different numbers, so
-  getting this wrong silently mixes them.
-- **Collapse prober pods before averaging over time.** Blackbox runs on two replicas and pods
-  churn, so `avg_over_time(probe_success[...])` then `max` lets a short-lived replica mask an
-  outage. Use a subquery instead:
+  `=~` being fully anchored. Write `job=~"^blackbox-http-ipv[46]$"` when you mean the shallow
+  probes only. Verified 2026-08-26, re-measured 2026-09-06: unanchored matched **7 jobs / 768
+  series** (pulling in `-health-check` and `-kuberneteswrapper`), fully anchored matched **2 jobs
+  / 69 series**. The deep and shallow probes report very different numbers, so getting this wrong
+  silently mixes them. Anchor `instance` regexes too, for the same reason.
+- **Collapse prober pods before averaging over time.** Blackbox runs on several replicas (three
+  as of 2026-09-06) and pods churn, so `avg_over_time(probe_success[...])` then `max` lets a
+  short-lived replica mask an outage. Use a subquery instead:
   `avg_over_time((max by (instance) (probe_success{...}))[$__range:1m])`.
+- **Not every host is probed the same way — check before writing an availability rule.**
+  `probe_success` lives in `admin-prod-obs-amw` (subscription `a6e9ee7d-…`, AdminServices-Prod).
+  Query it directly rather than inferring coverage from where a service runs: `ki.norge.no` is
+  Cloudflare-hosted outside dis-core yet *is* probed, while it has no deep `/health` job because
+  `/health` 404s. Three job families exist and they measure different things — don't mix them
+  (measured 2026-09-06):
+
+  | family | jobs | hosts | recording rule |
+  |---|---|---|---|
+  | kubernetes wrapper | `blackbox-http-ipv[46]-kuberneteswrapper` | 113 Altinn app hosts | **yes** — `altinn:probe_success:max_by_instance` |
+  | deep health | `blackbox-http-ipv[46]-health-check` | 5 (`info.*`, an APIM) | no |
+  | shallow HTTP | `blackbox-http-ipv4` / `-ipv6` | 13 (`ki.norge.no`, `info.altinn.no`, `altinn.studio`, `altinncdn.no`, the dis-core edges …) | no |
+
+  `altinn:probe_success:max_by_instance` is scoped **by job** (`-kuberneteswrapper`), not by
+  hostname — the `*.apps.altinn.no` filtering people associate with it lives in
+  `dashboards/altinn-uptime/sla.json`'s `label_replace`, not in the rule. So no shallow-probed
+  host has a recording rule, and both infoportal's and ki-norge's availability rules query raw
+  `probe_success`. Those rule groups are ARM `Microsoft.AlertsManagement/prometheusRuleGroups`
+  resources in `admin-prod-obs-rg`, managed from `github.com/dis-way/adminservices`
+  (submodule `observability`) — **not from this repo.**
 - **One OCI artifact, no partial apply.** A broken CR can block the whole artifact — keep
   `kustomize build .` green.
