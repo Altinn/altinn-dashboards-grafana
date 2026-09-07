@@ -1,14 +1,14 @@
 name: Publish grafana artifact
 
 # Packages the repo-root kustomize aggregate (dashboards + all product alerts) as a Flux
-# OCI artifact and pushes it to ACR on push to main/release.
+# OCI artifact and pushes it to ACR on push to main. `main` is the only branch that ships:
+# gitops-manifests' OCIRepository pins `ref.tag: main` and reconciles it every 5m.
 
 on:
   workflow_dispatch: {}
   push:
     branches:
       - main
-      - release
     paths:
       - "dashboards/**"
       - "products/**"

@@ -8,10 +8,15 @@ convention, update this file in the same PR. The human-facing narrative lives in
 
 Grafana **dashboards and alerting-as-code**, entirely as
 [grafana-operator](https://github.com/grafana/grafana-operator) custom resources
-(`grafana.integreatly.org/v1beta1`). There is **no live Grafana API access from here** — you
-edit YAML, CI validates it offline, and the whole repo-root kustomize aggregate is published as
-**one Flux OCI artifact** (`oci://altinncr.azurecr.io/monitoring/grafana`) that `gitops-manifests`
-applies into the `grafana` namespace. Nothing is imported by hand.
+(`grafana.integreatly.org/v1beta1`). Authoring is **one-way and offline** — you edit YAML, CI
+validates it against the vendored schemas, and the whole repo-root kustomize aggregate is
+published as **one Flux OCI artifact** (`oci://altinncr.azurecr.io/monitoring/grafana`) that
+`gitops-manifests` applies into the `grafana` namespace. Nothing is imported by hand, and
+nothing is edited in the Grafana UI.
+
+That is a rule about *writing*, not about *looking*. The live Grafana **is** readable from a
+local session — see [Inspect the live Grafana](#inspect-the-live-grafana-read-only). Use it to
+check what a rule is actually doing before you change it.
 
 A single **central Grafana** instance renders everything. Every CR binds to it with the same
 instance selector and lives in the same namespace:
@@ -130,7 +135,9 @@ Worked example: this is exactly how `products/infoportal/` was added.
 3. **Wire the secret** — add a `data` entry to `platform/secrets/external-secret.yaml` (see the
    secret-flow section). Confirm the vault secret name with the team; it may be env-suffixed.
 4. **Add ownership** to `CODEOWNERS`: `/products/<product>/    @Altinn/team-<product>`.
-5. **Validate locally** (see below), open a PR, let CI pass, merge, then promote `main → release`.
+5. **Validate locally** (see below), open a PR, let CI pass, and merge. Merging to `main` is the
+   whole release — the publish workflow pushes `monitoring/grafana:main` and Flux reconciles it
+   within ~5 min. There is no promotion step.
 
 Minimal-product KQL pattern (severity-3 traces grouped into actionable instances):
 
@@ -209,6 +216,52 @@ have no vendored schema, which is expected (`-ignore-missing-schemas`).
 
 Also run `python3 scripts/validate-dashboards.py` if you touched any dashboard wiring.
 
+## Inspect the live Grafana (read-only)
+
+The central Grafana is an **Azure Managed Grafana** resource, so a normal `az` user token
+authenticates against its HTTP API. This is read-only reconnaissance — it does not change the
+rule that all *authoring* happens through this repo.
+
+```bash
+G="https://dis-grafana-prod-gbhrc7a3gkgkfvd3.eno.grafana.azure.com"
+# AMG's fixed first-party audience, not the ARM audience:
+TOK=$(az account get-access-token --resource ce34e7e5-485f-4d76-964f-b3d2b16d1e4f \
+        --subscription a6e9ee7d-2b65-41e1-adfb-0c8c23515cf9 --query accessToken -o tsv)
+curl -sS -H "Authorization: Bearer $TOK" "$G/api/health"
+```
+
+The resource is `dis-grafana-prod` / `dis-grafana-prod-rg` / sub `a6e9ee7d-…`
+(AdminServices-Prod). `az grafana list` returns nothing (no ARM list permission) — find it with
+`az graph query -q "resources | where type =~ 'microsoft.dashboard/grafana'"` instead. Note
+`grafana.altinn.cloud` is a **different** instance (`altinn-grafana-test`); don't confuse them.
+
+Three endpoints answer almost every "is this alert behaving?" question:
+
+| endpoint | answers |
+|---|---|
+| `/api/prometheus/grafana/api/v1/rules` | every rule's live `state` / `health` / `lastError`, plus each alert instance's **expanded** annotations |
+| `/api/v1/rules/history?ruleUID=<uid>&from=<epoch>&to=<epoch>` | every state transition with the evaluated values (`{"A":0,"C":1}`) — proof of *whether and why* it fired |
+| `/api/alertmanager/grafana/api/v2/alerts` | what is firing right now |
+
+The history response is a Grafana dataframe: zip `schema.fields[].name` against the
+`data.values[]` columns (`time`, `text`, `prev`, `next`, `data`); **times are microseconds**. An
+empty `values` array means the rule has never left `Normal`.
+
+To check the underlying Prometheus data directly instead, resolve the Azure Monitor Workspace
+and query it with a `https://prometheus.monitor.azure.com` token:
+
+```bash
+EP=$(az monitor account list --subscription a6e9ee7d-2b65-41e1-adfb-0c8c23515cf9 \
+       --query "[?name=='admin-prod-obs-amw'].metrics.prometheusQueryEndpoint" -o tsv)
+PT=$(az account get-access-token --resource https://prometheus.monitor.azure.com \
+       --query accessToken -o tsv)
+curl -sS -G "$EP/api/v1/query" -H "Authorization: Bearer $PT" \
+  --data-urlencode 'query=max by (instance) (probe_success{job=~"^blackbox-http-ipv[46]$"})'
+```
+
+`query_range` caps each series at **860 points** regardless of `step`, so a long window silently
+returns only the most recent slice — chunk the range rather than reading that as a data gap.
+
 ## Gotchas
 
 - **`severityLevel` is numeric.** Use `severityLevel >= 3`, not `== "3"` — a string compare can
@@ -240,6 +293,11 @@ Also run `python3 scripts/validate-dashboards.py` if you touched any dashboard w
   `notificationSettings.repeat_interval` explicitly — the CRD field is **snake_case**
   (`repeat_interval`, not `repeatInterval`; `additionalProperties: false` rejects the camelCase
   spelling). Grafana caps it at **120h** and coerces it to a multiple of `group_interval`.
+- **The Grafana rule-definition page shows annotations un-expanded.** A rule whose description
+  reads `probe_success=0 for {{ $labels.instance }}` on that page is *not* broken and is *not*
+  evidence that anything fired — notifications expand it (`… for ki.norge.no`). Confirm with
+  `/api/v1/rules/history` before "fixing" a rule that never fired. Cost a round of investigation
+  on 2026-09-07.
 - **Never regenerate a rule `uid`.** Reuse it on every edit.
 - **Azure resource IDs are case-insensitive but use canonical casing** (`resourceGroups`,
   `Microsoft.Insights`) for consistency with existing rules — Azure Portal exports often
