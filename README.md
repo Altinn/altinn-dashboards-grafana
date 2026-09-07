@@ -139,7 +139,8 @@ the artifact** (public repo).
    entry + CR, if the CR's `folderRef` doesn't resolve, or if the overlay isn't registered at
    the repo root.
 6. Add the ownership line to `CODEOWNERS` — `/products/<name>/    @Altinn/team-<name>`.
-7. Open a PR → CI validates → merge → promote `main → release`.
+7. Open a PR → CI validates → merge to `main`. That is the whole release: the publish workflow
+   pushes `monitoring/grafana:main` and Flux reconciles it within ~5 min.
 
 ### Validate locally
 
@@ -154,10 +155,17 @@ kustomize build products/dialogporten/alerting \
 
 The whole repo-root aggregate is published as one Flux OCI artifact to
 `oci://altinncr.azurecr.io/monitoring/grafana` by
-`.github/workflows/publish-grafana-artifact.yml` (on push to `main`/`release`; manual via
+`.github/workflows/publish-grafana-artifact.yml` (on push to `main`; manual via
 `scripts/publish-grafana-artifact-manual.sh`). `gitops-manifests` consumes it through one
 `OCIRepository` + `Kustomization` (named `grafana-content`) and applies all CRs into the
-`grafana` namespace. Provisioning prerequisite: Azure OIDC secrets
+`grafana` namespace.
+
+**`main` is the only branch that ships.** The `OCIRepository` in
+`dis-way/gitops-manifests` (`oci/grafana-operator/grafana-manifests/base/oci-repository.yaml`)
+pins `ref.tag: main` and reconciles every 5 min, so merging to `main` *is* the release — there
+is no promotion step and no environment branch.
+
+Provisioning prerequisite: Azure OIDC secrets
 (`DIS_SYNCROOT_AZURE_SUBSCRIPTION_ID`, `DIS_SYNCROOT_AZURE_CLIENT_ID`,
 `DIS_SYNCROOT_AZURE_TENANT_ID`) for an identity with the `AcrPush` role, and the artifact path
 (`ARTIFACT_NAME` = `monitoring/grafana`).

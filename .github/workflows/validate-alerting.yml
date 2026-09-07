@@ -12,7 +12,7 @@ on:
       - "kustomization.yaml"
       - ".github/workflows/validate-alerting.yml"
   push:
-    branches: [main, release]
+    branches: [main]
     paths:
       - "products/**"
       - "platform/**"

@@ -8,10 +8,11 @@ convention, update this file in the same PR. The human-facing narrative lives in
 
 Grafana **dashboards and alerting-as-code**, entirely as
 [grafana-operator](https://github.com/grafana/grafana-operator) custom resources
-(`grafana.integreatly.org/v1beta1`). There is **no live Grafana API access from here** — you
-edit YAML, CI validates it offline, and the whole repo-root kustomize aggregate is published as
-**one Flux OCI artifact** (`oci://altinncr.azurecr.io/monitoring/grafana`) that `gitops-manifests`
-applies into the `grafana` namespace. Nothing is imported by hand.
+(`grafana.integreatly.org/v1beta1`). Authoring is **one-way and offline** — you edit YAML, CI
+validates it against the vendored schemas, and the whole repo-root kustomize aggregate is
+published as **one Flux OCI artifact** (`oci://altinncr.azurecr.io/monitoring/grafana`) that
+`gitops-manifests` applies into the `grafana` namespace. Nothing is imported by hand, and
+nothing is edited in the Grafana UI.
 
 A single **central Grafana** instance renders everything. Every CR binds to it with the same
 instance selector and lives in the same namespace:
@@ -130,7 +131,9 @@ Worked example: this is exactly how `products/infoportal/` was added.
 3. **Wire the secret** — add a `data` entry to `platform/secrets/external-secret.yaml` (see the
    secret-flow section). Confirm the vault secret name with the team; it may be env-suffixed.
 4. **Add ownership** to `CODEOWNERS`: `/products/<product>/    @Altinn/team-<product>`.
-5. **Validate locally** (see below), open a PR, let CI pass, merge, then promote `main → release`.
+5. **Validate locally** (see below), open a PR, let CI pass, and merge. Merging to `main` is the
+   whole release — the publish workflow pushes `monitoring/grafana:main` and Flux reconciles it
+   within ~5 min. There is no promotion step.
 
 Minimal-product KQL pattern (severity-3 traces grouped into actionable instances):
 
@@ -240,6 +243,11 @@ Also run `python3 scripts/validate-dashboards.py` if you touched any dashboard w
   `notificationSettings.repeat_interval` explicitly — the CRD field is **snake_case**
   (`repeat_interval`, not `repeatInterval`; `additionalProperties: false` rejects the camelCase
   spelling). Grafana caps it at **120h** and coerces it to a multiple of `group_interval`.
+- **The Grafana rule-definition page shows annotations un-expanded.** A rule whose description
+  reads `probe_success=0 for {{ $labels.instance }}` on that page is *not* broken and is *not*
+  evidence that anything fired — notifications expand it (`… for ki.norge.no`). Confirm with
+  `/api/v1/rules/history` before "fixing" a rule that never fired. Cost a round of investigation
+  on 2026-09-07.
 - **Never regenerate a rule `uid`.** Reuse it on every edit.
 - **Azure resource IDs are case-insensitive but use canonical casing** (`resourceGroups`,
   `Microsoft.Insights`) for consistency with existing rules — Azure Portal exports often
