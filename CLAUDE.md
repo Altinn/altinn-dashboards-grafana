@@ -14,10 +14,6 @@ published as **one Flux OCI artifact** (`oci://altinncr.azurecr.io/monitoring/gr
 `gitops-manifests` applies into the `grafana` namespace. Nothing is imported by hand, and
 nothing is edited in the Grafana UI.
 
-That is a rule about *writing*, not about *looking*. The live Grafana **is** readable from a
-local session — see [Inspect the live Grafana](#inspect-the-live-grafana-read-only). Use it to
-check what a rule is actually doing before you change it.
-
 A single **central Grafana** instance renders everything. Every CR binds to it with the same
 instance selector and lives in the same namespace:
 
@@ -215,52 +211,6 @@ yamllint -d relaxed products platform dashboards kustomization.yaml
 have no vendored schema, which is expected (`-ignore-missing-schemas`).
 
 Also run `python3 scripts/validate-dashboards.py` if you touched any dashboard wiring.
-
-## Inspect the live Grafana (read-only)
-
-The central Grafana is an **Azure Managed Grafana** resource, so a normal `az` user token
-authenticates against its HTTP API. This is read-only reconnaissance — it does not change the
-rule that all *authoring* happens through this repo.
-
-```bash
-G="https://dis-grafana-prod-gbhrc7a3gkgkfvd3.eno.grafana.azure.com"
-# AMG's fixed first-party audience, not the ARM audience:
-TOK=$(az account get-access-token --resource ce34e7e5-485f-4d76-964f-b3d2b16d1e4f \
-        --subscription a6e9ee7d-2b65-41e1-adfb-0c8c23515cf9 --query accessToken -o tsv)
-curl -sS -H "Authorization: Bearer $TOK" "$G/api/health"
-```
-
-The resource is `dis-grafana-prod` / `dis-grafana-prod-rg` / sub `a6e9ee7d-…`
-(AdminServices-Prod). `az grafana list` returns nothing (no ARM list permission) — find it with
-`az graph query -q "resources | where type =~ 'microsoft.dashboard/grafana'"` instead. Note
-`grafana.altinn.cloud` is a **different** instance (`altinn-grafana-test`); don't confuse them.
-
-Three endpoints answer almost every "is this alert behaving?" question:
-
-| endpoint | answers |
-|---|---|
-| `/api/prometheus/grafana/api/v1/rules` | every rule's live `state` / `health` / `lastError`, plus each alert instance's **expanded** annotations |
-| `/api/v1/rules/history?ruleUID=<uid>&from=<epoch>&to=<epoch>` | every state transition with the evaluated values (`{"A":0,"C":1}`) — proof of *whether and why* it fired |
-| `/api/alertmanager/grafana/api/v2/alerts` | what is firing right now |
-
-The history response is a Grafana dataframe: zip `schema.fields[].name` against the
-`data.values[]` columns (`time`, `text`, `prev`, `next`, `data`); **times are microseconds**. An
-empty `values` array means the rule has never left `Normal`.
-
-To check the underlying Prometheus data directly instead, resolve the Azure Monitor Workspace
-and query it with a `https://prometheus.monitor.azure.com` token:
-
-```bash
-EP=$(az monitor account list --subscription a6e9ee7d-2b65-41e1-adfb-0c8c23515cf9 \
-       --query "[?name=='admin-prod-obs-amw'].metrics.prometheusQueryEndpoint" -o tsv)
-PT=$(az account get-access-token --resource https://prometheus.monitor.azure.com \
-       --query accessToken -o tsv)
-curl -sS -G "$EP/api/v1/query" -H "Authorization: Bearer $PT" \
-  --data-urlencode 'query=max by (instance) (probe_success{job=~"^blackbox-http-ipv[46]$"})'
-```
-
-`query_range` caps each series at **860 points** regardless of `step`, so a long window silently
-returns only the most recent slice — chunk the range rather than reading that as a data gap.
 
 ## Gotchas
 
