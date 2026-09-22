@@ -31,6 +31,18 @@
       "tooltip": "PROD-only deep dive: endpoints, 404 attribution, dependencies",
       "type": "link",
       "url": "/d/infoportal-health-001"
+    },
+    {
+      "asDropdown": false,
+      "icon": "external link",
+      "includeVars": false,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "Kubernetes events",
+      "tooltip": "Warning events and Flux reconciliation state for the product-infoportal namespace, all environments",
+      "type": "link",
+      "url": "/d/kubernetes-events?var-product=infoportal"
     }
   ],
   "panels": [

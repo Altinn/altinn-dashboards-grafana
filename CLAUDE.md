@@ -286,5 +286,35 @@ Also run `python3 scripts/validate-dashboards.py` if you touched any dashboard w
   `probe_success`. Those rule groups are ARM `Microsoft.AlertsManagement/prometheusRuleGroups`
   resources in `admin-prod-obs-rg`, managed from `github.com/dis-way/adminservices`
   (submodule `observability`) — **not from this repo.**
+- **Kubernetes events live in the cluster workspaces, not the product ones.** Container Insights
+  writes `KubeEvents` (plus `ContainerLogV2` and `KubePodInventory`) to `dis-core-<env>-aks-law`,
+  not the `dis-core-<env>-products-law` the alert rules read. The Grafana identity can query all
+  four, and one cross-workspace query with every workspace id in `resources[]` works —
+  `dashboards/kubernetes/events.json` is the reference (verified 2026-09-22). Three traps:
+  only **Warning** events are collected (`collect_all_kube_events` is off in every DCR), so a
+  successful reconciliation or a normal scheduling event never shows up; Kyverno audit
+  `PolicyViolation` events are ~88 % of prod's rows and are about `kube-system` workloads, so
+  filter `Reason != "PolicyViolation"` first; and Container Insights writes a row per event
+  update, so count `dcount()` over an event key (cluster, namespace, kind, name, reason,
+  `FirstSeen`), never `count()`. "Per product" means the `product-<name>` namespace — each one
+  holds that product's own Flux `Kustomization` and `OCIRepository`. For a template variable
+  whose list must not shrink with the time picker, set `dashboardTime: false` (time range:
+  *Query*) and put the lookback in the KQL itself; the dashboard range is then ignored, and a
+  query with no time filter at all scans the full 30-day retention.
+- **Flux in dis-core is the AKS extension, and its state is in two places.** Current compliance
+  per configuration, with the per-Kustomization failure message, is in Azure Resource Graph
+  (`kubernetesconfigurationresources`, type `…/fluxconfigurations`) and is queryable through
+  `azure-monitor-oob`. History is kube-state-metrics' `gotk_resource_info` in each
+  `dis-core-<env>-products-amw`: the object's namespace is in **`exported_namespace`** (Azure
+  Managed Prometheus overwrites `namespace` with the scrape target's), and Azure Managed
+  Prometheus is case-insensitive and hands label values back lowercased, so `ready` reads
+  `true`/`false`/`unknown` and `customresource_kind` reads `kustomization` — match lowercase.
+  The two metric-based dashboards in `dashboards/fluxcd/` query
+  `gotk_reconcile_condition` (removed in Flux 2.1) and the controllers' own `/metrics` (not
+  scraped in dis-core), so they render empty in `dis-grafana-prod`; only the Resource Graph one
+  works.
+- **Azure Managed Prometheus rejects a regex on the metric name.** `{__name__=~"gotk_.*"}`
+  fails with `Metric name only support equality(=) filter`; probe for a metric with its exact
+  name, one at a time.
 - **One OCI artifact, no partial apply.** A broken CR can block the whole artifact — keep
   `kustomize build .` green.
