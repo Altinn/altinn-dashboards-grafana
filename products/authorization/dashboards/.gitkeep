@@ -1,0 +1,6 @@
+# Drop Authorization dashboard JSON here, alongside a kustomization.yaml
+# (configMapGenerator + generatorOptions.disableNameSuffixHash: true) and one
+# GrafanaDashboard CR per JSON with folderRef: external-grafana-authorization.
+# Copy ../../infoportal/dashboards/ as the template, then register
+# `products/authorization/dashboards` in the repo-root kustomization.yaml.
+# Alerts live in ../alerting/.
