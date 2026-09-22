@@ -1,0 +1,6 @@
+# Alerting-as-code for Authorization goes here: folder.yaml (GrafanaFolder
+# external-grafana-authorization), contact-points.yaml, rules-*.yaml, and a
+# kustomization.yaml listing them. Copy ../../infoportal/alerting/ as the template.
+# Once the overlay exists, register `products/authorization/alerting` in the repo-root
+# kustomization.yaml and add the Slack webhook to platform/secrets/external-secret.yaml.
+# Dashboards live in ../dashboards/.
