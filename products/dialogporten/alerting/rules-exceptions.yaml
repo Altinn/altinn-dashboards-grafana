@@ -1,4 +1,6 @@
 # Rules ported verbatim from the Grafana alerting export — edit in the Grafana UI, re-export, and re-port; do not hand-edit data[].model or regenerate uids.
+# Every rule is paused: Dialogporten's exception alerts are served by the team's existing Grafana
+# instance, and this port is not kept in sync with those rules. Re-port the current rules before unpausing.
 ---
 apiVersion: grafana.integreatly.org/v1beta1
 kind: GrafanaAlertRuleGroup
@@ -19,6 +21,7 @@ spec:
     for: 0s
     noDataState: OK
     execErrState: KeepLast
+    isPaused: true
     labels:
       AlertType: Exception
       Env: Test
@@ -147,6 +150,7 @@ spec:
     for: 0s
     noDataState: OK
     execErrState: KeepLast
+    isPaused: true
     labels:
       AlertType: Exception
       Env: YT01
@@ -275,6 +279,7 @@ spec:
     for: 0s
     noDataState: OK
     execErrState: KeepLast
+    isPaused: true
     labels:
       AlertType: Exception
       Env: Staging
@@ -406,6 +411,7 @@ spec:
     for: 0s
     noDataState: OK
     execErrState: KeepLast
+    isPaused: true
     labels:
       AlertType: Exception
       Env: Prod
