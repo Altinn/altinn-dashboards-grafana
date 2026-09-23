@@ -61,7 +61,7 @@ machinery.**
 | Folder | `folderRef: external-grafana-<product>` (rules + dashboards share it) |
 | Labels on every rule | `Product`, `Env`, plus `AlertType`/`Severity` as needed. Use the environment names the product's own platform uses — Dialogporten's own Azure envs are `Test`/`YT01`/`Staging`/`Prod`; products hosted in dis-core (infoportal, ki-norge) use `AT22`/`AT23`/`TT02`/`Prod`, matching the dashboards and how the teams speak |
 | Contact point | human name in `spec.name` (rules reference this string); DNS-safe `metadata.name` |
-| Routing | per-rule `notificationSettings.receiver: "<human contact-point name>"` (Option A) |
+| Routing | per-rule `notificationSettings.receiver: "<human contact-point name>"` (Option A). One name only — to reach several Slack channels, list several `receivers` on the contact point |
 | Rule `for` | **required by the CRD** on every rule. UI export omits it → add `for: 0s` |
 | Rule `uid` | stable + explicit per rule. **Reuse on edit, never regenerate** (regenerating duplicates the rule in Grafana) |
 
@@ -89,6 +89,34 @@ The webhook value is **never in git** (public repo). The chain:
            name: grafana-slack-webhooks
            key: <product>          # == secretKey above
    ```
+
+**The shared `#altinn-alerts-prod-critical` channel** takes a **per-product** webhook, not one
+shared one: vault secret `slack-webhook-<product>-altinn-alerts-prod-critical`, mapped to the
+ExternalSecret key `<product>-critical`. Prod-severity availability alerts post there *in addition
+to* the product's own channel.
+
+**Confirm the vault secret exists before merging.** The `ExternalSecret` syncs every key into a
+single Secret, so one `remoteRef.key` that does not resolve puts it in `SecretSyncError` and can
+block the whole `grafana-slack-webhooks` Secret from updating — for every product, not just yours.
+The vault is IP-firewalled, so this cannot be checked from a laptop; ask whoever owns the webhook.
+
+## Notifying more than one Slack channel
+
+`notificationSettings.receiver` takes exactly one contact-point name, so fan-out happens **inside
+the contact point**: `spec.receivers` is a list and Grafana notifies every entry. Give each
+receiver its own `valuesFrom` → a different `grafana-slack-webhooks` key, and the same alert posts
+to both channels. Keep the receivers' `settings` identical unless there is a reason not to — two
+copies of a template drift.
+
+**Scope the fan-out per environment.** A contact point cannot notify only *some* of its receivers,
+so which shape you need depends on the rules that already point at it:
+
+- Product has **only** prod rules on that contact point → append the second receiver to it and
+  change no rule. `products/infoportal/alerting/contact-points.yaml`.
+- Product **also** has non-prod rules on it (ki-norge has Availability TT02) → add a separate,
+  prod-only contact point and repoint just the prod rule, so a test-environment outage never
+  reaches the critical channel. `products/ki-norge/alerting/contact-points.yaml`
+  (`KI Norge Slack Availability Prod`).
 
 ## Alert rule anatomy
 
