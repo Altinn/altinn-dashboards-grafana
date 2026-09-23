@@ -13,10 +13,12 @@ imported by hand.
 ```
 dashboards/                     # platform dashboards (self-contained configMapRef CRs)
 ├── kustomization.yaml          #   wraps each JSON into a ConfigMap + lists the CRs
-├── folders.yaml                #   3 GrafanaFolder CRs (Altinn/Fluxcd/Linkerd)
-├── dashboards.yaml             #   9 GrafanaDashboard CRs
+├── folders.yaml                #   5 GrafanaFolder CRs (Altinn/Altinn Uptime/Fluxcd/Kubernetes/Linkerd)
+├── dashboards.yaml             #   11 GrafanaDashboard CRs
 ├── altinn/                     #   Altinn dashboard JSON
+├── altinn-uptime/              #   Altinn Uptime SLA dashboard JSON
 ├── fluxcd/                     #   FluxCD dashboard JSON
+├── kubernetes/                 #   Kubernetes events dashboard JSON (+ .lint exclusions)
 └── linkerd/                    #   Linkerd dashboard JSON
 products/                       # one folder per product, owning its dashboards + alerts
 ├── dialogporten/
@@ -57,6 +59,20 @@ scripts/publish-grafana-artifact-manual.sh    # manual `flux push artifact` (mir
 - `flux-cluster-stats.json` — cluster-wide FluxCD statistics
 - `flux-control-plane.json` — FluxCD control plane monitoring
 - `gitops-flux-application-deployments-dashboard.json` — application deployment tracking
+
+**Kubernetes** (`dashboards/kubernetes/`)
+- `events.json` — Kubernetes Warning events and Flux (GitOps) reconciliation state for the four
+  dis-core clusters (AT22, AT23, TT02, PROD), filterable by environment and by product. Products
+  are the `product-<name>` namespaces, each holding its own Flux `Kustomization` and
+  `OCIRepository`, so one *Product* filter narrows both the workload events and the Flux state
+  to one team. Three sources, all pinned to fixed datasource UIDs: Container Insights
+  `KubeEvents` as one cross-workspace query over the four `dis-core-<env>-aks-law` workspaces
+  (Warning events only, which is what failures are; Kyverno `PolicyViolation` audit noise is
+  hidden by default), the AKS Flux extension's compliance state from Azure Resource Graph (the
+  per-Kustomization failure message, current state only), and kube-state-metrics
+  `gotk_resource_info` from each `dis-core-<env>-products-amw` for a ready / not-ready timeline
+  of every product Kustomization. The product Service Health dashboards link here with their
+  product preselected.
 
 **Linkerd** (`dashboards/linkerd/`)
 - `daemonset.json` — DaemonSet monitoring and metrics

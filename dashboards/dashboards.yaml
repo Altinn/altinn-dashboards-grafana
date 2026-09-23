@@ -137,3 +137,17 @@ spec:
   configMapRef:
     name: dashboard-linkerd-deployment
     key: deployment.json
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: external-grafana-kubernetes-events
+  namespace: grafana
+spec:
+  folderRef: external-grafana-kubernetes
+  instanceSelector:
+    matchLabels:
+      dashboards: "external-grafana"
+  configMapRef:
+    name: dashboard-kubernetes-events
+    key: events.json
