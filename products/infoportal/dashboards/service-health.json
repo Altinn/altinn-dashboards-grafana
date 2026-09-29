@@ -19,7 +19,20 @@
   "editable": false,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
-  "links": [],
+  "links": [
+    {
+      "asDropdown": false,
+      "icon": "external link",
+      "includeVars": false,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "Kubernetes events",
+      "tooltip": "Warning events and Flux reconciliation state for the product-infoportal namespace, all environments",
+      "type": "link",
+      "url": "/d/kubernetes-events?var-product=infoportal"
+    }
+  ],
   "panels": [
     {
       "id": 1,

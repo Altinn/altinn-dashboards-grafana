@@ -1,0 +1,18 @@
+exclusions:
+  panel-datasource-rule:
+    reason: >-
+      Datasource UIDs are pinned on purpose. The dashboard mixes Azure Monitor
+      (Log Analytics for KubeEvents and Resource Graph for the Flux extension
+      state, both via azure-monitor-oob) with the four dis-core-<env>-products-amw
+      Prometheus workspaces in one view, which a single template variable cannot
+      express. A ${datasource} variable also saves the value "default"; the
+      default datasource in dis-grafana-prod is Azure Monitor rather than
+      Prometheus, so Grafana would silently bind the Flux timeline to the wrong
+      Prometheus and render it empty with no error. See CLAUDE.md.
+    entries:
+      - dashboard: "Kubernetes Events"
+  template-datasource-rule:
+    reason: >-
+      No datasource template variable by design; see panel-datasource-rule.
+    entries:
+      - dashboard: "Kubernetes Events"

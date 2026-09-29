@@ -31,6 +31,9 @@ configMapGenerator:
   - name: dashboard-fluxcd-gitops-flux-application-deployments-dashboard
     files:
       - fluxcd/gitops-flux-application-deployments-dashboard.json
+  - name: dashboard-kubernetes-events
+    files:
+      - kubernetes/events.json
   - name: dashboard-linkerd-daemonset
     files:
       - linkerd/daemonset.json

@@ -73,3 +73,22 @@ spec:
         { "role": "Viewer", "permission": 1 }
       ]
     }
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaFolder
+metadata:
+  name: external-grafana-kubernetes
+  namespace: grafana
+spec:
+  instanceSelector:
+    matchLabels:
+      dashboards: "external-grafana"
+  title: Kubernetes
+  permissions: |
+    {
+      "items": [
+        { "role": "Admin",  "permission": 4 },
+        { "role": "Editor", "permission": 1 },
+        { "role": "Viewer", "permission": 1 }
+      ]
+    }
