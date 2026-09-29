@@ -1,7 +1,8 @@
 # Slack webhook is injected from the grafana-slack-webhooks Secret at reconcile time — never commit it.
 # The `ki-norge` key is fed from the Key Vault secret `slack-webhook-ki-norge-prod`; see
-# platform/secrets/external-secret.yaml. One webhook serves both environments — the Prod and TT02
-# rules notify the same receiver and are told apart by the Env label in the title.
+# platform/secrets/external-secret.yaml. One webhook serves both environments — every rule here
+# posts to it, and the Env label in the title tells Prod and TT02 apart. Prod availability
+# additionally reaches #altinn-alerts-prod-critical; see the third contact point below.
 apiVersion: grafana.integreatly.org/v1beta1
 kind: GrafanaContactPoint
 metadata:
@@ -30,10 +31,14 @@ spec:
             secretKeyRef:
               name: grafana-slack-webhooks
               key: ki-norge
-# The availability rules (rules-availability.yaml) post to the SAME KI Norge Slack webhook, but
-# need their own contact point: the template above is exception-shaped (Type / Details / Count)
-# and would render empty for a probe alert. disableResolveMessage is false here because a
-# recovery notice is half the story for a state-style alert.
+# The availability rules (rules-availability.yaml) post to the KI Norge Slack webhook, but need
+# their own contact point: the template above is exception-shaped (Type / Details / Count) and
+# would render empty for a probe alert. disableResolveMessage is false here because a recovery
+# notice is half the story for a state-style alert.
+#
+# This one now serves **TT02 only** — Prod availability moved to the contact point below so it
+# also reaches the shared #altinn-alerts-prod-critical channel. Keep `spec.name` as-is: rules
+# reference it by that string, and the TT02 rule still does.
 ---
 apiVersion: grafana.integreatly.org/v1beta1
 kind: GrafanaContactPoint
@@ -60,3 +65,56 @@ spec:
             secretKeyRef:
               name: grafana-slack-webhooks
               key: ki-norge
+# Prod availability only. A GrafanaContactPoint may hold several receivers, and Grafana notifies
+# every one of them — so this single contact point fans a prod outage out to BOTH the KI Norge
+# channel and the shared cross-product #altinn-alerts-prod-critical channel.
+# `notificationSettings.receiver` takes one name, so fanning out has to happen here rather than
+# by listing two receivers on the rule.
+#
+# Infoportal does the same fan-out (PR #16) by appending the second receiver to its *existing*
+# availability contact point — it can, because it has only a Prod availability rule. KI Norge
+# also has a TT02 rule, and a contact point cannot notify only some of its receivers, so the
+# prod fan-out needs a contact point of its own. TT02 stays on the one above: a test environment
+# being down is not a production incident and must not reach the critical channel.
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaContactPoint
+metadata:
+  name: ki-norge-slack-availability-prod
+  namespace: grafana
+spec:
+  name: "KI Norge Slack Availability Prod"
+  instanceSelector:
+    matchLabels:
+      dashboards: external-grafana
+  resyncPeriod: 10m0s
+  receivers:
+    # 1. The product's own channel — same webhook and same rendering as the TT02 contact point.
+    - type: slack
+      disableResolveMessage: false
+      settings:
+        title: 'KI Norge {{ if eq .Status "firing" }}:red_circle: DOWN{{ else }}:large_green_circle: recovered{{ end }} — {{ .CommonLabels.Env }}'
+        text: |
+          {{ range .Alerts }}{{ .Labels.instance }} — HTTP probe {{ .Status }}
+          {{ end }}{{ with (index .Alerts 0).PanelURL }}<{{ . }}|Open probe panel>{{ end }}
+      valuesFrom:
+        - targetPath: url
+          valueFrom:
+            secretKeyRef:
+              name: grafana-slack-webhooks
+              key: ki-norge
+    # 2. #altinn-alerts-prod-critical. Same template on purpose — the title already carries the
+    #    product and environment, and keeping the two identical stops them drifting apart.
+    - type: slack
+      disableResolveMessage: false
+      settings:
+        title: 'KI Norge {{ if eq .Status "firing" }}:red_circle: DOWN{{ else }}:large_green_circle: recovered{{ end }} — {{ .CommonLabels.Env }}'
+        text: |
+          {{ range .Alerts }}{{ .Labels.instance }} — HTTP probe {{ .Status }}
+          {{ end }}{{ with (index .Alerts 0).PanelURL }}<{{ . }}|Open probe panel>{{ end }}
+      valuesFrom:
+        - targetPath: url
+          valueFrom:
+            secretKeyRef:
+              name: grafana-slack-webhooks
+              key: ki-norge-critical

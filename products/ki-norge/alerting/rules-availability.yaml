@@ -52,7 +52,9 @@ spec:
       __dashboardUid__: ki-norge-health-001
       __panelId__: "6"
     notificationSettings:
-      receiver: KI Norge Slack Availability
+      # Fans out to the KI Norge channel AND #altinn-alerts-prod-critical (two Slack
+      # receivers on one contact point). TT02 stays on the KI-Norge-only contact point.
+      receiver: KI Norge Slack Availability Prod
       # Without this the rule inherits the root policy's 4h repeat_interval and re-posts the same
       # "DOWN" message every 4h for as long as the probe stays red, which reads like repeated
       # independent outages. 24h keeps one daily reminder that a Critical alert is still open.
