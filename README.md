@@ -1,10 +1,10 @@
-# Altinn Grafana Dashboards & Alerts
+# Altinn Grafana Dashboards, Alerts & Datasources
 
-Grafana dashboards **and alerting-as-code** for Altinn infrastructure and services. Everything
-here is [grafana-operator](https://github.com/grafana/grafana-operator) custom resources
+Grafana dashboards, alerts and datasource definitions for Altinn infrastructure and services.
+Everything here is [grafana-operator](https://github.com/grafana/grafana-operator) custom resources
 (`grafana.integreatly.org/v1beta1`) — platform dashboards as self-contained `GrafanaDashboard`
-CRs (`spec.configMapRef` → a wrapped-JSON `ConfigMap`) plus the alert CRs. The whole repo-root
-kustomize aggregate is published as **one Flux OCI artifact**
+CRs (`spec.configMapRef` → a wrapped-JSON `ConfigMap`), alert CRs and `GrafanaDatasource` CRs.
+The whole repo-root kustomize aggregate is published as **one Flux OCI artifact**
 (`oci://altinncr.azurecr.io/monitoring/grafana`) and consumed by `gitops-manifests` — nothing is
 imported by hand.
 
@@ -20,7 +20,7 @@ dashboards/                     # platform dashboards (self-contained configMapR
 ├── fluxcd/                     #   FluxCD dashboard JSON
 ├── kubernetes/                 #   Kubernetes events dashboard JSON (+ .lint exclusions)
 └── linkerd/                    #   Linkerd dashboard JSON
-products/                       # one folder per product, owning its dashboards + alerts
+products/                       # product dashboards, alerts and optional datasources/ overlays
 ├── dialogporten/
 │   ├── dashboards/             #   product dashboard JSON
 │   └── alerting/               #   operator CRs
@@ -42,7 +42,8 @@ platform/                       # platform-team infrastructure CRs
     ├── vault.yaml                 # Vault (DIS vault operator) + managed SecretStore
     └── external-secret.yaml       # ExternalSecret → grafana-slack-webhooks Secret
 schemas/                        # vendored, version-pinned CRD JSON schemas for CI (regenerate.py)
-kustomization.yaml              # repo-root aggregator: dashboards/ + each products/*/{alerting,dashboards}
+examples/datasources/            # Prometheus + Tempo templates; excluded from deployment
+kustomization.yaml              # repo-root aggregator: dashboards/ + registered product/platform overlays
 scripts/publish-grafana-artifact-manual.sh    # manual `flux push artifact` (mirrors CI)
 .github/workflows/              # offline validation CI + OCI publish
 ```
@@ -165,6 +166,47 @@ SCHEMA_LOC='schemas/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json'
 kustomize build products/dialogporten/alerting \
   | kubeconform -strict -summary \
       -schema-location default -schema-location "$SCHEMA_LOC" -
+```
+
+## Datasources
+
+Product connections belong in `products/<product>/datasources/`; shared connections belong in
+`platform/datasources/`. Azure Grafana provisioning, access and networking remain in
+[`adminservices`](https://github.com/dis-way/adminservices/tree/main/tf/adminservices-prod/dis-grafana-prod-rg).
+The existing operator manages these connections in the external production instance.
+
+1. Copy [examples/datasources](examples/datasources) into the appropriate directory and keep
+   only the datasource and `ExternalSecret` pairs needed. Update `kustomization.yaml` accordingly.
+2. Replace the example names, URLs and secret references. Set a unique, stable `spec.uid`, such
+   as `studio-prometheus-experimental`, and reuse it in dashboards and alerts. Keep namespace
+   `grafana`, the `external-grafana` selector, `isDefault: false` and `editable: false`.
+3. Store each complete Authorization header value (including its authentication scheme) in
+   the existing `grafana-alerting` Key Vault. Point `remoteRef.key` at that secret's actual name.
+   Each datasource gets its own Kubernetes Secret through `grafana-alerting-secret-store`;
+   `valuesFrom` substitutes its `authorization` key into `secureJsonData.httpHeaderValue1`.
+   Leave `${authorization}` in Git. Rotate credentials in Key Vault.
+4. Verify the endpoint is reachable from **Azure Managed Grafana**, and that its telemetry may
+   be queried by the shared instance's users. Product folders do not restrict datasource access.
+5. Register the new overlay in the root `kustomization.yaml` and open a PR. `CODEOWNERS` requests
+   platform review for product datasources. Merging publishes the connections through the existing
+   OCI/Flux workflow.
+
+The examples use reserved `.invalid` endpoints and are validated by CI but are **not included
+in the deployment aggregate**.
+
+Prometheus and Tempo are supported core types. Before adding VictoriaLogs, confirm its plugin
+is available and enabled through [Azure plugin management](https://learn.microsoft.com/en-us/azure/managed-grafana/how-to-manage-plugins).
+The operator [cannot install plugins on external Grafana](https://grafana.github.io/grafana-operator/docs/examples/grafana/external_grafana/readme/).
+
+Validate a datasource overlay and the root aggregate before opening the PR:
+
+```bash
+SCHEMA_LOC='schemas/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json'
+for target in examples/datasources .; do  # replace the example path with the new overlay
+  kustomize build "$target" \
+    | kubeconform -strict -skip ExternalSecret,Vault,ApplicationIdentity -summary \
+        -schema-location default -schema-location "$SCHEMA_LOC" -
+done
 ```
 
 ## Delivery (OCI artifact)

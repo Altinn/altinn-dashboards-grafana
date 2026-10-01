@@ -14,6 +14,7 @@ KINDS = {
     "GrafanaAlertRuleGroup": "grafanaalertrulegroups",
     "GrafanaContactPoint": "grafanacontactpoints",
     "GrafanaDashboard": "grafanadashboards",
+    "GrafanaDatasource": "grafanadatasources",
     "GrafanaFolder": "grafanafolders",
     "GrafanaNotificationPolicy": "grafananotificationpolicies",
     "GrafanaNotificationPolicyRoute": "grafananotificationpolicyroutes",

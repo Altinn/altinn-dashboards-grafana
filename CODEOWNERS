@@ -1,7 +1,7 @@
-# Owners for the whole repo (will be added to all PRs)
+# Default owners; the last matching pattern determines ownership.
 *       @Altinn/team-platform
 
-# Per-product ownership: every product team owns its entire folder under products/.
+# Per-product ownership, with datasource configuration assigned to platform below.
 # Add one line per product as it is onboarded. Keep the trailing slash so the whole
 # folder (dashboards/, alerting/, …) is covered recursively — a `products/<name>/*`
 # glob would not match nested subdirectories.
@@ -9,3 +9,6 @@
 /products/dialogporten/    @Altinn/team-dialogporten-infra
 /products/infoportal/      @Altinn/team-portal
 /products/ki-norge/        @Altinn/team-ai-lab
+
+# Platform review for connections in the shared Grafana instance.
+/products/*/datasources/   @Altinn/team-platform

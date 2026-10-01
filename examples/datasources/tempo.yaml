@@ -1,0 +1,27 @@
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDatasource
+metadata:
+  name: example-tempo
+  namespace: grafana
+spec:
+  uid: example-tempo
+  instanceSelector:
+    matchLabels:
+      dashboards: external-grafana
+  datasource:
+    name: Example Tempo
+    type: tempo
+    access: proxy
+    url: https://tempo.example.invalid
+    isDefault: false
+    editable: false
+    jsonData:
+      httpHeaderName1: Authorization
+    secureJsonData:
+      httpHeaderValue1: "${authorization}"
+  valuesFrom:
+    - targetPath: secureJsonData.httpHeaderValue1
+      valueFrom:
+        secretKeyRef:
+          name: example-tempo-auth
+          key: authorization
