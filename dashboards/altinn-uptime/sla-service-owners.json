@@ -101,7 +101,7 @@
         "type": "prometheus",
         "uid": "admin-prod-obs-amw"
       },
-      "description": "Average SLA % of all selected tt02 hosts. Per host: 100 × (1 − downtime inside the operating period ÷ all minutes in the selected range). Operating period: Mon–Fri 06:00–19:00 UTC in the recording rule. This is 07:00–20:00 Norwegian time in winter time (CET). In summer time (CEST) the rule counts 08:00–21:00.",
+      "description": "Average SLA % of all selected tt02 hosts. Per host: 100 × (1 − downtime inside the operating period ÷ all minutes in the selected range). Operating period: the recording rule counts Mon–Fri 05:00–19:00 UTC. This covers 07:00–20:00 Norwegian time in both summer time (07:00–21:00) and winter time (06:00–20:00), so up to one extra hour per day is counted.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -186,7 +186,7 @@
           "showLineNumbers": false,
           "showMiniMap": false
         },
-        "content": "### SLA reference (per calendar month)\n- **Prod 99.9 %**, 24/7 except planned maintenance: 43.2 min in a 30-day month (40.3–44.6 min for 28–31 days). Planned maintenance is not excluded here.\n- **tt02 99.8 %** of all hours in the month, but only downtime Mon–Fri 07:00–20:00 counts: 86.4 min in a 30-day month (80.6–89.3 min for 28–31 days).\n- Samples are 5 minutes apart: each down sample counts as 5 min of downtime.\n- Default range is this month so far. Pick 'Previous month' in the time picker for a full month.",
+        "content": "### SLA reference (per calendar month)\n- **Prod 99.9 %**, 24/7 except planned maintenance: 43.2 min in a 30-day month (40.3–44.6 min for 28–31 days). Planned maintenance is not excluded here.\n- **tt02 99.8 %** of all hours in the month, but only downtime Mon–Fri 07:00–20:00 counts: 86.4 min in a 30-day month (80.6–89.3 min for 28–31 days). The rule counts 05:00–19:00 UTC, which covers 07:00–20:00 in both summer and winter time.\n- Samples are 5 minutes apart: each down sample counts as 5 min of downtime.\n- Default range is the last 30 days. Pick 'Previous month' in the time picker for a calendar month.",
         "mode": "markdown"
       },
       "pluginVersion": "12.4.3",
@@ -430,7 +430,7 @@
         "type": "prometheus",
         "uid": "admin-prod-obs-amw"
       },
-      "description": "SLA % = 100 × (1 − downtime inside the operating period ÷ all minutes in the selected range), from altinn:probe_success_tt02_business_hours_1m. Operating period: Mon–Fri 06:00–19:00 UTC in the recording rule. This is 07:00–20:00 Norwegian time in winter time (CET). In summer time (CEST) the rule counts 08:00–21:00. Downtime (min) = number of down samples inside the operating period × 5 minutes. Samples are 5 minutes apart: each down sample counts as 5 minutes of downtime. An outage shorter than 5 minutes can be missed. Green = meets the 99.8 % SLA.",
+      "description": "SLA % = 100 × (1 − downtime inside the operating period ÷ all minutes in the selected range), from altinn:probe_success_tt02_business_hours_1m. Operating period: the recording rule counts Mon–Fri 05:00–19:00 UTC. This covers 07:00–20:00 Norwegian time in both summer time (07:00–21:00) and winter time (06:00–20:00), so up to one extra hour per day is counted. Downtime (min) = number of down samples inside the operating period × 5 minutes. Samples are 5 minutes apart: each down sample counts as 5 minutes of downtime. An outage shorter than 5 minutes can be missed. Green = meets the 99.8 % SLA.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -673,7 +673,7 @@
     ]
   },
   "time": {
-    "from": "now/M",
+    "from": "now-30d",
     "to": "now"
   },
   "timepicker": {},
@@ -681,5 +681,5 @@
   "title": "SLA - Service Owners",
   "uid": "altinn-uptime-sla-service-owners",
   "weekStart": "",
-  "description": "Per-service-owner availability of the Altinn apps hosts (<org>.apps.altinn.no and <org>.apps.tt02.altinn.no) in admin-prod-obs-amw, measured per calendar month (default: this month so far; pick e.g. 'Previous month' in the time picker). Prod: 99.9 %, 24/7, from altinn:probe_success_1m. tt02: 99.8 % of all hours in the month, but only downtime inside the operating period counts (Mon–Fri 06:00–19:00 UTC in the recording rule. This is 07:00–20:00 Norwegian time in winter time (CET). In summer time (CEST) the rule counts 08:00–21:00), from altinn:probe_success_tt02_business_hours_1m. The base rule altinn:probe_success:max_by_instance runs every 5 minutes and takes max by instance over the blackbox-http-ipv4/ipv6-kuberneteswrapper jobs, so a host counts as up when at least one blackbox-exporter pod reaches it over IPv4 or IPv6. The _1m rules run every minute but read that 5-minute base, so each series holds one 0/1 sample per 5 minutes. Planned maintenance is not excluded. Filter with the Customer variable. Datasource UIDs are pinned rather than templated so the panels cannot silently bind to the wrong Prometheus datasource."
+  "description": "Per-service-owner availability of the Altinn apps hosts (<org>.apps.altinn.no and <org>.apps.tt02.altinn.no) in admin-prod-obs-amw, with an SLA measured per calendar month (default range: last 30 days; pick e.g. 'Previous month' in the time picker for a calendar month). Prod: 99.9 %, 24/7, from altinn:probe_success_1m. tt02: 99.8 % of all hours in the month, but only downtime inside the operating period counts (the recording rule counts Mon–Fri 05:00–19:00 UTC. This covers 07:00–20:00 Norwegian time in both summer time (07:00–21:00) and winter time (06:00–20:00), so up to one extra hour per day is counted), from altinn:probe_success_tt02_business_hours_1m. The base rule altinn:probe_success:max_by_instance runs every 5 minutes and takes max by instance over the blackbox-http-ipv4/ipv6-kuberneteswrapper jobs, so a host counts as up when at least one blackbox-exporter pod reaches it over IPv4 or IPv6. The _1m rules run every minute but read that 5-minute base, so each series holds one 0/1 sample per 5 minutes. Planned maintenance is not excluded. Filter with the Customer variable. Datasource UIDs are pinned rather than templated so the panels cannot silently bind to the wrong Prometheus datasource."
 }
