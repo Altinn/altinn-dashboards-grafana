@@ -57,7 +57,7 @@ spec:
 apiVersion: grafana.integreatly.org/v1beta1
 kind: GrafanaDashboard
 metadata:
-  name: external-grafana-altinn-uptime-sla
+  name: external-grafana-altinn-uptime-status-up
   namespace: grafana
 spec:
   folderRef: external-grafana-altinn-uptime
@@ -65,8 +65,50 @@ spec:
     matchLabels:
       dashboards: "external-grafana"
   configMapRef:
-    name: dashboard-altinn-uptime-sla
-    key: sla.json
+    name: dashboard-altinn-uptime-status-up
+    key: status-up.json
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: external-grafana-altinn-uptime-sla-service-owners
+  namespace: grafana
+spec:
+  folderRef: external-grafana-altinn-uptime
+  instanceSelector:
+    matchLabels:
+      dashboards: "external-grafana"
+  configMapRef:
+    name: dashboard-altinn-uptime-sla-service-owners
+    key: sla-service-owners.json
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: external-grafana-altinn-uptime-sla-altinn-product
+  namespace: grafana
+spec:
+  folderRef: external-grafana-altinn-uptime
+  instanceSelector:
+    matchLabels:
+      dashboards: "external-grafana"
+  configMapRef:
+    name: dashboard-altinn-uptime-sla-altinn-product
+    key: sla-altinn-product.json
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: external-grafana-altinn-uptime-endpoint-statistics
+  namespace: grafana
+spec:
+  folderRef: external-grafana-altinn-uptime
+  instanceSelector:
+    matchLabels:
+      dashboards: "external-grafana"
+  configMapRef:
+    name: dashboard-altinn-uptime-endpoint-statistics
+    key: endpoint-statistics.json
 ---
 apiVersion: grafana.integreatly.org/v1beta1
 kind: GrafanaDashboard

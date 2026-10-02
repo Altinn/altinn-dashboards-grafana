@@ -280,8 +280,9 @@ Also run `python3 scripts/validate-dashboards.py` if you touched any dashboard w
   | shallow HTTP | `blackbox-http-ipv4` / `-ipv6` | 13 (`ki.norge.no`, `info.altinn.no`, `altinn.studio`, `altinncdn.no`, the dis-core edges …) | no |
 
   `altinn:probe_success:max_by_instance` is scoped **by job** (`-kuberneteswrapper`), not by
-  hostname — the `*.apps.altinn.no` filtering people associate with it lives in
-  `dashboards/altinn-uptime/sla.json`'s `label_replace`, not in the rule. So no shallow-probed
+  hostname — the `*.apps.altinn.no` filtering people associate with it lives in the
+  `instance=~` matchers of `dashboards/altinn-uptime/sla-service-owners.json`, not in the rule
+  (only the derived tt02 business-hours rules filter on `*.apps.tt02.altinn.no`). So no shallow-probed
   host has a recording rule, and both infoportal's and ki-norge's availability rules query raw
   `probe_success`. Those rule groups are ARM `Microsoft.AlertsManagement/prometheusRuleGroups`
   resources in `admin-prod-obs-rg`, managed from `github.com/dis-way/adminservices`
