@@ -11,6 +11,7 @@ exclusions:
     entries:
       - dashboard: Status UP
       - dashboard: SLA - Service Owners
+      - dashboard: SLA - Altinn Product
       - dashboard: Endpoint Statistics
   template-datasource-rule:
     reason: >-
@@ -18,4 +19,5 @@ exclusions:
     entries:
       - dashboard: Status UP
       - dashboard: SLA - Service Owners
+      - dashboard: SLA - Altinn Product
       - dashboard: Endpoint Statistics

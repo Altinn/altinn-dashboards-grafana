@@ -25,6 +25,9 @@ configMapGenerator:
   - name: dashboard-altinn-uptime-sla-service-owners
     files:
       - altinn-uptime/sla-service-owners.json
+  - name: dashboard-altinn-uptime-sla-altinn-product
+    files:
+      - altinn-uptime/sla-altinn-product.json
   - name: dashboard-altinn-uptime-endpoint-statistics
     files:
       - altinn-uptime/endpoint-statistics.json
