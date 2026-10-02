@@ -22,6 +22,15 @@ configMapGenerator:
   - name: dashboard-altinn-uptime-sla
     files:
       - altinn-uptime/sla.json
+  - name: dashboard-altinn-uptime-status-up
+    files:
+      - altinn-uptime/status-up.json
+  - name: dashboard-altinn-uptime-sla-service-owners
+    files:
+      - altinn-uptime/sla-service-owners.json
+  - name: dashboard-altinn-uptime-endpoint-statistics
+    files:
+      - altinn-uptime/endpoint-statistics.json
   - name: dashboard-fluxcd-flux-cluster-stats
     files:
       - fluxcd/flux-cluster-stats.json
