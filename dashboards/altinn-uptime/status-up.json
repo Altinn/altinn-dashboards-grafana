@@ -15,17 +15,88 @@
       }
     ]
   },
+  "description": "Live up/down state of every blackbox-exporter HTTP probe in admin-prod-obs-amw. A probe counts as down only when all blackbox-exporter pods report failure (max by instance). Filter with the Job and Instance variables. Datasource UIDs are pinned rather than templated so the panels cannot silently bind to the wrong Prometheus datasource.",
   "editable": false,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
-  "id": null,
   "links": [],
+  "preload": false,
+  "refresh": "30s",
+  "schemaVersion": 42,
+  "tags": [
+    "prometheus",
+    "blackbox-exporter"
+  ],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "admin-prod-obs-amw"
+        },
+        "definition": "label_values(probe_success{job=~\"blackbox-http-.*\"}, job)",
+        "includeAll": true,
+        "label": "Job",
+        "multi": true,
+        "name": "job",
+        "options": [],
+        "query": {
+          "query": "label_values(probe_success{job=~\"blackbox-http-.*\"}, job)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 2,
+        "regex": "",
+        "regexApplyTo": "value",
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "admin-prod-obs-amw"
+        },
+        "definition": "label_values(probe_success{job=~\"^$job$\"}, instance)",
+        "includeAll": true,
+        "label": "Instance",
+        "multi": true,
+        "name": "instance",
+        "options": [],
+        "query": {
+          "query": "label_values(probe_success{job=~\"^$job$\"}, instance)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 2,
+        "regex": "",
+        "regexApplyTo": "value",
+        "sort": 1,
+        "type": "query"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-2h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Status UP",
+  "uid": "altinn-uptime-status-up",
+  "weekStart": "",
   "panels": [
     {
       "datasource": {
         "type": "prometheus",
         "uid": "admin-prod-obs-amw"
       },
+      "description": "Number of probed instances that are up now (at least one blackbox-exporter pod reports success).",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -38,7 +109,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": 0
               },
               {
                 "color": "red",
@@ -48,12 +120,6 @@
           }
         },
         "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 5,
-        "x": 0,
-        "y": 0
       },
       "id": 4,
       "options": {
@@ -73,7 +139,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "11.6.9",
+      "pluginVersion": "12.4.8",
       "targets": [
         {
           "datasource": {
@@ -90,13 +156,19 @@
       ],
       "title": "UP",
       "type": "stat",
-      "description": "Number of probed instances that are up now (at least one blackbox-exporter pod reports success)."
+      "gridPos": {
+        "h": 8,
+        "w": 5,
+        "x": 0,
+        "y": 0
+      }
     },
     {
       "datasource": {
         "type": "prometheus",
         "uid": "admin-prod-obs-amw"
       },
+      "description": "Number of probed instances that are down now (all blackbox-exporter pods report failure).",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -109,7 +181,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": 0
               },
               {
                 "color": "red",
@@ -119,12 +192,6 @@
           }
         },
         "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 5,
-        "x": 5,
-        "y": 0
       },
       "id": 5,
       "options": {
@@ -144,7 +211,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "11.6.9",
+      "pluginVersion": "12.4.8",
       "targets": [
         {
           "datasource": {
@@ -161,13 +228,247 @@
       ],
       "title": "DOWN",
       "type": "stat",
-      "description": "Number of probed instances that are down now (all blackbox-exporter pods report failure)."
+      "gridPos": {
+        "h": 8,
+        "w": 5,
+        "x": 5,
+        "y": 0
+      }
     },
     {
       "datasource": {
         "type": "prometheus",
         "uid": "admin-prod-obs-amw"
       },
+      "description": "Probes (host + IP family) that failed at least once in the selected time range. A probe counts as failed when all blackbox-exporter pods report failure. Checked every 15 s. Sorted by last failure; probes that are down now are at the top.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true,
+            "footer": {
+              "reducers": []
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "instance"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Instance"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "ip_family"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "IP"
+              },
+              {
+                "id": "custom.width",
+                "value": 80
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Value #A"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Time down"
+              },
+              {
+                "id": "unit",
+                "value": "s"
+              },
+              {
+                "id": "custom.width",
+                "value": 140
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Value #B"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Last failure"
+              },
+              {
+                "id": "unit",
+                "value": "dateTimeAsIso"
+              },
+              {
+                "id": "custom.width",
+                "value": 200
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Value #C"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Now"
+              },
+              {
+                "id": "custom.width",
+                "value": 90
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "mode": "basic",
+                  "type": "color-background"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "options": {
+                      "0": {
+                        "color": "green",
+                        "index": 0,
+                        "text": "OK"
+                      },
+                      "1": {
+                        "color": "red",
+                        "index": 1,
+                        "text": "DOWN"
+                      }
+                    },
+                    "type": "value"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "id": 6,
+      "options": {
+        "cellHeight": "sm",
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "Last failure"
+          }
+        ]
+      },
+      "pluginVersion": "12.4.8",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "admin-prod-obs-amw"
+          },
+          "editorMode": "code",
+          "expr": "sum_over_time((max by(instance, ip_family) (probe_success{job=~\"^$job$\", instance=~\"^$instance$\"}) == bool 0)[$__range:15s]) * 15 > 0",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "admin-prod-obs-amw"
+          },
+          "editorMode": "code",
+          "expr": "max_over_time(timestamp(max by(instance, ip_family) (probe_success{job=~\"^$job$\", instance=~\"^$instance$\"}) == 0)[$__range:15s]) * 1000",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "admin-prod-obs-amw"
+          },
+          "editorMode": "code",
+          "expr": "(max by(instance, ip_family) (probe_success{job=~\"^$job$\", instance=~\"^$instance$\"}) == bool 0) and on(instance, ip_family) (sum_over_time((max by(instance, ip_family) (probe_success{job=~\"^$job$\", instance=~\"^$instance$\"}) == bool 0)[$__range:15s]) > 0)",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "C"
+        }
+      ],
+      "title": "Failing probes",
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "indexByName": {
+              "Value #A": 3,
+              "Value #B": 4,
+              "Value #C": 0,
+              "instance": 1,
+              "ip_family": 2
+            },
+            "renameByName": {}
+          }
+        }
+      ],
+      "type": "table",
+      "gridPos": {
+        "h": 8,
+        "w": 14,
+        "x": 10,
+        "y": 0
+      }
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "admin-prod-obs-amw"
+      },
+      "description": "Periods in the selected time range when a probe (host + IP family) was down. Empty when no probe failed.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -207,7 +508,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": 0
               },
               {
                 "color": "red",
@@ -331,12 +633,6 @@
           }
         ]
       },
-      "gridPos": {
-        "h": 11,
-        "w": 24,
-        "x": 0,
-        "y": 8
-      },
       "id": 3,
       "options": {
         "alignValue": "left",
@@ -355,7 +651,7 @@
           "sort": "none"
         }
       },
-      "pluginVersion": "11.6.9",
+      "pluginVersion": "12.4.8",
       "targets": [
         {
           "datasource": {
@@ -420,23 +716,31 @@
       ],
       "title": "Probe fail",
       "type": "state-timeline",
-      "description": "Periods in the selected time range when a probe (host + IP family) was down. Empty when no probe failed."
+      "gridPos": {
+        "h": 11,
+        "w": 24,
+        "x": 0,
+        "y": 8
+      }
     },
     {
-      "collapsed": true,
+      "id": 7,
+      "title": "Status",
+      "type": "row",
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
         "y": 19
       },
-      "id": 7,
+      "collapsed": true,
       "panels": [
         {
           "datasource": {
             "type": "prometheus",
             "uid": "admin-prod-obs-amw"
           },
+          "description": "Up/down history of each probed instance over the selected time range.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -481,7 +785,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": 0
                   },
                   {
                     "color": "red",
@@ -499,12 +804,6 @@
               }
             },
             "overrides": []
-          },
-          "gridPos": {
-            "h": 15,
-            "w": 24,
-            "x": 0,
-            "y": 20
           },
           "id": 2,
           "options": {
@@ -524,7 +823,7 @@
               "sort": "none"
             }
           },
-          "pluginVersion": "11.6.9",
+          "pluginVersion": "12.4.8",
           "targets": [
             {
               "datasource": {
@@ -541,308 +840,15 @@
           ],
           "title": "Status",
           "type": "state-timeline",
-          "description": "Up/down history of each probed instance over the selected time range."
-        }
-      ],
-      "title": "Status",
-      "type": "row"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "admin-prod-obs-amw"
-      },
-      "description": "Probes (host + IP family) that failed at least once in the selected time range. A probe counts as failed when all blackbox-exporter pods report failure. Checked every 15 s. Sorted by last failure; probes that are down now are at the top.",
-      "fieldConfig": {
-        "defaults": {
-          "custom": {
-            "align": "auto",
-            "cellOptions": {
-              "type": "auto"
-            },
-            "filterable": true,
-            "inspect": false
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          }
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "instance"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Instance"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "ip_family"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "IP"
-              },
-              {
-                "id": "custom.width",
-                "value": 80
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Value #A"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Time down"
-              },
-              {
-                "id": "unit",
-                "value": "s"
-              },
-              {
-                "id": "custom.width",
-                "value": 140
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Value #B"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Last failure"
-              },
-              {
-                "id": "unit",
-                "value": "dateTimeAsIso"
-              },
-              {
-                "id": "custom.width",
-                "value": 200
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Value #C"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Now"
-              },
-              {
-                "id": "custom.width",
-                "value": 90
-              },
-              {
-                "id": "custom.cellOptions",
-                "value": {
-                  "mode": "basic",
-                  "type": "color-background"
-                }
-              },
-              {
-                "id": "mappings",
-                "value": [
-                  {
-                    "options": {
-                      "0": {
-                        "color": "green",
-                        "index": 0,
-                        "text": "OK"
-                      },
-                      "1": {
-                        "color": "red",
-                        "index": 1,
-                        "text": "DOWN"
-                      }
-                    },
-                    "type": "value"
-                  }
-                ]
-              }
-            ]
-          }
-        ]
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 14,
-        "x": 10,
-        "y": 0
-      },
-      "id": 6,
-      "options": {
-        "cellHeight": "sm",
-        "footer": {
-          "countRows": false,
-          "fields": "",
-          "reducer": [
-            "sum"
-          ],
-          "show": false
-        },
-        "showHeader": true,
-        "sortBy": [
-          {
-            "desc": true,
-            "displayName": "Last failure"
-          }
-        ]
-      },
-      "pluginVersion": "11.6.9",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "admin-prod-obs-amw"
-          },
-          "editorMode": "code",
-          "expr": "sum_over_time((max by(instance, ip_family) (probe_success{job=~\"^$job$\", instance=~\"^$instance$\"}) == bool 0)[$__range:15s]) * 15 > 0",
-          "format": "table",
-          "instant": true,
-          "legendFormat": "__auto",
-          "range": false,
-          "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "admin-prod-obs-amw"
-          },
-          "editorMode": "code",
-          "expr": "max_over_time(timestamp(max by(instance, ip_family) (probe_success{job=~\"^$job$\", instance=~\"^$instance$\"}) == 0)[$__range:15s]) * 1000",
-          "format": "table",
-          "instant": true,
-          "legendFormat": "__auto",
-          "range": false,
-          "refId": "B"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "admin-prod-obs-amw"
-          },
-          "editorMode": "code",
-          "expr": "(max by(instance, ip_family) (probe_success{job=~\"^$job$\", instance=~\"^$instance$\"}) == bool 0) and on(instance, ip_family) (sum_over_time((max by(instance, ip_family) (probe_success{job=~\"^$job$\", instance=~\"^$instance$\"}) == bool 0)[$__range:15s]) > 0)",
-          "format": "table",
-          "instant": true,
-          "legendFormat": "__auto",
-          "range": false,
-          "refId": "C"
-        }
-      ],
-      "title": "Failing probes",
-      "transformations": [
-        {
-          "id": "merge",
-          "options": {}
-        },
-        {
-          "id": "organize",
-          "options": {
-            "excludeByName": {
-              "Time": true
-            },
-            "indexByName": {
-              "Value #A": 3,
-              "Value #B": 4,
-              "Value #C": 0,
-              "instance": 1,
-              "ip_family": 2
-            },
-            "renameByName": {}
+          "gridPos": {
+            "h": 15,
+            "w": 24,
+            "x": 0,
+            "y": 20
           }
         }
-      ],
-      "type": "table"
+      ]
     }
   ],
-  "preload": false,
-  "refresh": "30s",
-  "schemaVersion": 41,
-  "tags": [
-    "prometheus",
-    "blackbox-exporter"
-  ],
-  "templating": {
-    "list": [
-      {
-        "current": {},
-        "datasource": {
-          "type": "prometheus",
-          "uid": "admin-prod-obs-amw"
-        },
-        "definition": "label_values(probe_success{job=~\"blackbox-http-.*\"}, job)",
-        "hide": 0,
-        "includeAll": true,
-        "label": "Job",
-        "multi": true,
-        "name": "job",
-        "options": [],
-        "query": {
-          "query": "label_values(probe_success{job=~\"blackbox-http-.*\"}, job)",
-          "refId": "StandardVariableQuery"
-        },
-        "refresh": 2,
-        "regex": "",
-        "sort": 1,
-        "type": "query"
-      },
-      {
-        "current": {},
-        "datasource": {
-          "type": "prometheus",
-          "uid": "admin-prod-obs-amw"
-        },
-        "definition": "label_values(probe_success{job=~\"^$job$\"}, instance)",
-        "hide": 0,
-        "includeAll": true,
-        "label": "Instance",
-        "multi": true,
-        "name": "instance",
-        "options": [],
-        "query": {
-          "query": "label_values(probe_success{job=~\"^$job$\"}, instance)",
-          "refId": "StandardVariableQuery"
-        },
-        "refresh": 2,
-        "regex": "",
-        "sort": 1,
-        "type": "query"
-      }
-    ]
-  },
-  "time": {
-    "from": "now-2h",
-    "to": "now"
-  },
-  "timepicker": {},
-  "timezone": "browser",
-  "title": "Status UP",
-  "uid": "altinn-uptime-status-up",
-  "description": "Live up/down state of every blackbox-exporter HTTP probe in admin-prod-obs-amw. A probe counts as down only when all blackbox-exporter pods report failure (max by instance). Filter with the Job and Instance variables. Datasource UIDs are pinned rather than templated so the panels cannot silently bind to the wrong Prometheus datasource."
+  "id": null
 }

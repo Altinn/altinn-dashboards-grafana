@@ -15,11 +15,58 @@
       }
     ]
   },
+  "description": "Per-service-owner availability of the Altinn apps hosts (<org>.apps.altinn.no and <org>.apps.tt02.altinn.no) in admin-prod-obs-amw, with an SLA measured per calendar month (default range: last 30 days; pick e.g. 'Previous month' in the time picker for a calendar month). Prod: 99.9 %, 24/7, from altinn:probe_success_1m. tt02: 99.8 % of all hours in the month, but only downtime inside the operating period counts (the recording rule counts Mon–Fri 05:00–19:00 UTC. This covers 07:00–20:00 Norwegian time in both summer time (07:00–21:00) and winter time (06:00–20:00), so up to one extra hour per day is counted), from altinn:probe_success_tt02_business_hours_1m. The base rule altinn:probe_success:max_by_instance runs every 5 minutes and takes max by instance over the blackbox-http-ipv4/ipv6-kuberneteswrapper jobs, so a host counts as up when at least one blackbox-exporter pod reaches it over IPv4 or IPv6. The _1m rules run every minute but read that 5-minute base, so each series holds one 0/1 sample per 5 minutes. Planned maintenance is not excluded. Filter with the Customer variable. Datasource UIDs are pinned rather than templated so the panels cannot silently bind to the wrong Prometheus datasource.",
   "editable": false,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
-  "id": null,
   "links": [],
+  "preload": false,
+  "refresh": "",
+  "schemaVersion": 42,
+  "tags": [
+    "prometheus",
+    "blackbox-exporter",
+    "sla"
+  ],
+  "templating": {
+    "list": [
+      {
+        "allValue": ".*",
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "admin-prod-obs-amw"
+        },
+        "definition": "label_values(altinn:probe_success_1m, instance)",
+        "includeAll": true,
+        "label": "Customer",
+        "multi": true,
+        "name": "customer",
+        "options": [],
+        "query": {
+          "query": "label_values(altinn:probe_success_1m, instance)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 2,
+        "regex": "/^([^.]+)[.]apps[.].*/",
+        "regexApplyTo": "value",
+        "sort": 1,
+        "type": "query"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-30d",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "Europe/Oslo",
+  "title": "SLA - Service Owners",
+  "uid": "altinn-uptime-sla-service-owners",
+  "weekStart": "",
   "panels": [
     {
       "datasource": {
@@ -55,12 +102,6 @@
         },
         "overrides": []
       },
-      "gridPos": {
-        "h": 5,
-        "w": 8,
-        "x": 0,
-        "y": 0
-      },
       "id": 100,
       "options": {
         "colorMode": "background",
@@ -79,7 +120,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "12.4.3",
+      "pluginVersion": "12.4.8",
       "targets": [
         {
           "datasource": {
@@ -94,7 +135,13 @@
         }
       ],
       "title": "Prod overall SLA 24/7",
-      "type": "stat"
+      "type": "stat",
+      "gridPos": {
+        "h": 5,
+        "w": 8,
+        "x": 0,
+        "y": 0
+      }
     },
     {
       "datasource": {
@@ -130,12 +177,6 @@
         },
         "overrides": []
       },
-      "gridPos": {
-        "h": 5,
-        "w": 8,
-        "x": 8,
-        "y": 0
-      },
       "id": 101,
       "options": {
         "colorMode": "background",
@@ -154,7 +195,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "12.4.3",
+      "pluginVersion": "12.4.8",
       "targets": [
         {
           "datasource": {
@@ -169,15 +210,19 @@
         }
       ],
       "title": "tt02 overall SLA (downtime in operating period)",
-      "type": "stat"
-    },
-    {
-      "description": "Reference only: the SLA terms and the allowed downtime per calendar month.",
+      "type": "stat",
       "gridPos": {
         "h": 5,
         "w": 8,
-        "x": 16,
+        "x": 8,
         "y": 0
+      }
+    },
+    {
+      "description": "Reference only: the SLA terms and the allowed downtime per calendar month.",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
       },
       "id": 102,
       "options": {
@@ -189,22 +234,28 @@
         "content": "### SLA reference (per calendar month)\n- **Prod 99.9 %**, 24/7 except planned maintenance: 43.2 min in a 30-day month (40.3–44.6 min for 28–31 days). Planned maintenance is not excluded here.\n- **tt02 99.8 %** of all hours in the month, but only downtime Mon–Fri 07:00–20:00 counts: 86.4 min in a 30-day month (80.6–89.3 min for 28–31 days). The rule counts 05:00–19:00 UTC, which covers 07:00–20:00 in both summer and winter time.\n- Samples are 5 minutes apart: each down sample counts as 5 min of downtime.\n- Default range is the last 30 days. Pick 'Previous month' in the time picker for a calendar month.",
         "mode": "markdown"
       },
-      "pluginVersion": "12.4.3",
+      "pluginVersion": "12.4.8",
       "title": "Info",
-      "type": "text"
+      "type": "text",
+      "gridPos": {
+        "h": 5,
+        "w": 8,
+        "x": 16,
+        "y": 0
+      }
     },
     {
-      "collapsed": false,
+      "id": 10,
+      "title": "Prod — SLA 99.9 % (24/7, 5-minute samples)",
+      "type": "row",
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
         "y": 5
       },
-      "id": 10,
-      "panels": [],
-      "title": "Prod — SLA 99.9 % (24/7, 5-minute samples)",
-      "type": "row"
+      "collapsed": false,
+      "panels": []
     },
     {
       "datasource": {
@@ -323,12 +374,6 @@
           }
         ]
       },
-      "gridPos": {
-        "h": 14,
-        "w": 24,
-        "x": 0,
-        "y": 6
-      },
       "id": 1,
       "options": {
         "cellHeight": "sm",
@@ -340,7 +385,7 @@
           }
         ]
       },
-      "pluginVersion": "12.4.3",
+      "pluginVersion": "12.4.8",
       "targets": [
         {
           "datasource": {
@@ -410,20 +455,26 @@
           }
         }
       ],
-      "type": "table"
+      "type": "table",
+      "gridPos": {
+        "h": 14,
+        "w": 24,
+        "x": 0,
+        "y": 6
+      }
     },
     {
-      "collapsed": false,
+      "id": 11,
+      "title": "tt02 — SLA 99.8 % (downtime counted only in operating period, 5-minute samples)",
+      "type": "row",
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
         "y": 20
       },
-      "id": 11,
-      "panels": [],
-      "title": "tt02 — SLA 99.8 % (downtime counted only in operating period, 5-minute samples)",
-      "type": "row"
+      "collapsed": false,
+      "panels": []
     },
     {
       "datasource": {
@@ -542,12 +593,6 @@
           }
         ]
       },
-      "gridPos": {
-        "h": 14,
-        "w": 24,
-        "x": 0,
-        "y": 21
-      },
       "id": 2,
       "options": {
         "cellHeight": "sm",
@@ -559,7 +604,7 @@
           }
         ]
       },
-      "pluginVersion": "12.4.3",
+      "pluginVersion": "12.4.8",
       "targets": [
         {
           "datasource": {
@@ -629,57 +674,14 @@
           }
         }
       ],
-      "type": "table"
+      "type": "table",
+      "gridPos": {
+        "h": 14,
+        "w": 24,
+        "x": 0,
+        "y": 21
+      }
     }
   ],
-  "preload": false,
-  "refresh": "",
-  "schemaVersion": 42,
-  "tags": [
-    "prometheus",
-    "blackbox-exporter",
-    "sla"
-  ],
-  "templating": {
-    "list": [
-      {
-        "allValue": ".*",
-        "current": {
-          "text": "All",
-          "value": [
-            "$__all"
-          ]
-        },
-        "datasource": {
-          "type": "prometheus",
-          "uid": "admin-prod-obs-amw"
-        },
-        "definition": "label_values(altinn:probe_success_1m, instance)",
-        "includeAll": true,
-        "label": "Customer",
-        "multi": true,
-        "name": "customer",
-        "options": [],
-        "query": {
-          "query": "label_values(altinn:probe_success_1m, instance)",
-          "refId": "StandardVariableQuery"
-        },
-        "refresh": 2,
-        "regex": "/^([^.]+)[.]apps[.].*/",
-        "regexApplyTo": "value",
-        "sort": 1,
-        "type": "query"
-      }
-    ]
-  },
-  "time": {
-    "from": "now-30d",
-    "to": "now"
-  },
-  "timepicker": {},
-  "timezone": "Europe/Oslo",
-  "title": "SLA - Service Owners",
-  "uid": "altinn-uptime-sla-service-owners",
-  "weekStart": "",
-  "description": "Per-service-owner availability of the Altinn apps hosts (<org>.apps.altinn.no and <org>.apps.tt02.altinn.no) in admin-prod-obs-amw, with an SLA measured per calendar month (default range: last 30 days; pick e.g. 'Previous month' in the time picker for a calendar month). Prod: 99.9 %, 24/7, from altinn:probe_success_1m. tt02: 99.8 % of all hours in the month, but only downtime inside the operating period counts (the recording rule counts Mon–Fri 05:00–19:00 UTC. This covers 07:00–20:00 Norwegian time in both summer time (07:00–21:00) and winter time (06:00–20:00), so up to one extra hour per day is counted), from altinn:probe_success_tt02_business_hours_1m. The base rule altinn:probe_success:max_by_instance runs every 5 minutes and takes max by instance over the blackbox-http-ipv4/ipv6-kuberneteswrapper jobs, so a host counts as up when at least one blackbox-exporter pod reaches it over IPv4 or IPv6. The _1m rules run every minute but read that 5-minute base, so each series holds one 0/1 sample per 5 minutes. Planned maintenance is not excluded. Filter with the Customer variable. Datasource UIDs are pinned rather than templated so the panels cannot silently bind to the wrong Prometheus datasource."
+  "id": null
 }

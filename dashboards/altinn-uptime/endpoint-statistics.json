@@ -25,27 +25,95 @@
   "editable": false,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": null,
   "links": [],
+  "preload": false,
+  "refresh": "",
+  "schemaVersion": 42,
+  "tags": [
+    "prometheus",
+    "blackbox"
+  ],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "admin-prod-obs-amw"
+        },
+        "definition": "label_values(probe_success, job)",
+        "includeAll": true,
+        "label": "Job",
+        "name": "job",
+        "options": [],
+        "query": {
+          "query": "label_values(probe_success, job)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 2,
+        "regex": "",
+        "regexApplyTo": "value",
+        "sort": 2,
+        "type": "query"
+      },
+      {
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "admin-prod-obs-amw"
+        },
+        "definition": "label_values(probe_success{job=~\"^$job$\"}, instance)",
+        "includeAll": true,
+        "label": "Instance",
+        "name": "instance",
+        "options": [],
+        "query": {
+          "query": "label_values(probe_success{job=~\"^$job$\"}, instance)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 2,
+        "regex": "",
+        "regexApplyTo": "value",
+        "sort": 1,
+        "type": "query"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Endpoint Statistics",
+  "uid": "altinn-uptime-endpoint-statistics",
+  "weekStart": "",
   "panels": [
     {
-      "collapsed": false,
+      "id": 4,
+      "title": "Overview",
+      "type": "row",
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
         "y": 0
       },
-      "id": 4,
-      "panels": [],
-      "title": "Overview",
-      "type": "row"
+      "collapsed": false,
+      "panels": []
     },
     {
       "datasource": {
         "type": "prometheus",
         "uid": "admin-prod-obs-amw"
       },
+      "description": "Number of probe series that match the Job and Instance filters.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -68,12 +136,6 @@
         },
         "overrides": []
       },
-      "gridPos": {
-        "h": 3,
-        "w": 2,
-        "x": 0,
-        "y": 1
-      },
       "id": 20,
       "options": {
         "colorMode": "value",
@@ -92,7 +154,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "12.3.0",
+      "pluginVersion": "12.4.8",
       "targets": [
         {
           "datasource": {
@@ -105,13 +167,19 @@
       ],
       "title": "Total",
       "type": "stat",
-      "description": "Number of probe series that match the Job and Instance filters."
+      "gridPos": {
+        "h": 3,
+        "w": 2,
+        "x": 0,
+        "y": 1
+      }
     },
     {
       "datasource": {
         "type": "prometheus",
         "uid": "admin-prod-obs-amw"
       },
+      "description": "One row per probed instance: probe status, HTTP status code, TLS version and issuer, certificate expiry, and the duration of each HTTP phase (resolve, connect, TLS, processing, transfer).",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -708,12 +776,6 @@
           }
         ]
       },
-      "gridPos": {
-        "h": 10,
-        "w": 22,
-        "x": 2,
-        "y": 1
-      },
       "id": 30,
       "options": {
         "cellHeight": "sm",
@@ -725,7 +787,7 @@
           }
         ]
       },
-      "pluginVersion": "12.3.0",
+      "pluginVersion": "12.4.8",
       "targets": [
         {
           "datasource": {
@@ -749,7 +811,6 @@
           "exemplar": false,
           "expr": "probe_http_ssl{job=~\"^$job$\", instance=~\"^$instance$\"} > 0",
           "format": "table",
-          "hide": false,
           "instant": true,
           "range": false,
           "refId": "B"
@@ -763,7 +824,6 @@
           "exemplar": false,
           "expr": "(probe_ssl_earliest_cert_expiry{job=~\"^$job$\", instance=~\"^$instance$\"} - time()) / 3600 / 24",
           "format": "table",
-          "hide": false,
           "instant": true,
           "range": false,
           "refId": "C"
@@ -777,7 +837,6 @@
           "exemplar": false,
           "expr": "probe_http_status_code{job=~\"^$job$\", instance=~\"^$instance$\"} > 0",
           "format": "table",
-          "hide": false,
           "instant": true,
           "range": false,
           "refId": "D"
@@ -791,7 +850,6 @@
           "exemplar": false,
           "expr": "avg_over_time(probe_duration_seconds{job=~\"^$job$\", instance=~\"^$instance$\"}[1m])",
           "format": "table",
-          "hide": false,
           "instant": true,
           "range": false,
           "refId": "E"
@@ -805,7 +863,6 @@
           "exemplar": false,
           "expr": "probe_tls_version_info{job=~\"^$job$\", instance=~\"^$instance$\"}",
           "format": "table",
-          "hide": false,
           "instant": true,
           "range": false,
           "refId": "F"
@@ -819,7 +876,6 @@
           "exemplar": false,
           "expr": "avg_over_time(probe_dns_lookup_time_seconds{job=~\"^$job$\", instance=~\"^$instance$\"}[1m])",
           "format": "table",
-          "hide": false,
           "instant": true,
           "range": false,
           "refId": "G"
@@ -833,7 +889,6 @@
           "exemplar": false,
           "expr": "probe_ssl_earliest_cert_expiry{job=~\"^$job$\", instance=~\"^$instance$\"} * 1000",
           "format": "table",
-          "hide": false,
           "instant": true,
           "range": false,
           "refId": "H"
@@ -847,7 +902,6 @@
           "exemplar": false,
           "expr": "probe_ssl_last_chain_info{job=~\"^$job$\", instance=~\"^$instance$\"}",
           "format": "table",
-          "hide": false,
           "instant": true,
           "range": false,
           "refId": "I"
@@ -861,7 +915,6 @@
           "exemplar": false,
           "expr": "probe_http_duration_seconds{job=~\"^$job$\", instance=~\"^$instance$\", phase=\"resolve\"}",
           "format": "table",
-          "hide": false,
           "instant": true,
           "range": false,
           "refId": "J"
@@ -875,7 +928,6 @@
           "exemplar": false,
           "expr": "probe_http_duration_seconds{job=~\"^$job$\", instance=~\"^$instance$\", phase=\"connect\"}",
           "format": "table",
-          "hide": false,
           "instant": true,
           "interval": "",
           "range": false,
@@ -890,7 +942,6 @@
           "exemplar": false,
           "expr": "probe_http_duration_seconds{job=~\"^$job$\", instance=~\"^$instance$\", phase=\"tls\"}",
           "format": "table",
-          "hide": false,
           "instant": true,
           "range": false,
           "refId": "L"
@@ -904,7 +955,6 @@
           "exemplar": false,
           "expr": "probe_http_duration_seconds{job=~\"^$job$\", instance=~\"^$instance$\", phase=\"processing\"}",
           "format": "table",
-          "hide": false,
           "instant": true,
           "range": false,
           "refId": "M"
@@ -918,7 +968,6 @@
           "exemplar": false,
           "expr": "probe_http_duration_seconds{job=~\"^$job$\", instance=~\"^$instance$\", phase=\"transfer\"}",
           "format": "table",
-          "hide": false,
           "instant": true,
           "range": false,
           "refId": "N"
@@ -1085,13 +1134,19 @@
         }
       ],
       "type": "table",
-      "description": "One row per probed instance: probe status, HTTP status code, TLS version and issuer, certificate expiry, and the duration of each HTTP phase (resolve, connect, TLS, processing, transfer)."
+      "gridPos": {
+        "h": 10,
+        "w": 22,
+        "x": 2,
+        "y": 1
+      }
     },
     {
       "datasource": {
         "type": "prometheus",
         "uid": "admin-prod-obs-amw"
       },
+      "description": "Number of probe series that fail now.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1135,12 +1190,6 @@
           }
         ]
       },
-      "gridPos": {
-        "h": 3,
-        "w": 2,
-        "x": 0,
-        "y": 4
-      },
       "id": 22,
       "options": {
         "colorMode": "value",
@@ -1160,7 +1209,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "12.3.0",
+      "pluginVersion": "12.4.8",
       "targets": [
         {
           "datasource": {
@@ -1170,7 +1219,6 @@
           "editorMode": "code",
           "exemplar": false,
           "expr": "count(probe_success{job=~\"^$job$\", instance=~\"^$instance$\"} == 0)",
-          "hide": false,
           "instant": true,
           "range": false,
           "refId": "A"
@@ -1178,13 +1226,19 @@
       ],
       "title": "Fail",
       "type": "stat",
-      "description": "Number of probe series that fail now."
+      "gridPos": {
+        "h": 3,
+        "w": 2,
+        "x": 0,
+        "y": 4
+      }
     },
     {
       "datasource": {
         "type": "prometheus",
         "uid": "admin-prod-obs-amw"
       },
+      "description": "Share of probe series that succeed and fail now.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1204,66 +1258,6 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "不正常状态实例"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "red",
-                  "mode": "fixed"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "正常状态实例"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "green",
-                  "mode": "fixed"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "探测失败状态实例"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "red",
-                  "mode": "fixed"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "探测成功状态实例"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "green",
-                  "mode": "fixed"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
               "options": "Failed status instance"
             },
             "properties": [
@@ -1277,12 +1271,6 @@
             ]
           }
         ]
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 2,
-        "x": 0,
-        "y": 7
       },
       "id": 24,
       "options": {
@@ -1310,7 +1298,7 @@
           "sort": "none"
         }
       },
-      "pluginVersion": "12.3.0",
+      "pluginVersion": "12.4.8",
       "targets": [
         {
           "datasource": {
@@ -1335,7 +1323,6 @@
           "editorMode": "code",
           "exemplar": false,
           "expr": "count(probe_success{job=~\"^$job$\", instance=~\"^$instance$\"} == 0)",
-          "hide": false,
           "instant": true,
           "legendFormat": "Failed status instance",
           "range": false,
@@ -1344,23 +1331,31 @@
       ],
       "title": "Instance status percentage",
       "type": "piechart",
-      "description": "Share of probe series that succeed and fail now."
+      "gridPos": {
+        "h": 4,
+        "w": 2,
+        "x": 0,
+        "y": 7
+      }
     },
     {
-      "collapsed": true,
+      "id": 6,
+      "title": "$instance status",
+      "type": "row",
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
         "y": 11
       },
-      "id": 6,
+      "collapsed": true,
       "panels": [
         {
           "datasource": {
             "type": "prometheus",
             "uid": "admin-prod-obs-amw"
           },
+          "description": "Current probe result for this instance.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -1392,7 +1387,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#d44a3a"
+                    "color": "#d44a3a",
+                    "value": 0
                   },
                   {
                     "color": "rgba(237, 129, 40, 0.89)",
@@ -1408,12 +1404,6 @@
             },
             "overrides": []
           },
-          "gridPos": {
-            "h": 5,
-            "w": 2,
-            "x": 0,
-            "y": 12
-          },
           "id": 12,
           "maxDataPoints": 100,
           "options": {
@@ -1421,6 +1411,7 @@
             "graphMode": "none",
             "justifyMode": "auto",
             "orientation": "horizontal",
+            "percentChangeColorMode": "standard",
             "reduceOptions": {
               "calcs": [
                 "lastNotNull"
@@ -1428,9 +1419,11 @@
               "fields": "",
               "values": false
             },
-            "textMode": "auto"
+            "showPercentChange": false,
+            "textMode": "auto",
+            "wideLayout": true
           },
-          "pluginVersion": "8.5.20",
+          "pluginVersion": "12.4.8",
           "targets": [
             {
               "datasource": {
@@ -1438,28 +1431,37 @@
                 "uid": "admin-prod-obs-amw"
               },
               "expr": "probe_success{instance=~\"^$instance$\"}",
-              "hide": false,
               "refId": "B"
             }
           ],
           "title": "Status",
           "type": "stat",
-          "description": "Current probe result for this instance."
+          "gridPos": {
+            "h": 5,
+            "w": 2,
+            "x": 0,
+            "y": 12
+          }
         },
         {
           "datasource": {
             "type": "prometheus",
             "uid": "admin-prod-obs-amw"
           },
+          "description": "Duration of each HTTP phase (resolve, connect, TLS, processing, transfer) for this instance.",
           "fieldConfig": {
             "defaults": {
               "color": {
                 "mode": "palette-classic"
               },
               "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
                 "axisLabel": "",
                 "axisPlacement": "auto",
                 "barAlignment": 0,
+                "barWidthFactor": 0.6,
                 "drawStyle": "line",
                 "fillOpacity": 10,
                 "gradientMode": "none",
@@ -1468,6 +1470,7 @@
                   "tooltip": false,
                   "viz": false
                 },
+                "insertNulls": false,
                 "lineInterpolation": "linear",
                 "lineWidth": 1,
                 "pointSize": 5,
@@ -1475,6 +1478,7 @@
                   "type": "linear"
                 },
                 "showPoints": "never",
+                "showValues": false,
                 "spanNulls": true,
                 "stacking": {
                   "group": "A",
@@ -1489,7 +1493,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": 0
                   },
                   {
                     "color": "red",
@@ -1500,12 +1505,6 @@
               "unit": "s"
             },
             "overrides": []
-          },
-          "gridPos": {
-            "h": 10,
-            "w": 13,
-            "x": 2,
-            "y": 12
           },
           "id": 8,
           "options": {
@@ -1518,11 +1517,12 @@
               "showLegend": true
             },
             "tooltip": {
+              "hideZeros": false,
               "mode": "multi",
               "sort": "none"
             }
           },
-          "pluginVersion": "8.5.20",
+          "pluginVersion": "12.4.8",
           "targets": [
             {
               "datasource": {
@@ -1531,7 +1531,6 @@
               },
               "editorMode": "code",
               "expr": "probe_http_duration_seconds{instance=~\"^$instance$\"}",
-              "hide": false,
               "legendFormat": "{{instance}}:{{phase}}",
               "range": true,
               "refId": "A"
@@ -1539,13 +1538,19 @@
           ],
           "title": "HTTP Duration",
           "type": "timeseries",
-          "description": "Duration of each HTTP phase (resolve, connect, TLS, processing, transfer) for this instance."
+          "gridPos": {
+            "h": 10,
+            "w": 13,
+            "x": 2,
+            "y": 12
+          }
         },
         {
           "datasource": {
             "type": "prometheus",
             "uid": "admin-prod-obs-amw"
           },
+          "description": "Average total probe duration for this instance.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -1566,7 +1571,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": 0
                   },
                   {
                     "color": "red",
@@ -1578,12 +1584,6 @@
             },
             "overrides": []
           },
-          "gridPos": {
-            "h": 5,
-            "w": 2,
-            "x": 15,
-            "y": 12
-          },
           "id": 14,
           "maxDataPoints": 100,
           "options": {
@@ -1591,6 +1591,7 @@
             "graphMode": "none",
             "justifyMode": "auto",
             "orientation": "horizontal",
+            "percentChangeColorMode": "standard",
             "reduceOptions": {
               "calcs": [
                 "lastNotNull"
@@ -1598,9 +1599,11 @@
               "fields": "",
               "values": false
             },
-            "textMode": "auto"
+            "showPercentChange": false,
+            "textMode": "auto",
+            "wideLayout": true
           },
-          "pluginVersion": "8.5.20",
+          "pluginVersion": "12.4.8",
           "targets": [
             {
               "datasource": {
@@ -1608,28 +1611,37 @@
                 "uid": "admin-prod-obs-amw"
               },
               "expr": "avg(probe_duration_seconds{instance=~\"^$instance$\"})",
-              "hide": false,
               "refId": "B"
             }
           ],
           "title": "Average Probe Duration",
           "type": "stat",
-          "description": "Average total probe duration for this instance."
+          "gridPos": {
+            "h": 5,
+            "w": 2,
+            "x": 15,
+            "y": 12
+          }
         },
         {
           "datasource": {
             "type": "prometheus",
             "uid": "admin-prod-obs-amw"
           },
+          "description": "Total probe duration for this instance over time.",
           "fieldConfig": {
             "defaults": {
               "color": {
                 "mode": "palette-classic"
               },
               "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
                 "axisLabel": "",
                 "axisPlacement": "auto",
                 "barAlignment": 0,
+                "barWidthFactor": 0.6,
                 "drawStyle": "line",
                 "fillOpacity": 10,
                 "gradientMode": "none",
@@ -1638,6 +1650,7 @@
                   "tooltip": false,
                   "viz": false
                 },
+                "insertNulls": false,
                 "lineInterpolation": "linear",
                 "lineWidth": 1,
                 "pointSize": 5,
@@ -1645,6 +1658,7 @@
                   "type": "linear"
                 },
                 "showPoints": "never",
+                "showValues": false,
                 "spanNulls": false,
                 "stacking": {
                   "group": "A",
@@ -1659,7 +1673,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": 0
                   },
                   {
                     "color": "red",
@@ -1670,12 +1685,6 @@
               "unit": "s"
             },
             "overrides": []
-          },
-          "gridPos": {
-            "h": 10,
-            "w": 7,
-            "x": 17,
-            "y": 12
           },
           "id": 10,
           "options": {
@@ -1688,11 +1697,12 @@
               "showLegend": true
             },
             "tooltip": {
+              "hideZeros": false,
               "mode": "multi",
               "sort": "none"
             }
           },
-          "pluginVersion": "8.5.20",
+          "pluginVersion": "12.4.8",
           "targets": [
             {
               "datasource": {
@@ -1701,7 +1711,6 @@
               },
               "editorMode": "code",
               "expr": "probe_duration_seconds{instance=~\"^$instance$\"}",
-              "hide": false,
               "legendFormat": "{{instance}}",
               "range": true,
               "refId": "B"
@@ -1709,13 +1718,19 @@
           ],
           "title": "Probe Duration",
           "type": "timeseries",
-          "description": "Total probe duration for this instance over time."
+          "gridPos": {
+            "h": 10,
+            "w": 7,
+            "x": 17,
+            "y": 12
+          }
         },
         {
           "datasource": {
             "type": "prometheus",
             "uid": "admin-prod-obs-amw"
           },
+          "description": "Expiry date of the earliest-expiring certificate in the chain for this instance.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -1726,7 +1741,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": 0
                   },
                   {
                     "color": "red",
@@ -1758,18 +1774,13 @@
               }
             ]
           },
-          "gridPos": {
-            "h": 5,
-            "w": 2,
-            "x": 0,
-            "y": 17
-          },
           "id": 18,
           "options": {
             "colorMode": "value",
             "graphMode": "none",
             "justifyMode": "auto",
             "orientation": "auto",
+            "percentChangeColorMode": "standard",
             "reduceOptions": {
               "calcs": [
                 "lastNotNull"
@@ -1777,9 +1788,11 @@
               "fields": "/^Certificate Expiration Time$/",
               "values": false
             },
-            "textMode": "auto"
+            "showPercentChange": false,
+            "textMode": "auto",
+            "wideLayout": true
           },
-          "pluginVersion": "8.5.20",
+          "pluginVersion": "12.4.8",
           "targets": [
             {
               "datasource": {
@@ -1827,13 +1840,19 @@
             }
           ],
           "type": "stat",
-          "description": "Expiry date of the earliest-expiring certificate in the chain for this instance."
+          "gridPos": {
+            "h": 5,
+            "w": 2,
+            "x": 0,
+            "y": 17
+          }
         },
         {
           "datasource": {
             "type": "prometheus",
             "uid": "admin-prod-obs-amw"
           },
+          "description": "Average DNS lookup time for this instance.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -1854,7 +1873,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": 0
                   },
                   {
                     "color": "red",
@@ -1866,12 +1886,6 @@
             },
             "overrides": []
           },
-          "gridPos": {
-            "h": 5,
-            "w": 2,
-            "x": 15,
-            "y": 17
-          },
           "id": 16,
           "maxDataPoints": 100,
           "options": {
@@ -1879,6 +1893,7 @@
             "graphMode": "none",
             "justifyMode": "auto",
             "orientation": "horizontal",
+            "percentChangeColorMode": "standard",
             "reduceOptions": {
               "calcs": [
                 "lastNotNull"
@@ -1886,9 +1901,11 @@
               "fields": "",
               "values": false
             },
-            "textMode": "auto"
+            "showPercentChange": false,
+            "textMode": "auto",
+            "wideLayout": true
           },
-          "pluginVersion": "8.5.20",
+          "pluginVersion": "12.4.8",
           "targets": [
             {
               "datasource": {
@@ -1896,28 +1913,37 @@
                 "uid": "admin-prod-obs-amw"
               },
               "expr": "avg(probe_dns_lookup_time_seconds{instance=~\"^$instance$\"})",
-              "hide": false,
               "refId": "B"
             }
           ],
           "title": "Average DNS Lookup",
           "type": "stat",
-          "description": "Average DNS lookup time for this instance."
+          "gridPos": {
+            "h": 5,
+            "w": 2,
+            "x": 15,
+            "y": 17
+          }
         },
         {
           "datasource": {
             "type": "prometheus",
             "uid": "admin-prod-obs-amw"
           },
+          "description": "HTTP status code returned to the probe over time for this instance.",
           "fieldConfig": {
             "defaults": {
               "color": {
                 "mode": "palette-classic"
               },
               "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
                 "axisLabel": "",
                 "axisPlacement": "auto",
                 "barAlignment": 0,
+                "barWidthFactor": 0.6,
                 "drawStyle": "line",
                 "fillOpacity": 0,
                 "gradientMode": "none",
@@ -1926,6 +1952,7 @@
                   "tooltip": false,
                   "viz": false
                 },
+                "insertNulls": false,
                 "lineInterpolation": "linear",
                 "lineWidth": 1,
                 "pointSize": 5,
@@ -1933,6 +1960,7 @@
                   "type": "linear"
                 },
                 "showPoints": "never",
+                "showValues": false,
                 "spanNulls": false,
                 "stacking": {
                   "group": "A",
@@ -1947,7 +1975,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": 0
                   },
                   {
                     "color": "red",
@@ -1958,12 +1987,6 @@
               "unit": "short"
             },
             "overrides": []
-          },
-          "gridPos": {
-            "h": 10,
-            "w": 24,
-            "x": 0,
-            "y": 22
           },
           "id": 26,
           "options": {
@@ -1976,11 +1999,12 @@
               "showLegend": true
             },
             "tooltip": {
+              "hideZeros": false,
               "mode": "multi",
               "sort": "none"
             }
           },
-          "pluginVersion": "8.5.20",
+          "pluginVersion": "12.4.8",
           "targets": [
             {
               "datasource": {
@@ -1996,72 +2020,16 @@
           ],
           "title": "Response code change record",
           "type": "timeseries",
-          "description": "HTTP status code returned to the probe over time for this instance."
+          "gridPos": {
+            "h": 10,
+            "w": 24,
+            "x": 0,
+            "y": 22
+          }
         }
       ],
-      "repeat": "instance",
-      "title": "$instance status",
-      "type": "row"
+      "repeat": "instance"
     }
   ],
-  "preload": false,
-  "refresh": "",
-  "schemaVersion": 42,
-  "tags": [
-    "prometheus",
-    "blackbox"
-  ],
-  "templating": {
-    "list": [
-      {
-        "current": {},
-        "datasource": {
-          "type": "prometheus",
-          "uid": "admin-prod-obs-amw"
-        },
-        "definition": "label_values(probe_success, job)",
-        "includeAll": true,
-        "label": "Job",
-        "name": "job",
-        "options": [],
-        "query": {
-          "query": "label_values(probe_success, job)",
-          "refId": "StandardVariableQuery"
-        },
-        "refresh": 2,
-        "regex": "",
-        "sort": 2,
-        "type": "query"
-      },
-      {
-        "current": {},
-        "datasource": {
-          "type": "prometheus",
-          "uid": "admin-prod-obs-amw"
-        },
-        "definition": "label_values(probe_success{job=~\"^$job$\"}, instance)",
-        "includeAll": true,
-        "label": "Instance",
-        "name": "instance",
-        "options": [],
-        "query": {
-          "query": "label_values(probe_success{job=~\"^$job$\"}, instance)",
-          "refId": "StandardVariableQuery"
-        },
-        "refresh": 2,
-        "regex": "",
-        "sort": 1,
-        "type": "query"
-      }
-    ]
-  },
-  "time": {
-    "from": "now-6h",
-    "to": "now"
-  },
-  "timepicker": {},
-  "timezone": "",
-  "title": "Endpoint Statistics",
-  "uid": "altinn-uptime-endpoint-statistics",
-  "weekStart": ""
+  "id": null
 }
