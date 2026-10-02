@@ -15,7 +15,7 @@
       }
     ]
   },
-  "description": "Per-product availability of Altinn products with a deep health check (<product>.altinn.no and <product>.tt02.altinn.no), with an SLA measured per calendar month (default range: last 30 days; pick e.g. 'Previous month' in the time picker for a calendar month). Source: raw probe_success of the blackbox-http-ipv4/ipv6-health-check jobs in admin-prod-obs-amw. These probes call /health and pass only on HTTP 200 with a JSON body that reports status Healthy (blackbox modules http_health_check_ipv4/ipv6). Targets are listed under health_check_ipv4/ipv6 in the altinn-uptime-extra-targets ConfigMap (dis-way/gitops-manifests, oci/blackbox-exporter/altinn-uptime); a new product appears here without a dashboard change. A host counts as up when at least one blackbox-exporter pod reports success over IPv4 or IPv6. Availability is checked in 1-minute steps; each step where the host was down counts as 1 minute of downtime. An outage shorter than about 1 minute can be missed. Prod: 99.9 %, 24/7. tt02: 99.8 % of all hours in the month, but only downtime inside the operating period counts (Mon–Fri 05:00–19:00 UTC. This covers 07:00–20:00 Norwegian time in both summer time (07:00–21:00) and winter time (06:00–20:00), so up to one extra hour per day is counted). Test environments (at22, at23) are not covered by the SLA and are not shown. Planned maintenance is not excluded. Datasource UIDs are pinned rather than templated so the panels cannot silently bind to the wrong Prometheus datasource.",
+  "description": "Per-product availability of Altinn products with a deep health check (<product>.altinn.no and <product>.tt02.altinn.no), with an SLA measured per calendar month (default range: last 30 days; pick e.g. 'Previous month' in the time picker for a calendar month). Source: the recording rules altinn:probe_success_health_check:max_by_instance (prod, 24/7) and altinn:probe_success_health_check_tt02_business_hours (tt02, operating period only) in admin-prod-obs-amw (dis-way/adminservices, tf/adminservices-prod/admin-prod-aks-rg/altinn-uptime-rules.tf), evaluated every minute over the blackbox-http-ipv4/ipv6-health-check jobs. The rules hold data only from when they were deployed. These probes call /health and pass only on HTTP 200 with a JSON body that reports status Healthy (blackbox modules http_health_check_ipv4/ipv6). Targets are listed under health_check_ipv4/ipv6 in the altinn-uptime-extra-targets ConfigMap (dis-way/gitops-manifests, oci/blackbox-exporter/altinn-uptime); a new product appears here without a dashboard change. A host counts as up when at least one blackbox-exporter pod reports success over IPv4 or IPv6. The recording rules hold one 0/1 sample per minute; each down sample counts as 1 minute of downtime. An outage shorter than about 1 minute can be missed. Prod: 99.9 %, 24/7. tt02: 99.8 % of all hours in the month, but only downtime inside the operating period counts (Mon–Fri 05:00–19:00 UTC. This covers 07:00–20:00 Norwegian time in both summer time (07:00–21:00) and winter time (06:00–20:00), so up to one extra hour per day is counted). Test environments (at22, at23) are not covered by the SLA and are not shown. Planned maintenance is not excluded. Datasource UIDs are pinned rather than templated so the panels cannot silently bind to the wrong Prometheus datasource.",
   "editable": false,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
@@ -41,14 +41,14 @@
           "type": "prometheus",
           "uid": "admin-prod-obs-amw"
         },
-        "definition": "label_values(probe_success{job=~\"^blackbox-http-ipv[46]-health-check$\", instance=~\"^[^.]+[.](tt02[.])?altinn[.]no$\"}, instance)",
+        "definition": "label_values(altinn:probe_success_health_check:max_by_instance{instance=~\"^[^.]+[.](tt02[.])?altinn[.]no$\"}, instance)",
         "includeAll": true,
         "label": "Product",
         "multi": true,
         "name": "product",
         "options": [],
         "query": {
-          "query": "label_values(probe_success{job=~\"^blackbox-http-ipv[46]-health-check$\", instance=~\"^[^.]+[.](tt02[.])?altinn[.]no$\"}, instance)",
+          "query": "label_values(altinn:probe_success_health_check:max_by_instance{instance=~\"^[^.]+[.](tt02[.])?altinn[.]no$\"}, instance)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 2,
@@ -74,7 +74,7 @@
         "type": "prometheus",
         "uid": "admin-prod-obs-amw"
       },
-      "description": "Average availability of all selected prod products over the selected range (health-check probes, 1-minute steps, all hours, all days). Planned maintenance is not excluded.",
+      "description": "Average availability of all selected prod products over the selected range (altinn:probe_success_health_check:max_by_instance, one sample per minute, all hours, all days). Planned maintenance is not excluded.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -129,7 +129,7 @@
             "uid": "admin-prod-obs-amw"
           },
           "editorMode": "code",
-          "expr": "avg(\n  avg_over_time(\n  (max by (instance) (\n    probe_success{\n      job=~\"^blackbox-http-ipv[46]-health-check$\",\n      instance=~\"^(${product:pipe})[.]altinn[.]no$\"\n    }\n  ))[$__range:1m]\n) * 100\n)",
+          "expr": "avg(\n  avg_over_time(\n    altinn:probe_success_health_check:max_by_instance{\n      instance=~\"^(${product:pipe})[.]altinn[.]no$\"\n    }[$__range]\n  ) * 100\n)",
           "instant": true,
           "range": false,
           "refId": "A"
@@ -204,7 +204,7 @@
             "uid": "admin-prod-obs-amw"
           },
           "editorMode": "code",
-          "expr": "avg(\n  100 * (1 - sum_over_time(\n  ((max by (instance) (\n    probe_success{\n      job=~\"^blackbox-http-ipv[46]-health-check$\",\n      instance=~\"^(${product:pipe})[.]tt02[.]altinn[.]no$\"\n    }\n  ) == bool 0) and on() (\n    day_of_week() >= 1 and day_of_week() <= 5\n    and hour() >= 5 and hour() < 19\n  ))[$__range:1m]\n) / ($__range_ms / 60000))\n)",
+          "expr": "avg(\n  100 * (1 - (\n  (1 - avg_over_time(\n    altinn:probe_success_health_check_tt02_business_hours{\n      instance=~\"^(${product:pipe})[.]tt02[.]altinn[.]no$\"\n    }[$__range]\n  ))\n  * count_over_time(\n    altinn:probe_success_health_check_tt02_business_hours{\n      instance=~\"^(${product:pipe})[.]tt02[.]altinn[.]no$\"\n    }[$__range]\n  )\n) / ($__range_ms / 60000))\n)",
           "instant": true,
           "range": false,
           "refId": "A"
@@ -232,7 +232,7 @@
           "showLineNumbers": false,
           "showMiniMap": false
         },
-        "content": "### SLA reference (per calendar month)\n- **Prod 99.9 %**, 24/7 except planned maintenance: 43.2 min in a 30-day month (40.3–44.6 min for 28–31 days). Planned maintenance is not excluded here.\n- **tt02 99.8 %** of all hours in the month, but only downtime Mon–Fri 07:00–20:00 counts: 86.4 min in a 30-day month (80.6–89.3 min for 28–31 days). This dashboard counts 05:00–19:00 UTC, which covers 07:00–20:00 in both summer and winter time.\n- Checked in 1-minute steps: each down step counts as 1 min of downtime.\n- Default range is the last 30 days. Pick 'Previous month' in the time picker for a calendar month.",
+        "content": "### SLA reference (per calendar month)\n- **Prod 99.9 %**, 24/7 except planned maintenance: 43.2 min in a 30-day month (40.3–44.6 min for 28–31 days). Planned maintenance is not excluded here.\n- **tt02 99.8 %** of all hours in the month, but only downtime Mon–Fri 07:00–20:00 counts: 86.4 min in a 30-day month (80.6–89.3 min for 28–31 days). The recording rule counts 05:00–19:00 UTC, which covers 07:00–20:00 in both summer and winter time.\n- One sample per minute: each down sample counts as 1 min of downtime.\n- Default range is the last 30 days. Pick 'Previous month' in the time picker for a calendar month.",
         "mode": "markdown"
       },
       "pluginVersion": "12.4.8",
@@ -247,7 +247,7 @@
     },
     {
       "id": 10,
-      "title": "Prod — SLA 99.9 % (24/7, 1-minute steps)",
+      "title": "Prod — SLA 99.9 % (24/7, 1-minute samples)",
       "type": "row",
       "gridPos": {
         "h": 1,
@@ -263,7 +263,7 @@
         "type": "prometheus",
         "uid": "admin-prod-obs-amw"
       },
-      "description": "SLA % = share of 1-minute steps in the selected range where the host was up (all hours, all days). Downtime (min) = number of down steps. Planned maintenance is not excluded. Green = meets the 99.9 % SLA. Availability is checked in 1-minute steps; each step where the host was down counts as 1 minute of downtime. An outage shorter than about 1 minute can be missed.",
+      "description": "SLA % = share of 1-minute samples in the selected range where the host was up (all hours, all days). Downtime (min) = number of down samples. Planned maintenance is not excluded. Green = meets the 99.9 % SLA. The recording rules hold one 0/1 sample per minute; each down sample counts as 1 minute of downtime. An outage shorter than about 1 minute can be missed.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -394,7 +394,7 @@
             "uid": "admin-prod-obs-amw"
           },
           "editorMode": "code",
-          "expr": "label_replace(\n  avg_over_time(\n  (max by (instance) (\n    probe_success{\n      job=~\"^blackbox-http-ipv[46]-health-check$\",\n      instance=~\"^(${product:pipe})[.]altinn[.]no$\"\n    }\n  ))[$__range:1m]\n) * 100,\n  \"product\",\n  \"$1\",\n  \"instance\",\n  \"^([^.]+)[.]altinn[.]no$\"\n)",
+          "expr": "label_replace(\n  avg_over_time(\n    altinn:probe_success_health_check:max_by_instance{\n      instance=~\"^(${product:pipe})[.]altinn[.]no$\"\n    }[$__range]\n  ) * 100,\n  \"product\",\n  \"$1\",\n  \"instance\",\n  \"^([^.]+)[.]altinn[.]no$\"\n)",
           "format": "table",
           "instant": true,
           "legendFormat": "{{instance}}",
@@ -407,7 +407,7 @@
             "uid": "admin-prod-obs-amw"
           },
           "editorMode": "code",
-          "expr": "label_replace(\n  sum_over_time(\n  (max by (instance) (\n    probe_success{\n      job=~\"^blackbox-http-ipv[46]-health-check$\",\n      instance=~\"^(${product:pipe})[.]altinn[.]no$\"\n    }\n  ) == bool 0)[$__range:1m]\n),\n  \"product\",\n  \"$1\",\n  \"instance\",\n  \"^([^.]+)[.]altinn[.]no$\"\n)",
+          "expr": "label_replace(\n  (1 - avg_over_time(\n    altinn:probe_success_health_check:max_by_instance{\n      instance=~\"^(${product:pipe})[.]altinn[.]no$\"\n    }[$__range]\n  ))\n  * count_over_time(\n    altinn:probe_success_health_check:max_by_instance{\n      instance=~\"^(${product:pipe})[.]altinn[.]no$\"\n    }[$__range]\n  ),\n  \"product\",\n  \"$1\",\n  \"instance\",\n  \"^([^.]+)[.]altinn[.]no$\"\n)",
           "format": "table",
           "instant": true,
           "legendFormat": "{{instance}}",
@@ -466,7 +466,7 @@
     },
     {
       "id": 11,
-      "title": "tt02 — SLA 99.8 % (downtime counted only in operating period, 1-minute steps)",
+      "title": "tt02 — SLA 99.8 % (downtime counted only in operating period, 1-minute samples)",
       "type": "row",
       "gridPos": {
         "h": 1,
@@ -482,7 +482,7 @@
         "type": "prometheus",
         "uid": "admin-prod-obs-amw"
       },
-      "description": "SLA % = 100 × (1 − downtime inside the operating period ÷ all minutes in the selected range). Operating period: Mon–Fri 05:00–19:00 UTC. This covers 07:00–20:00 Norwegian time in both summer time (07:00–21:00) and winter time (06:00–20:00), so up to one extra hour per day is counted. Downtime (min) = number of down steps inside the operating period. Green = meets the 99.8 % SLA. Availability is checked in 1-minute steps; each step where the host was down counts as 1 minute of downtime. An outage shorter than about 1 minute can be missed.",
+      "description": "SLA % = 100 × (1 − downtime inside the operating period ÷ all minutes in the selected range). Operating period: Mon–Fri 05:00–19:00 UTC. This covers 07:00–20:00 Norwegian time in both summer time (07:00–21:00) and winter time (06:00–20:00), so up to one extra hour per day is counted. Downtime (min) = number of down samples inside the operating period. Green = meets the 99.8 % SLA. The recording rules hold one 0/1 sample per minute; each down sample counts as 1 minute of downtime. An outage shorter than about 1 minute can be missed.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -613,7 +613,7 @@
             "uid": "admin-prod-obs-amw"
           },
           "editorMode": "code",
-          "expr": "label_replace(\n  100 * (1 - sum_over_time(\n  ((max by (instance) (\n    probe_success{\n      job=~\"^blackbox-http-ipv[46]-health-check$\",\n      instance=~\"^(${product:pipe})[.]tt02[.]altinn[.]no$\"\n    }\n  ) == bool 0) and on() (\n    day_of_week() >= 1 and day_of_week() <= 5\n    and hour() >= 5 and hour() < 19\n  ))[$__range:1m]\n) / ($__range_ms / 60000)),\n  \"product\",\n  \"$1\",\n  \"instance\",\n  \"^([^.]+)[.]tt02[.]altinn[.]no$\"\n)",
+          "expr": "label_replace(\n  100 * (1 - (\n  (1 - avg_over_time(\n    altinn:probe_success_health_check_tt02_business_hours{\n      instance=~\"^(${product:pipe})[.]tt02[.]altinn[.]no$\"\n    }[$__range]\n  ))\n  * count_over_time(\n    altinn:probe_success_health_check_tt02_business_hours{\n      instance=~\"^(${product:pipe})[.]tt02[.]altinn[.]no$\"\n    }[$__range]\n  )\n) / ($__range_ms / 60000)),\n  \"product\",\n  \"$1\",\n  \"instance\",\n  \"^([^.]+)[.]tt02[.]altinn[.]no$\"\n)",
           "format": "table",
           "instant": true,
           "legendFormat": "{{instance}}",
@@ -626,7 +626,7 @@
             "uid": "admin-prod-obs-amw"
           },
           "editorMode": "code",
-          "expr": "label_replace(\n  sum_over_time(\n  ((max by (instance) (\n    probe_success{\n      job=~\"^blackbox-http-ipv[46]-health-check$\",\n      instance=~\"^(${product:pipe})[.]tt02[.]altinn[.]no$\"\n    }\n  ) == bool 0) and on() (\n    day_of_week() >= 1 and day_of_week() <= 5\n    and hour() >= 5 and hour() < 19\n  ))[$__range:1m]\n),\n  \"product\",\n  \"$1\",\n  \"instance\",\n  \"^([^.]+)[.]tt02[.]altinn[.]no$\"\n)",
+          "expr": "label_replace(\n  (1 - avg_over_time(\n    altinn:probe_success_health_check_tt02_business_hours{\n      instance=~\"^(${product:pipe})[.]tt02[.]altinn[.]no$\"\n    }[$__range]\n  ))\n  * count_over_time(\n    altinn:probe_success_health_check_tt02_business_hours{\n      instance=~\"^(${product:pipe})[.]tt02[.]altinn[.]no$\"\n    }[$__range]\n  ),\n  \"product\",\n  \"$1\",\n  \"instance\",\n  \"^([^.]+)[.]tt02[.]altinn[.]no$\"\n)",
           "format": "table",
           "instant": true,
           "legendFormat": "{{instance}}",
