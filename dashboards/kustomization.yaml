@@ -19,9 +19,6 @@ configMapGenerator:
   - name: dashboard-altinn-traefik-official
     files:
       - altinn/traefik-official.json
-  - name: dashboard-altinn-uptime-sla
-    files:
-      - altinn-uptime/sla.json
   - name: dashboard-altinn-uptime-status-up
     files:
       - altinn-uptime/status-up.json
