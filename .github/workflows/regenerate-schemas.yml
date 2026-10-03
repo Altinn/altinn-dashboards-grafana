@@ -59,5 +59,8 @@ jobs:
         run: |
           set -euo pipefail
           SCHEMA_LOC='schemas/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json'
-          kustomize build . | kubeconform -strict -ignore-missing-schemas -summary \
-            -schema-location default -schema-location "$SCHEMA_LOC" -
+          for target in . examples/datasources; do
+            kustomize build "$target" \
+              | kubeconform -strict -skip ExternalSecret,Vault,ApplicationIdentity -summary \
+                  -schema-location default -schema-location "$SCHEMA_LOC" -
+          done

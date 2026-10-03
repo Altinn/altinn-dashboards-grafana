@@ -1,6 +1,6 @@
 name: validate-alerting
 
-# Offline validation of the grafana-operator alerting CRs and dashboard JSON.
+# Offline validation of Grafana resources, datasource examples and dashboard JSON.
 
 on:
   pull_request:
@@ -9,6 +9,7 @@ on:
       - "platform/**"
       - "dashboards/**"
       - "schemas/**"
+      - "examples/**"
       - "kustomization.yaml"
       - ".github/workflows/validate-alerting.yml"
   push:
@@ -18,6 +19,7 @@ on:
       - "platform/**"
       - "dashboards/**"
       - "schemas/**"
+      - "examples/**"
       - "kustomization.yaml"
       - ".github/workflows/validate-alerting.yml"
   workflow_dispatch: {}
@@ -55,26 +57,25 @@ jobs:
           sudo install -m 0755 kubeconform /usr/local/bin/kubeconform
           kubeconform -v
 
-      - name: Validate every product overlay + the root aggregate
+      - name: Validate product and platform overlays, examples and the root aggregate
         run: |
           set -euo pipefail
           # Schema filenames are lowercase because kubeconform lowercases {{.ResourceKind}}.
           SCHEMA_LOC='schemas/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json'
           targets=()
-          # Both alerting/ and dashboards/ overlays; dirs without a kustomization.yaml
-          # (e.g. a dashboards/ holding only .gitkeep) are skipped by the loop below.
+          # Empty product scaffolds have no kustomization.yaml and are skipped below.
           while IFS= read -r d; do targets+=("$d"); done < <(
             find products -mindepth 2 -maxdepth 2 -type d \
-              \( -name alerting -o -name dashboards \) | sort
+              \( -name alerting -o -name dashboards -o -name datasources \) | sort
           )
-          if [ -f platform/alerting/kustomization.yaml ]; then targets+=("platform/alerting"); fi
+          targets+=("platform/alerting" "platform/datasources" "examples/datasources")
           targets+=(".")   # root aggregator
           rc=0
           for d in "${targets[@]}"; do
             [ -f "$d/kustomization.yaml" ] || continue
             echo "::group::validate $d"
             if kustomize build "$d" \
-                | kubeconform -strict -ignore-missing-schemas -summary -verbose \
+                | kubeconform -strict -skip ExternalSecret,Vault,ApplicationIdentity -summary -verbose \
                     -schema-location default \
                     -schema-location "$SCHEMA_LOC" -; then
               echo "OK: $d"
@@ -137,7 +138,7 @@ jobs:
         run: |
           set -euo pipefail
           pipx install yamllint
-          targets=(dashboards products)
+          targets=(dashboards products examples)
           if [ -d platform ]; then targets+=(platform); fi
           yamllint -d relaxed "${targets[@]}"
 
