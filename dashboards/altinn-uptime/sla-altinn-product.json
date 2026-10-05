@@ -15,7 +15,7 @@
       }
     ]
   },
-  "description": "Per-product availability of Altinn products with a deep health check (<product>.altinn.no and <product>.tt02.altinn.no), with an SLA measured per calendar month (default range: last 30 days; pick e.g. 'Previous month' in the time picker for a calendar month). Source: the recording rules altinn:probe_success_health_check:max_by_instance (prod, 24/7) and altinn:probe_success_health_check_tt02_business_hours (tt02, operating period only) in admin-prod-obs-amw (dis-way/adminservices, tf/adminservices-prod/admin-prod-aks-rg/altinn-uptime-rules.tf), evaluated every minute over the blackbox-http-ipv4/ipv6-health-check jobs. The rules hold data only from when they were deployed. These probes call /health and pass only on HTTP 200 with a JSON body that reports status Healthy (blackbox modules http_health_check_ipv4/ipv6). Targets are listed under health_check_ipv4/ipv6 in the altinn-uptime-extra-targets ConfigMap (dis-way/gitops-manifests, oci/blackbox-exporter/altinn-uptime); a new product appears here without a dashboard change. A host counts as up when at least one blackbox-exporter pod reports success over IPv4 or IPv6. The recording rules hold one 0/1 sample per minute; each down sample counts as 1 minute of downtime. An outage shorter than about 1 minute can be missed. Prod: 99.9 %, 24/7. tt02: 99.8 % of all hours in the month, but only downtime inside the operating period counts (Mon–Fri 05:00–19:00 UTC. This covers 07:00–20:00 Norwegian time in both summer time (07:00–21:00) and winter time (06:00–20:00), so up to one extra hour per day is counted). Test environments (at22, at23) are not covered by the SLA and are not shown. Planned maintenance is not excluded. Datasource UIDs are pinned rather than templated so the panels cannot silently bind to the wrong Prometheus datasource.",
+  "description": "Per-product availability of Altinn products with a deep health check (<product>.altinn.no and <product>.norge.no in prod, <product>.tt02.altinn.no and <product>.test.norge.no in tt02 / test, or <host>/<product> for services behind a shared host such as platform.altinn.no/dialogporten in API Management), with an SLA measured per calendar month (default range: last 30 days; pick e.g. 'Previous month' in the time picker for a calendar month). Source: the recording rules altinn:probe_success_health_check:max_by_instance (prod, 24/7) and altinn:probe_success_health_check_tt02_business_hours (tt02 / test, operating period only) in admin-prod-obs-amw (dis-way/adminservices, tf/adminservices-prod/admin-prod-aks-rg/altinn-uptime-rules.tf), evaluated every minute over the blackbox-http-ipv4/ipv6-health-check jobs. The rules hold data only from when they were deployed. These probes call /health and pass only on HTTP 200 with a JSON body that reports status Healthy (blackbox modules http_health_check_ipv4/ipv6). Targets are listed under health_check_ipv4/ipv6 in the altinn-uptime-extra-targets ConfigMap (dis-way/gitops-manifests, oci/altinn-uptime/configmaps/extra-targets.yaml); a new product appears here without a dashboard change. A host counts as up when at least one blackbox-exporter pod reports success over IPv4 or IPv6. The recording rules hold one 0/1 sample per minute; each down sample counts as 1 minute of downtime. An outage shorter than about 1 minute can be missed. Prod: 99.9 %, 24/7. tt02 / test (tt02.altinn.no, test.norge.no): 99.8 % of all hours in the month, but only downtime inside the operating period counts (Mon–Fri 05:00–19:00 UTC. This covers 07:00–20:00 Norwegian time in both summer time (07:00–21:00) and winter time (06:00–20:00), so up to one extra hour per day is counted). Test environments (at22, at23) are not covered by the SLA and are not shown. Planned maintenance is not excluded. Datasource UIDs are pinned rather than templated so the panels cannot silently bind to the wrong Prometheus datasource.",
   "editable": false,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
@@ -32,7 +32,7 @@
   "templating": {
     "list": [
       {
-        "allValue": "[^.]+",
+        "allValue": "[^./]+",
         "current": {
           "text": "All",
           "value": "$__all"
@@ -41,18 +41,18 @@
           "type": "prometheus",
           "uid": "admin-prod-obs-amw"
         },
-        "definition": "label_values(altinn:probe_success_health_check:max_by_instance{instance=~\"^[^.]+[.](tt02[.])?altinn[.]no$\"}, instance)",
+        "definition": "label_values(altinn:probe_success_health_check:max_by_instance{instance=~\"^[^./]+[.]((tt02[.])?altinn|(test[.])?norge)[.]no(/[^/]+)?$\"}, instance)",
         "includeAll": true,
         "label": "Product",
         "multi": true,
         "name": "product",
         "options": [],
         "query": {
-          "query": "label_values(altinn:probe_success_health_check:max_by_instance{instance=~\"^[^.]+[.](tt02[.])?altinn[.]no$\"}, instance)",
+          "query": "label_values(altinn:probe_success_health_check:max_by_instance{instance=~\"^[^./]+[.]((tt02[.])?altinn|(test[.])?norge)[.]no(/[^/]+)?$\"}, instance)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 2,
-        "regex": "/^([^.]+)[.]/",
+        "regex": "/(?:^|\\/)([^.\\/]+)(?:[.](?:(?:tt02[.])?altinn|(?:test[.])?norge)[.]no)?$/",
         "regexApplyTo": "value",
         "sort": 1,
         "type": "query"
@@ -65,7 +65,7 @@
   },
   "timepicker": {},
   "timezone": "Europe/Oslo",
-  "title": "SLA - Altinn Product",
+  "title": "SLA - Altinn Products",
   "uid": "altinn-uptime-sla-altinn-product",
   "weekStart": "",
   "panels": [
@@ -129,7 +129,7 @@
             "uid": "admin-prod-obs-amw"
           },
           "editorMode": "code",
-          "expr": "avg(\n  avg_over_time(\n    altinn:probe_success_health_check:max_by_instance{\n      instance=~\"^(${product:pipe})[.]altinn[.]no$\"\n    }[$__range]\n  ) * 100\n)",
+          "expr": "avg(\n  avg_over_time(\n    altinn:probe_success_health_check:max_by_instance{\n      instance=~\"^((${product:pipe})[.](altinn|norge)[.]no|[^./]+[.](altinn|norge)[.]no/(${product:pipe}))$\"\n    }[$__range]\n  ) * 100\n)",
           "instant": true,
           "range": false,
           "refId": "A"
@@ -149,7 +149,7 @@
         "type": "prometheus",
         "uid": "admin-prod-obs-amw"
       },
-      "description": "Average SLA % of all selected tt02 products. Per host: 100 × (1 − downtime inside the operating period ÷ all minutes in the selected range). Operating period: Mon–Fri 05:00–19:00 UTC. This covers 07:00–20:00 Norwegian time in both summer time (07:00–21:00) and winter time (06:00–20:00), so up to one extra hour per day is counted.",
+      "description": "Average SLA % of all selected tt02 / test products (tt02.altinn.no, test.norge.no). Per host: 100 × (1 − downtime inside the operating period ÷ all minutes in the selected range). Operating period: Mon–Fri 05:00–19:00 UTC. This covers 07:00–20:00 Norwegian time in both summer time (07:00–21:00) and winter time (06:00–20:00), so up to one extra hour per day is counted.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -204,13 +204,13 @@
             "uid": "admin-prod-obs-amw"
           },
           "editorMode": "code",
-          "expr": "avg(\n  100 * (1 - (\n  (1 - avg_over_time(\n    altinn:probe_success_health_check_tt02_business_hours{\n      instance=~\"^(${product:pipe})[.]tt02[.]altinn[.]no$\"\n    }[$__range]\n  ))\n  * count_over_time(\n    altinn:probe_success_health_check_tt02_business_hours{\n      instance=~\"^(${product:pipe})[.]tt02[.]altinn[.]no$\"\n    }[$__range]\n  )\n) / ($__range_ms / 60000))\n)",
+          "expr": "avg(\n  100 * (1 - (\n  (1 - avg_over_time(\n    altinn:probe_success_health_check_tt02_business_hours{\n      instance=~\"^((${product:pipe})[.](tt02[.]altinn|test[.]norge)[.]no|[^./]+[.](tt02[.]altinn|test[.]norge)[.]no/(${product:pipe}))$\"\n    }[$__range]\n  ))\n  * count_over_time(\n    altinn:probe_success_health_check_tt02_business_hours{\n      instance=~\"^((${product:pipe})[.](tt02[.]altinn|test[.]norge)[.]no|[^./]+[.](tt02[.]altinn|test[.]norge)[.]no/(${product:pipe}))$\"\n    }[$__range]\n  )\n) / ($__range_ms / 60000))\n)",
           "instant": true,
           "range": false,
           "refId": "A"
         }
       ],
-      "title": "tt02 overall SLA (downtime in operating period)",
+      "title": "tt02 / test overall SLA (downtime in operating period)",
       "type": "stat",
       "gridPos": {
         "h": 5,
@@ -394,7 +394,7 @@
             "uid": "admin-prod-obs-amw"
           },
           "editorMode": "code",
-          "expr": "label_replace(\n  avg_over_time(\n    altinn:probe_success_health_check:max_by_instance{\n      instance=~\"^(${product:pipe})[.]altinn[.]no$\"\n    }[$__range]\n  ) * 100,\n  \"product\",\n  \"$1\",\n  \"instance\",\n  \"^([^.]+)[.]altinn[.]no$\"\n)",
+          "expr": "label_replace(\n  avg_over_time(\n    altinn:probe_success_health_check:max_by_instance{\n      instance=~\"^((${product:pipe})[.](altinn|norge)[.]no|[^./]+[.](altinn|norge)[.]no/(${product:pipe}))$\"\n    }[$__range]\n  ) * 100,\n  \"product\",\n  \"$1$2\",\n  \"instance\",\n  \"^(?:([^./]+)[.](?:altinn|norge)[.]no|[^./]+[.](?:altinn|norge)[.]no/([^/]+))$\"\n)",
           "format": "table",
           "instant": true,
           "legendFormat": "{{instance}}",
@@ -407,7 +407,7 @@
             "uid": "admin-prod-obs-amw"
           },
           "editorMode": "code",
-          "expr": "label_replace(\n  (1 - avg_over_time(\n    altinn:probe_success_health_check:max_by_instance{\n      instance=~\"^(${product:pipe})[.]altinn[.]no$\"\n    }[$__range]\n  ))\n  * count_over_time(\n    altinn:probe_success_health_check:max_by_instance{\n      instance=~\"^(${product:pipe})[.]altinn[.]no$\"\n    }[$__range]\n  ),\n  \"product\",\n  \"$1\",\n  \"instance\",\n  \"^([^.]+)[.]altinn[.]no$\"\n)",
+          "expr": "label_replace(\n  (1 - avg_over_time(\n    altinn:probe_success_health_check:max_by_instance{\n      instance=~\"^((${product:pipe})[.](altinn|norge)[.]no|[^./]+[.](altinn|norge)[.]no/(${product:pipe}))$\"\n    }[$__range]\n  ))\n  * count_over_time(\n    altinn:probe_success_health_check:max_by_instance{\n      instance=~\"^((${product:pipe})[.](altinn|norge)[.]no|[^./]+[.](altinn|norge)[.]no/(${product:pipe}))$\"\n    }[$__range]\n  ),\n  \"product\",\n  \"$1$2\",\n  \"instance\",\n  \"^(?:([^./]+)[.](?:altinn|norge)[.]no|[^./]+[.](?:altinn|norge)[.]no/([^/]+))$\"\n)",
           "format": "table",
           "instant": true,
           "legendFormat": "{{instance}}",
@@ -466,7 +466,7 @@
     },
     {
       "id": 11,
-      "title": "tt02 — SLA 99.8 % (downtime counted only in operating period, 1-minute samples)",
+      "title": "tt02 / test — SLA 99.8 % (downtime counted only in operating period, 1-minute samples)",
       "type": "row",
       "gridPos": {
         "h": 1,
@@ -613,7 +613,7 @@
             "uid": "admin-prod-obs-amw"
           },
           "editorMode": "code",
-          "expr": "label_replace(\n  100 * (1 - (\n  (1 - avg_over_time(\n    altinn:probe_success_health_check_tt02_business_hours{\n      instance=~\"^(${product:pipe})[.]tt02[.]altinn[.]no$\"\n    }[$__range]\n  ))\n  * count_over_time(\n    altinn:probe_success_health_check_tt02_business_hours{\n      instance=~\"^(${product:pipe})[.]tt02[.]altinn[.]no$\"\n    }[$__range]\n  )\n) / ($__range_ms / 60000)),\n  \"product\",\n  \"$1\",\n  \"instance\",\n  \"^([^.]+)[.]tt02[.]altinn[.]no$\"\n)",
+          "expr": "label_replace(\n  100 * (1 - (\n  (1 - avg_over_time(\n    altinn:probe_success_health_check_tt02_business_hours{\n      instance=~\"^((${product:pipe})[.](tt02[.]altinn|test[.]norge)[.]no|[^./]+[.](tt02[.]altinn|test[.]norge)[.]no/(${product:pipe}))$\"\n    }[$__range]\n  ))\n  * count_over_time(\n    altinn:probe_success_health_check_tt02_business_hours{\n      instance=~\"^((${product:pipe})[.](tt02[.]altinn|test[.]norge)[.]no|[^./]+[.](tt02[.]altinn|test[.]norge)[.]no/(${product:pipe}))$\"\n    }[$__range]\n  )\n) / ($__range_ms / 60000)),\n  \"product\",\n  \"$1$2\",\n  \"instance\",\n  \"^(?:([^./]+)[.](?:tt02[.]altinn|test[.]norge)[.]no|[^./]+[.](?:tt02[.]altinn|test[.]norge)[.]no/([^/]+))$\"\n)",
           "format": "table",
           "instant": true,
           "legendFormat": "{{instance}}",
@@ -626,7 +626,7 @@
             "uid": "admin-prod-obs-amw"
           },
           "editorMode": "code",
-          "expr": "label_replace(\n  (1 - avg_over_time(\n    altinn:probe_success_health_check_tt02_business_hours{\n      instance=~\"^(${product:pipe})[.]tt02[.]altinn[.]no$\"\n    }[$__range]\n  ))\n  * count_over_time(\n    altinn:probe_success_health_check_tt02_business_hours{\n      instance=~\"^(${product:pipe})[.]tt02[.]altinn[.]no$\"\n    }[$__range]\n  ),\n  \"product\",\n  \"$1\",\n  \"instance\",\n  \"^([^.]+)[.]tt02[.]altinn[.]no$\"\n)",
+          "expr": "label_replace(\n  (1 - avg_over_time(\n    altinn:probe_success_health_check_tt02_business_hours{\n      instance=~\"^((${product:pipe})[.](tt02[.]altinn|test[.]norge)[.]no|[^./]+[.](tt02[.]altinn|test[.]norge)[.]no/(${product:pipe}))$\"\n    }[$__range]\n  ))\n  * count_over_time(\n    altinn:probe_success_health_check_tt02_business_hours{\n      instance=~\"^((${product:pipe})[.](tt02[.]altinn|test[.]norge)[.]no|[^./]+[.](tt02[.]altinn|test[.]norge)[.]no/(${product:pipe}))$\"\n    }[$__range]\n  ),\n  \"product\",\n  \"$1$2\",\n  \"instance\",\n  \"^(?:([^./]+)[.](?:tt02[.]altinn|test[.]norge)[.]no|[^./]+[.](?:tt02[.]altinn|test[.]norge)[.]no/([^/]+))$\"\n)",
           "format": "table",
           "instant": true,
           "legendFormat": "{{instance}}",
@@ -634,7 +634,7 @@
           "refId": "B"
         }
       ],
-      "title": "tt02 — Per-product SLA % (sorted worst first)",
+      "title": "tt02 / test — Per-product SLA % (sorted worst first)",
       "transformations": [
         {
           "id": "merge",
