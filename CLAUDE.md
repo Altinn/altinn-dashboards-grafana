@@ -268,16 +268,16 @@ Also run `python3 scripts/validate-dashboards.py` if you touched any dashboard w
   `avg_over_time((max by (instance) (probe_success{...}))[$__range:1m])`.
 - **Not every host is probed the same way — check before writing an availability rule.**
   `probe_success` lives in `admin-prod-obs-amw` (subscription `a6e9ee7d-…`, AdminServices-Prod).
-  Query it directly rather than inferring coverage from where a service runs: `ki.norge.no` is
-  Cloudflare-hosted outside dis-core yet *is* probed, while it has no deep `/health` job because
-  `/health` 404s. Three job families exist and they measure different things — don't mix them
-  (measured 2026-09-06):
+  Query it directly rather than inferring coverage from where a service runs. KI Norge moved
+  from front-page probes to `/health` on 2026-10-05: its instance labels remain `ki.norge.no`
+  and `ki.test.norge.no`, but the jobs now end in `-health-check`. Dashboard and alert selectors
+  must follow that change. Three job families measure different things — don't mix them:
 
   | family | jobs | hosts | recording rule |
   |---|---|---|---|
-  | kubernetes wrapper | `blackbox-http-ipv[46]-kuberneteswrapper` | 113 Altinn app hosts | **yes** — `altinn:probe_success:max_by_instance` |
-  | deep health | `blackbox-http-ipv[46]-health-check` | 5 (`info.*`, an APIM) | no |
-  | shallow HTTP | `blackbox-http-ipv4` / `-ipv6` | 13 (`ki.norge.no`, `info.altinn.no`, `altinn.studio`, `altinncdn.no`, the dis-core edges …) | no |
+  | kubernetes wrapper | `blackbox-http-ipv[46]-kuberneteswrapper` | Altinn app hosts | `altinn:probe_success:max_by_instance` |
+  | deep health | `blackbox-http-ipv[46]-health-check` | `info.*`, KI Norge, Dialogporten through APIM | `altinn:probe_success_health_check:max_by_instance` |
+  | shallow HTTP | `blackbox-http-ipv4` / `-ipv6` | `info.altinn.no`, `altinn.studio`, `altinncdn.no`, the dis-core edges … | no |
 
   `altinn:probe_success:max_by_instance` is scoped **by job** (`-kuberneteswrapper`), not by
   hostname — the `*.apps.altinn.no` filtering people associate with it lives in the
