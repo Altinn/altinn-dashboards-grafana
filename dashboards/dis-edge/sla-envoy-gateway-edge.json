@@ -6340,7 +6340,7 @@
         "options": [],
         "query": "prometheus",
         "refresh": 1,
-        "regex": "",
+        "regex": "/dis-edge-.+-products-amw$/",
         "type": "datasource"
       },
       {
@@ -6354,7 +6354,7 @@
         "options": [],
         "query": "prometheus",
         "refresh": 1,
-        "regex": "",
+        "regex": "/dis-edge-.+-products-amw$/",
         "type": "datasource"
       },
       {
