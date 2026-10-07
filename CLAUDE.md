@@ -178,7 +178,8 @@ traces
   CI job fails on the pinned UIDs.
   **Exception: `dashboards/dis-edge/`** keeps a Prometheus `datasource` variable on purpose, so
   the Envoy dashboards can be pointed at any `dis-edge-<env>-products-amw` workspace (one
-  PromQL query cannot span workspaces). It is safe because the saved default is a real UID
+  PromQL query cannot span workspaces); the variable's `regex` (`/dis-edge-.+-products-amw$/`)
+  limits the dropdown to those workspaces. It is safe because the saved default is a real UID
   (`dis-edge-prod-products-amw`), not `default`. Keep that default when editing, and don't
   "fix" these back to pinned UIDs. A templated Prometheus datasource also switches on the
   linter's query rules (job/instance matchers, `$__rate_interval`), which is why

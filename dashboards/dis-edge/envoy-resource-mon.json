@@ -706,6 +706,7 @@
         "options": [],
         "query": "prometheus",
         "refresh": 1,
+        "regex": "/dis-edge-.+-products-amw$/",
         "type": "datasource"
       }
     ]
