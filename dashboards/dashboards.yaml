@@ -113,6 +113,76 @@ spec:
 apiVersion: grafana.integreatly.org/v1beta1
 kind: GrafanaDashboard
 metadata:
+  name: external-grafana-dis-edge-envoy-clusters
+  namespace: grafana
+spec:
+  folderRef: external-grafana-dis-edge
+  instanceSelector:
+    matchLabels:
+      dashboards: "external-grafana"
+  configMapRef:
+    name: dashboard-dis-edge-envoy-clusters
+    key: envoy-clusters.json
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: external-grafana-dis-edge-envoy-global
+  namespace: grafana
+spec:
+  folderRef: external-grafana-dis-edge
+  instanceSelector:
+    matchLabels:
+      dashboards: "external-grafana"
+  configMapRef:
+    name: dashboard-dis-edge-envoy-global
+    key: envoy-global.json
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: external-grafana-dis-edge-envoy-ratelimit
+  namespace: grafana
+spec:
+  folderRef: external-grafana-dis-edge
+  instanceSelector:
+    matchLabels:
+      dashboards: "external-grafana"
+  configMapRef:
+    name: dashboard-dis-edge-envoy-ratelimit
+    key: envoy-ratelimit.json
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: external-grafana-dis-edge-envoy-resource-mon
+  namespace: grafana
+spec:
+  folderRef: external-grafana-dis-edge
+  instanceSelector:
+    matchLabels:
+      dashboards: "external-grafana"
+  configMapRef:
+    name: dashboard-dis-edge-envoy-resource-mon
+    key: envoy-resource-mon.json
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: external-grafana-dis-edge-sla-envoy-gateway-edge
+  namespace: grafana
+spec:
+  folderRef: external-grafana-dis-edge
+  instanceSelector:
+    matchLabels:
+      dashboards: "external-grafana"
+  configMapRef:
+    name: dashboard-dis-edge-sla-envoy-gateway-edge
+    key: sla-envoy-gateway-edge.json
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
   name: external-grafana-fluxcd-flux-cluster-stats
   namespace: grafana
 spec:
