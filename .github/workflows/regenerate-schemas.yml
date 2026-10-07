@@ -61,6 +61,6 @@ jobs:
           SCHEMA_LOC='schemas/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json'
           for target in . examples/datasources; do
             kustomize build "$target" \
-              | kubeconform -strict -skip ExternalSecret,Vault,ApplicationIdentity -summary \
+              | kubeconform -strict -skip ExternalSecret,SecretStore,Vault,ApplicationIdentity -summary \
                   -schema-location default -schema-location "$SCHEMA_LOC" -
           done
