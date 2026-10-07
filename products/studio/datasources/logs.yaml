@@ -1,0 +1,27 @@
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDatasource
+metadata:
+  name: altinn-studio-logs
+  namespace: grafana
+spec:
+  uid: altinn-studio-logs
+  instanceSelector:
+    matchLabels:
+      dashboards: external-grafana
+  datasource:
+    name: altinn-studio-logs
+    type: victoriametrics-logs-datasource
+    access: proxy
+    url: https://altinn.studio/internal/observability/logs
+    isDefault: false
+    editable: false
+    jsonData:
+      httpHeaderName1: Authorization
+    secureJsonData:
+      httpHeaderValue1: "${authorization}"
+  valuesFrom:
+    - targetPath: secureJsonData.httpHeaderValue1
+      valueFrom:
+        secretKeyRef:
+          name: altinn-studio-logs-auth
+          key: authorization

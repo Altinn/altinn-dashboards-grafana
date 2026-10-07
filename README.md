@@ -198,6 +198,12 @@ Prometheus and Tempo are supported core types. Before adding VictoriaLogs, confi
 is available and enabled through [Azure plugin management](https://learn.microsoft.com/en-us/azure/managed-grafana/how-to-manage-plugins).
 The operator [cannot install plugins on external Grafana](https://grafana.github.io/grafana-operator/docs/examples/grafana/external_grafana/readme/).
 
+Studio's three connections in `products/studio/datasources` share the Key Vault secret
+`datasource-altinn-studio-authorization` in the existing `grafana-alerting` vault. Store the
+complete `Bearer <token>` value there; each connection syncs it into its own Kubernetes Secret.
+Before deploying the overlay, populate the secret and enable `victoriametrics-logs-datasource`
+in Azure Managed Grafana. Prometheus and Tempo use built-in plugins.
+
 Validate a datasource overlay and the root aggregate before opening the PR:
 
 ```bash
