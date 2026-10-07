@@ -6,7 +6,7 @@ convention, update this file in the same PR. The human-facing narrative lives in
 
 ## What this repo is
 
-Grafana **dashboards and alerting-as-code**, entirely as
+Grafana **dashboards, alerts and datasources as code**, entirely as
 [grafana-operator](https://github.com/grafana/grafana-operator) custom resources
 (`grafana.integreatly.org/v1beta1`). Authoring is **one-way and offline** — you edit YAML, CI
 validates it against the vendored schemas, and the whole repo-root kustomize aggregate is
@@ -41,9 +41,12 @@ products/<product>/
     ├── folder.yaml               # GrafanaFolder  external-grafana-<product>
     ├── contact-points.yaml       # GrafanaContactPoint (Slack)
     └── rules-*.yaml              # GrafanaAlertRuleGroup(s)
-platform/secrets/                 # Slack-webhook Key Vault → ExternalSecret → Secret wiring
+products/<product>/datasources/   # optional GrafanaDatasource + ExternalSecret overlay
+platform/datasources/             # optional shared datasource overlay
+platform/secrets/                 # shared Key Vault + Slack ExternalSecret wiring
+examples/datasources/             # validated templates, excluded from the root aggregate
 schemas/                          # vendored CRD JSON schemas for offline kubeconform
-kustomization.yaml                # repo-root aggregator (dashboards/ + each products/*/alerting)
+kustomization.yaml                # repo-root aggregator for registered product/platform overlays
 CODEOWNERS                        # per-product ownership
 ```
 
@@ -89,6 +92,23 @@ The webhook value is **never in git** (public repo). The chain:
            name: grafana-slack-webhooks
            key: <product>          # == secretKey above
    ```
+
+## Datasource conventions
+
+Follow [the datasource onboarding steps](README.md#datasources) and copy
+`examples/datasources/` for Prometheus/Tempo connections. Use `products/<product>/datasources/`
+for product connections and `platform/datasources/` for shared ones; register completed overlays
+at the repo root. Never register the examples or deploy their placeholder endpoints.
+
+- Set stable `spec.uid`, namespace `grafana` and selector `dashboards: external-grafana`.
+- Keep `isDefault: false` and `editable: false`; edit managed connections through Git.
+- Store complete Authorization values in Key Vault, with separate `ExternalSecret` targets per
+  datasource. Use `valuesFrom` → `secureJsonData.httpHeaderValue1`, retaining the
+  `${authorization}` placeholder and matching Secret key. Never commit credential values.
+- Product datasource paths request platform review through `CODEOWNERS`. Later product ownership
+  rules must preserve platform ownership of the datasource subdirectory.
+- Confirm plugin availability in Azure before adding non-core types such as VictoriaLogs;
+  `spec.plugins` cannot install plugins on this external instance.
 
 ## Alert rule anatomy
 
@@ -207,18 +227,19 @@ kustomize build .
 
 # 2. kubeconform -strict against the vendored schemas (CI pins v0.6.7)
 kustomize build products/<product>/alerting \
-  | kubeconform -strict -ignore-missing-schemas -summary -verbose \
+  | kubeconform -strict -skip ExternalSecret,Vault,ApplicationIdentity -summary -verbose \
       -schema-location default -schema-location "$SCHEMA_LOC" -
 kustomize build . \
-  | kubeconform -strict -ignore-missing-schemas -summary -verbose \
+  | kubeconform -strict -skip ExternalSecret,Vault,ApplicationIdentity -summary -verbose \
       -schema-location default -schema-location "$SCHEMA_LOC" -
 
 # 3. relaxed yamllint (long-line warnings are OK; errors are not)
-yamllint -d relaxed products platform dashboards kustomization.yaml
+yamllint -d relaxed products platform dashboards examples kustomization.yaml
 ```
 
-`ExternalSecret`, `Vault`, and `ApplicationIdentity` show as **skipped** in kubeconform — they
-have no vendored schema, which is expected (`-ignore-missing-schemas`).
+`ExternalSecret`, `Vault`, and `ApplicationIdentity` are explicitly skipped because their
+schemas are not vendored. Missing schemas for Grafana resources must fail validation.
+Also render and validate `examples/datasources` when changing datasource schemas or examples.
 
 Also run `python3 scripts/validate-dashboards.py` if you touched any dashboard wiring.
 
