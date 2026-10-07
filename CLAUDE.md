@@ -176,6 +176,15 @@ traces
   Also add the dashboard's **title** to `products/<product>/dashboards/.lint` under
   `panel-datasource-rule` and `template-datasource-rule`, or the `dashboard-linter --strict`
   CI job fails on the pinned UIDs.
+  **Exception: `dashboards/dis-edge/`** keeps a Prometheus `datasource` variable on purpose, so
+  the Envoy dashboards can be pointed at any `dis-edge-<env>-products-amw` workspace (one
+  PromQL query cannot span workspaces). It is safe because the saved default is a real UID
+  (`dis-edge-prod-products-amw`), not `default`. Keep that default when editing, and don't
+  "fix" these back to pinned UIDs. A templated Prometheus datasource also switches on the
+  linter's query rules (job/instance matchers, `$__rate_interval`), which is why
+  `dashboards/dis-edge/.lint` is longer than the others. The older dashboards in `altinn/`,
+  `fluxcd/` and `linkerd/` predate the pin convention and save a name or nothing; they are
+  not a precedent for either style.
 - **Show every environment in one dashboard** rather than behind an env variable: give the
   Azure Logs target **all four** `resources[]` at once and derive the environment from
   `_ResourceId` in KQL. `dis-grafana-prod`'s identity has `Monitoring Reader` on each

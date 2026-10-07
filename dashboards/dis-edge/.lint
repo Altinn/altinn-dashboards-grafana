@@ -1,0 +1,73 @@
+exclusions:
+  template-job-rule:
+    reason: >-
+      Envoy metrics in the dis-edge Azure Managed Prometheus workspaces are
+      identified by OpenTelemetry resource labels (k8s_cluster_name,
+      k8s_namespace_name, envoy_cluster_name, ...), not by a meaningful
+      job/instance pair, so a job template would only add a dropdown that
+      filters nothing useful.
+    entries:
+      - dashboard: Envoy Clusters
+      - dashboard: Envoy Global
+      - dashboard: Global Ratelimit
+      - dashboard: Resources Monitor
+      - dashboard: SLA Envoy Gateway / Edge
+  template-instance-rule:
+    reason: >-
+      No instance template by design; see template-job-rule.
+    entries:
+      - dashboard: Envoy Clusters
+      - dashboard: Envoy Global
+      - dashboard: Global Ratelimit
+      - dashboard: Resources Monitor
+      - dashboard: SLA Envoy Gateway / Edge
+  target-job-rule:
+    reason: >-
+      Queries filter on the OpenTelemetry resource labels and the dashboard
+      variables instead of job; see template-job-rule.
+    entries:
+      - dashboard: Envoy Clusters
+      - dashboard: Envoy Global
+      - dashboard: Global Ratelimit
+      - dashboard: Resources Monitor
+      - dashboard: SLA Envoy Gateway / Edge
+  target-instance-rule:
+    reason: >-
+      Queries filter on the OpenTelemetry resource labels and the dashboard
+      variables instead of instance; see template-job-rule.
+    entries:
+      - dashboard: Envoy Clusters
+      - dashboard: Envoy Global
+      - dashboard: Global Ratelimit
+      - dashboard: Resources Monitor
+      - dashboard: SLA Envoy Gateway / Edge
+  panel-title-description-rule:
+    reason: >-
+      Imported from the upstream Envoy Gateway dashboards, whose panels have
+      self-explanatory titles but no descriptions. Not worth diverging from
+      upstream for.
+    entries:
+      - dashboard: Envoy Clusters
+      - dashboard: Envoy Global
+      - dashboard: Resources Monitor
+  panel-datasource-rule:
+    reason: >-
+      These panels use the "-- Mixed --" datasource; every target inside them
+      still uses a templated datasource ($datasource / ${k8s_datasource}).
+    entries:
+      - dashboard: Resources Monitor
+      - dashboard: SLA Envoy Gateway / Edge
+  target-rate-interval-rule:
+    reason: >-
+      The SLA tiles use fixed windows (5m, 15m, 1h, ...) on purpose, so each
+      tile shows exactly what the matching alert would evaluate regardless of
+      the time picker. $__rate_interval would make them drift from the alerts.
+    entries:
+      - dashboard: SLA Envoy Gateway / Edge
+  template-datasource-rule:
+    reason: >-
+      The SLA dashboard deliberately has two datasource variables, one for
+      Envoy metrics and one for Kubernetes metrics, so they cannot both carry
+      the single name the linter expects.
+    entries:
+      - dashboard: SLA Envoy Gateway / Edge

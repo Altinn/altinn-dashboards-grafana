@@ -31,6 +31,21 @@ configMapGenerator:
   - name: dashboard-altinn-uptime-endpoint-statistics
     files:
       - altinn-uptime/endpoint-statistics.json
+  - name: dashboard-dis-edge-envoy-clusters
+    files:
+      - dis-edge/envoy-clusters.json
+  - name: dashboard-dis-edge-envoy-global
+    files:
+      - dis-edge/envoy-global.json
+  - name: dashboard-dis-edge-envoy-ratelimit
+    files:
+      - dis-edge/envoy-ratelimit.json
+  - name: dashboard-dis-edge-envoy-resource-mon
+    files:
+      - dis-edge/envoy-resource-mon.json
+  - name: dashboard-dis-edge-sla-envoy-gateway-edge
+    files:
+      - dis-edge/sla-envoy-gateway-edge.json
   - name: dashboard-fluxcd-flux-cluster-stats
     files:
       - fluxcd/flux-cluster-stats.json
