@@ -199,8 +199,9 @@ is available and enabled through [Azure plugin management](https://learn.microso
 The operator [cannot install plugins on external Grafana](https://grafana.github.io/grafana-operator/docs/examples/grafana/external_grafana/readme/).
 
 Studio's three connections in `products/studio/datasources` share the Key Vault secret
-`datasource-altinn-studio-authorization` in the existing `grafana-alerting` vault. Store the
-complete `Bearer <token>` value there; each connection syncs it into its own Kubernetes Secret.
+`datasource-altinn-studio-authorization` in Azure Key Vault `grafana-grafana-b607eb82`
+(managed by the `grafana-alerting` Vault resource). Store the complete `Bearer <token>` value
+there; each connection syncs it into its own Kubernetes Secret.
 Before deploying the overlay, populate the secret and enable `victoriametrics-logs-datasource`
 in Azure Managed Grafana. Prometheus and Tempo use built-in plugins.
 
