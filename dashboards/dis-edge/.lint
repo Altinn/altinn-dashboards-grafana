@@ -53,21 +53,13 @@ exclusions:
   panel-datasource-rule:
     reason: >-
       These panels use the "-- Mixed --" datasource; every target inside them
-      still uses a templated datasource ($datasource / ${k8s_datasource}).
+      still uses the templated $datasource.
     entries:
       - dashboard: Resources Monitor
-      - dashboard: SLA Envoy Gateway / Edge
   target-rate-interval-rule:
     reason: >-
       The SLA tiles use fixed windows (5m, 15m, 1h, ...) on purpose, so each
       tile shows exactly what the matching alert would evaluate regardless of
       the time picker. $__rate_interval would make them drift from the alerts.
-    entries:
-      - dashboard: SLA Envoy Gateway / Edge
-  template-datasource-rule:
-    reason: >-
-      The SLA dashboard deliberately has two datasource variables, one for
-      Envoy metrics and one for Kubernetes metrics, so they cannot both carry
-      the single name the linter expects.
     entries:
       - dashboard: SLA Envoy Gateway / Edge
