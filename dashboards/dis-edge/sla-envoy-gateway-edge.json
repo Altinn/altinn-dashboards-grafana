@@ -62,7 +62,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${k8s_datasource}"
+        "uid": "${datasource}"
       },
       "description": "HPA desired replicas minus available proxy pods. Non-zero for more than a few minutes means pods are not starting or not ready (image pull, scheduling, crash loop).",
       "fieldConfig": {
@@ -121,7 +121,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${k8s_datasource}"
+            "uid": "${datasource}"
           },
           "expr": "sum(kube_horizontalpodautoscaler_status_desired_replicas{cluster=\"$cluster\",namespace=\"envoy-gateway-system\",horizontalpodautoscaler=~\"envoy-envoy-gateway-system-.*\"}) - (sum(kube_deployment_status_replicas_available{cluster=\"$cluster\",namespace=\"envoy-gateway-system\",deployment=~\"envoy-envoy-gateway-system-.*\"}) or vector(0))",
           "instant": true,
@@ -1015,7 +1015,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${k8s_datasource}"
+        "uid": "${datasource}"
       },
       "description": "At 100% the HPA cannot add capacity - CPU climbs and latency follows.",
       "fieldConfig": {
@@ -1076,7 +1076,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${k8s_datasource}"
+            "uid": "${datasource}"
           },
           "expr": "sum(kube_horizontalpodautoscaler_status_current_replicas{cluster=\"$cluster\",namespace=\"envoy-gateway-system\",horizontalpodautoscaler=~\"envoy-envoy-gateway-system-.*\"}) / sum(kube_horizontalpodautoscaler_spec_max_replicas{cluster=\"$cluster\",namespace=\"envoy-gateway-system\",horizontalpodautoscaler=~\"envoy-envoy-gateway-system-.*\"})",
           "instant": true,
@@ -1091,7 +1091,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${k8s_datasource}"
+        "uid": "${datasource}"
       },
       "description": "Envoy container restarts. Memory limit equals request, so OOMKill is the usual cause.",
       "fieldConfig": {
@@ -1146,7 +1146,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${k8s_datasource}"
+            "uid": "${datasource}"
           },
           "expr": "sum(increase(kube_pod_container_status_restarts_total{cluster=\"$cluster\",namespace=\"envoy-gateway-system\",container=\"envoy\"}[1h])) or vector(0)",
           "instant": true,
@@ -1254,7 +1254,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${k8s_datasource}"
+        "uid": "${datasource}"
       },
       "description": "Available envoy-gateway controller replicas. At 0 nothing reconciles - existing proxies keep serving, but no change goes out and new proxies cannot start.",
       "fieldConfig": {
@@ -1309,7 +1309,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${k8s_datasource}"
+            "uid": "${datasource}"
           },
           "expr": "sum(kube_deployment_status_replicas_available{cluster=\"$cluster\",namespace=\"envoy-gateway-system\",deployment=\"envoy-gateway\"}) or vector(0)",
           "instant": true,
@@ -4862,8 +4862,8 @@
     },
     {
       "datasource": {
-        "type": "datasource",
-        "uid": "-- Mixed --"
+        "type": "prometheus",
+        "uid": "${datasource}"
       },
       "description": "HPA 3-20 on 50% CPU, scale-down waits 15 minutes. Desired pinned at max = out of headroom.",
       "fieldConfig": {
@@ -4945,7 +4945,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${k8s_datasource}"
+            "uid": "${datasource}"
           },
           "expr": "sum(kube_horizontalpodautoscaler_status_current_replicas{cluster=\"$cluster\",namespace=\"envoy-gateway-system\",horizontalpodautoscaler=~\"envoy-envoy-gateway-system-.*\"})",
           "instant": false,
@@ -4956,7 +4956,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${k8s_datasource}"
+            "uid": "${datasource}"
           },
           "expr": "sum(kube_horizontalpodautoscaler_status_desired_replicas{cluster=\"$cluster\",namespace=\"envoy-gateway-system\",horizontalpodautoscaler=~\"envoy-envoy-gateway-system-.*\"})",
           "instant": false,
@@ -4967,7 +4967,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${k8s_datasource}"
+            "uid": "${datasource}"
           },
           "expr": "sum(kube_horizontalpodautoscaler_spec_max_replicas{cluster=\"$cluster\",namespace=\"envoy-gateway-system\",horizontalpodautoscaler=~\"envoy-envoy-gateway-system-.*\"})",
           "instant": false,
@@ -4993,7 +4993,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${k8s_datasource}"
+        "uid": "${datasource}"
       },
       "description": "No CPU limit by design. The HPA targets 50% of the request.",
       "fieldConfig": {
@@ -5075,7 +5075,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${k8s_datasource}"
+            "uid": "${datasource}"
           },
           "expr": "sum by (pod) (rate(container_cpu_usage_seconds_total{cluster=\"$cluster\",namespace=\"envoy-gateway-system\",container=\"envoy\",pod=~\"envoy-envoy-gateway-system-.*\"}[$__rate_interval]))",
           "instant": false,
@@ -5086,7 +5086,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${k8s_datasource}"
+            "uid": "${datasource}"
           },
           "expr": "max(kube_pod_container_resource_requests{cluster=\"$cluster\",namespace=\"envoy-gateway-system\",container=\"envoy\",resource=\"cpu\"}) * 0.5",
           "instant": false,
@@ -5101,7 +5101,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${k8s_datasource}"
+        "uid": "${datasource}"
       },
       "description": "Limit equals ENVOY_MEMORY_REQUEST. Hitting it is an OOMKill.",
       "fieldConfig": {
@@ -5183,7 +5183,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${k8s_datasource}"
+            "uid": "${datasource}"
           },
           "expr": "max by (pod) (container_memory_working_set_bytes{cluster=\"$cluster\",namespace=\"envoy-gateway-system\",container=\"envoy\",pod=~\"envoy-envoy-gateway-system-.*\"})",
           "instant": false,
@@ -5194,7 +5194,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${k8s_datasource}"
+            "uid": "${datasource}"
           },
           "expr": "max(kube_pod_container_resource_limits{cluster=\"$cluster\",namespace=\"envoy-gateway-system\",container=\"envoy\",resource=\"memory\"})",
           "instant": false,
@@ -6076,7 +6076,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${k8s_datasource}"
+        "uid": "${datasource}"
       },
       "description": "envoy-gateway controller container.",
       "fieldConfig": {
@@ -6158,7 +6158,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${k8s_datasource}"
+            "uid": "${datasource}"
           },
           "expr": "sum(rate(container_cpu_usage_seconds_total{cluster=\"$cluster\",namespace=\"envoy-gateway-system\",container=\"envoy-gateway\"}[$__rate_interval]))",
           "instant": false,
@@ -6169,7 +6169,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${k8s_datasource}"
+            "uid": "${datasource}"
           },
           "expr": "max(container_memory_working_set_bytes{cluster=\"$cluster\",namespace=\"envoy-gateway-system\",container=\"envoy-gateway\"}) / 1e9",
           "instant": false,
@@ -6334,23 +6334,9 @@
           "text": "Managed_Prometheus_dis-edge-prod-products-amw",
           "value": "dis-edge-prod-products-amw"
         },
-        "description": "Azure Monitor Workspace the otel-collector remote-writes to.",
-        "label": "Envoy metrics",
+        "description": "Azure Monitor Workspace holding both the Envoy (otel-collector) and Kubernetes (kube-state-metrics, cAdvisor) series.",
+        "label": "Data source",
         "name": "datasource",
-        "options": [],
-        "query": "prometheus",
-        "refresh": 1,
-        "regex": "/dis-edge-.+-products-amw$/",
-        "type": "datasource"
-      },
-      {
-        "current": {
-          "text": "Managed_Prometheus_dis-edge-prod-products-amw",
-          "value": "dis-edge-prod-products-amw"
-        },
-        "description": "Workspace with AMA kube-state-metrics and cAdvisor series. Same as above if both land in one workspace.",
-        "label": "Kubernetes metrics",
-        "name": "k8s_datasource",
         "options": [],
         "query": "prometheus",
         "refresh": 1,
