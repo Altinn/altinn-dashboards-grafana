@@ -1,26 +1,23 @@
 exclusions:
-  target-instance-rule:
+  panel-datasource-rule:
     reason: >-
-      Fleet-wide SLA overview: panels intentionally match every instance by
-      domain regex (*.apps.altinn.no / *.apps.tt02.altinn.no) and break down
-      per customer. There is no single-$instance drill-down by design.
+      Datasource UIDs are pinned on purpose (admin-prod-obs-amw, where the
+      blackbox probes and the altinn:probe_success_* recording rules live). A
+      ${datasource} variable saves the value "default"; the default datasource
+      in dis-grafana-prod is Azure Monitor rather than Prometheus, so Grafana
+      silently falls back to the first Prometheus datasource -- a dis-core AMW
+      that holds no probe data -- and the panels render empty with no error.
+      See CLAUDE.md.
     entries:
-      - dashboard: SLA - Altinn Uptime
-  target-job-rule:
+      - dashboard: Status UP
+      - dashboard: SLA - Service Owners
+      - dashboard: SLA - Altinn Products
+      - dashboard: Endpoint Statistics
+  template-datasource-rule:
     reason: >-
-      Queries read the recording rule altinn:probe_success:max_by_instance,
-      which is aggregated across jobs; a $job matcher is not applicable.
+      No datasource template variable by design; see panel-datasource-rule.
     entries:
-      - dashboard: SLA - Altinn Uptime
-  template-instance-rule:
-    reason: >-
-      Overview dashboard has no per-instance filter variable by design (see
-      target-instance-rule).
-    entries:
-      - dashboard: SLA - Altinn Uptime
-  template-job-rule:
-    reason: >-
-      Overview dashboard has no per-job filter variable by design (see
-      target-job-rule).
-    entries:
-      - dashboard: SLA - Altinn Uptime
+      - dashboard: Status UP
+      - dashboard: SLA - Service Owners
+      - dashboard: SLA - Altinn Products
+      - dashboard: Endpoint Statistics

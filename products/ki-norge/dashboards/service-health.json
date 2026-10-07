@@ -15,7 +15,7 @@
       }
     ]
   },
-  "description": "Operational health of KI Norge in PROD and TT02. Availability comes from the blackbox-exporter HTTP probes of the public Astro frontends (ki.norge.no, ki.test.norge.no) in admin-prod-obs-amw; traffic, latency, errors and dependencies come from the headless Umbraco CMS behind them (Application Insights, dis-core-{prod,tt02}-products-ai, cloud_RoleName=kinorgeportal). Both environments are queried in a single cross-resource target and told apart by _ResourceId, so there is no environment variable to switch. Unlike info.altinn.no there is no deep /health probe — ki.norge.no does not expose one — so availability here means 'the site answered HTTP 200', not 'the app reported itself healthy'. Datasource UIDs are pinned rather than templated so the panels cannot silently bind to the wrong datasource.",
+  "description": "Operational health of KI Norge in PROD and TT02. Availability comes from the blackbox-exporter /health probes of ki.norge.no and ki.test.norge.no in admin-prod-obs-amw; a successful probe requires HTTP 200 and a response body reporting status Healthy. Traffic, latency, errors and dependencies come from the headless Umbraco CMS behind the public frontends (Application Insights, dis-core-{prod,tt02}-products-ai, cloud_RoleName=kinorgeportal). Both environments are queried in a single cross-resource target and told apart by _ResourceId, so there is no environment variable to switch. Health-check history starts on 2026-10-05, when the front-page probes were replaced. Datasource UIDs are pinned rather than templated so the panels cannot silently bind to the wrong datasource.",
   "editable": false,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
@@ -59,7 +59,7 @@
     {
       "id": 1,
       "type": "row",
-      "title": "Availability — blackbox HTTP probes of the public site",
+      "title": "Availability — blackbox /health probes",
       "collapsed": false,
       "gridPos": {
         "h": 1,
@@ -91,7 +91,7 @@
             "uid": "admin-prod-obs-amw"
           },
           "editorMode": "code",
-          "expr": "max by (instance) (probe_success{job=~\"^blackbox-http-ipv[46]$\", instance=~\"^(ki\\\\.norge\\\\.no|ki\\\\.test\\\\.norge\\\\.no)$\"})",
+          "expr": "max by (instance) (probe_success{job=~\"^blackbox-http-ipv[46]-health-check$\", instance=~\"^(ki\\\\.norge\\\\.no|ki\\\\.test\\\\.norge\\\\.no)$\"})",
           "legendFormat": "{{instance}}",
           "instant": true,
           "range": false,
@@ -148,7 +148,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "description": "Green only if the site answered on at least one IP family from at least one prober pod — the same collapse the `Availability Prod` / `Availability TT02` alert rules use. `ki.norge.no` is PROD, `ki.test.norge.no` is TT02."
+      "description": "Green only if /health reported Healthy on at least one IP family from at least one prober pod — the same collapse the `Availability Prod` / `Availability TT02` alert rules use. `ki.norge.no` is PROD, `ki.test.norge.no` is TT02."
     },
     {
       "id": 3,
@@ -172,7 +172,7 @@
             "uid": "admin-prod-obs-amw"
           },
           "editorMode": "code",
-          "expr": "avg_over_time((max by (instance) (probe_success{job=~\"^blackbox-http-ipv[46]$\", instance=~\"^(ki\\\\.norge\\\\.no|ki\\\\.test\\\\.norge\\\\.no)$\"}))[$__range:1m]) * 100",
+          "expr": "avg_over_time((max by (instance) (probe_success{job=~\"^blackbox-http-ipv[46]-health-check$\", instance=~\"^(ki\\\\.norge\\\\.no|ki\\\\.test\\\\.norge\\\\.no)$\"}))[$__range:1m]) * 100",
           "legendFormat": "{{instance}}",
           "instant": true,
           "range": false,
@@ -222,7 +222,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "description": "The pod collapse happens *inside* the subquery on purpose: averaging raw `probe_success` first and taking the max after would let a short-lived prober replica mask an outage."
+      "description": "Only /health samples, available since 2026-10-05, are included. The pod collapse happens *inside* the subquery on purpose: averaging raw `probe_success` first and taking the max after would let a short-lived prober replica mask an outage."
     },
     {
       "id": 4,
@@ -246,7 +246,7 @@
             "uid": "admin-prod-obs-amw"
           },
           "editorMode": "code",
-          "expr": "min by (instance) (probe_ssl_earliest_cert_expiry{job=~\"^blackbox-http-ipv[46]$\", instance=~\"^(ki\\\\.norge\\\\.no|ki\\\\.test\\\\.norge\\\\.no)$\"} - time()) / 86400",
+          "expr": "min by (instance) (probe_ssl_earliest_cert_expiry{job=~\"^blackbox-http-ipv[46]-health-check$\", instance=~\"^(ki\\\\.norge\\\\.no|ki\\\\.test\\\\.norge\\\\.no)$\"} - time()) / 86400",
           "legendFormat": "{{instance}}",
           "instant": true,
           "range": false,
@@ -320,7 +320,7 @@
             "uid": "admin-prod-obs-amw"
           },
           "editorMode": "code",
-          "expr": "max by (instance) (probe_duration_seconds{job=~\"^blackbox-http-ipv[46]$\", instance=~\"^(ki\\\\.norge\\\\.no|ki\\\\.test\\\\.norge\\\\.no)$\"})",
+          "expr": "max by (instance) (probe_duration_seconds{job=~\"^blackbox-http-ipv[46]-health-check$\", instance=~\"^(ki\\\\.norge\\\\.no|ki\\\\.test\\\\.norge\\\\.no)$\"})",
           "legendFormat": "{{instance}}",
           "instant": true,
           "range": false,
@@ -370,7 +370,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "description": "Slowest of the two IP families, per host. Baseline is roughly 0.1–0.4 s from the admin-prod-aks probers."
+      "description": "Slowest /health probe across both IP families and all prober pods, per host."
     },
     {
       "id": 6,
@@ -394,7 +394,7 @@
             "uid": "admin-prod-obs-amw"
           },
           "editorMode": "code",
-          "expr": "max (probe_success{job=\"blackbox-http-ipv4\", instance=\"ki.norge.no\"})",
+          "expr": "max (probe_success{job=\"blackbox-http-ipv4-health-check\", instance=\"ki.norge.no\"})",
           "legendFormat": "PROD ipv4",
           "instant": false,
           "range": true,
@@ -408,7 +408,7 @@
             "uid": "admin-prod-obs-amw"
           },
           "editorMode": "code",
-          "expr": "max (probe_success{job=\"blackbox-http-ipv6\", instance=\"ki.norge.no\"})",
+          "expr": "max (probe_success{job=\"blackbox-http-ipv6-health-check\", instance=\"ki.norge.no\"})",
           "legendFormat": "PROD ipv6",
           "instant": false,
           "range": true,
@@ -422,7 +422,7 @@
             "uid": "admin-prod-obs-amw"
           },
           "editorMode": "code",
-          "expr": "max (probe_success{job=\"blackbox-http-ipv4\", instance=\"ki.test.norge.no\"})",
+          "expr": "max (probe_success{job=\"blackbox-http-ipv4-health-check\", instance=\"ki.test.norge.no\"})",
           "legendFormat": "TT02 ipv4",
           "instant": false,
           "range": true,
@@ -436,7 +436,7 @@
             "uid": "admin-prod-obs-amw"
           },
           "editorMode": "code",
-          "expr": "max (probe_success{job=\"blackbox-http-ipv6\", instance=\"ki.test.norge.no\"})",
+          "expr": "max (probe_success{job=\"blackbox-http-ipv6-health-check\", instance=\"ki.test.norge.no\"})",
           "legendFormat": "TT02 ipv6",
           "instant": false,
           "range": true,
@@ -505,7 +505,7 @@
           "sort": "none"
         }
       },
-      "description": "The panel the Slack availability alert links to. The alert collapses these four series into one and fires only when all of them are down, so this is where you see whether an incident was one IP family or the whole site. Job names are matched exactly here rather than by regex — Azure Managed Prometheus does not anchor `=~`, so a loose matcher would pull in the unrelated `-health-check` and `-kuberneteswrapper` jobs."
+      "description": "The panel the Slack availability alert links to. Each environment alerts only when both IP families fail to report Healthy from every prober pod. The four series show which environment and IP family failed. Exact health-check job names keep these probes separate from shallow HTTP and kuberneteswrapper probes."
     },
     {
       "id": 7,
@@ -529,7 +529,7 @@
             "uid": "admin-prod-obs-amw"
           },
           "editorMode": "code",
-          "expr": "max by (instance, job) (probe_duration_seconds{job=~\"^blackbox-http-ipv[46]$\", instance=~\"^(ki\\\\.norge\\\\.no|ki\\\\.test\\\\.norge\\\\.no)$\"})",
+          "expr": "max by (instance, job) (probe_duration_seconds{job=~\"^blackbox-http-ipv[46]-health-check$\", instance=~\"^(ki\\\\.norge\\\\.no|ki\\\\.test\\\\.norge\\\\.no)$\"})",
           "legendFormat": "{{instance}} {{job}}",
           "instant": false,
           "range": true,
@@ -604,7 +604,7 @@
           "sort": "desc"
         }
       },
-      "description": "Splits what the stat above collapses. A gap here means the probe failed rather than returned slowly."
+      "description": "Splits probe duration by host and IP family. A gap means no probe samples are available; use the probe status panel to identify failed health checks."
     },
     {
       "id": 8,

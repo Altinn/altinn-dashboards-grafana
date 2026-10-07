@@ -57,7 +57,7 @@ spec:
 apiVersion: grafana.integreatly.org/v1beta1
 kind: GrafanaDashboard
 metadata:
-  name: external-grafana-altinn-uptime-sla
+  name: external-grafana-altinn-uptime-status-up
   namespace: grafana
 spec:
   folderRef: external-grafana-altinn-uptime
@@ -65,8 +65,120 @@ spec:
     matchLabels:
       dashboards: "external-grafana"
   configMapRef:
-    name: dashboard-altinn-uptime-sla
-    key: sla.json
+    name: dashboard-altinn-uptime-status-up
+    key: status-up.json
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: external-grafana-altinn-uptime-sla-service-owners
+  namespace: grafana
+spec:
+  folderRef: external-grafana-altinn-uptime
+  instanceSelector:
+    matchLabels:
+      dashboards: "external-grafana"
+  configMapRef:
+    name: dashboard-altinn-uptime-sla-service-owners
+    key: sla-service-owners.json
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: external-grafana-altinn-uptime-sla-altinn-product
+  namespace: grafana
+spec:
+  folderRef: external-grafana-altinn-uptime
+  instanceSelector:
+    matchLabels:
+      dashboards: "external-grafana"
+  configMapRef:
+    name: dashboard-altinn-uptime-sla-altinn-product
+    key: sla-altinn-product.json
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: external-grafana-altinn-uptime-endpoint-statistics
+  namespace: grafana
+spec:
+  folderRef: external-grafana-altinn-uptime
+  instanceSelector:
+    matchLabels:
+      dashboards: "external-grafana"
+  configMapRef:
+    name: dashboard-altinn-uptime-endpoint-statistics
+    key: endpoint-statistics.json
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: external-grafana-dis-edge-envoy-clusters
+  namespace: grafana
+spec:
+  folderRef: external-grafana-dis-edge
+  instanceSelector:
+    matchLabels:
+      dashboards: "external-grafana"
+  configMapRef:
+    name: dashboard-dis-edge-envoy-clusters
+    key: envoy-clusters.json
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: external-grafana-dis-edge-envoy-global
+  namespace: grafana
+spec:
+  folderRef: external-grafana-dis-edge
+  instanceSelector:
+    matchLabels:
+      dashboards: "external-grafana"
+  configMapRef:
+    name: dashboard-dis-edge-envoy-global
+    key: envoy-global.json
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: external-grafana-dis-edge-envoy-ratelimit
+  namespace: grafana
+spec:
+  folderRef: external-grafana-dis-edge
+  instanceSelector:
+    matchLabels:
+      dashboards: "external-grafana"
+  configMapRef:
+    name: dashboard-dis-edge-envoy-ratelimit
+    key: envoy-ratelimit.json
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: external-grafana-dis-edge-envoy-resource-mon
+  namespace: grafana
+spec:
+  folderRef: external-grafana-dis-edge
+  instanceSelector:
+    matchLabels:
+      dashboards: "external-grafana"
+  configMapRef:
+    name: dashboard-dis-edge-envoy-resource-mon
+    key: envoy-resource-mon.json
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: external-grafana-dis-edge-sla-envoy-gateway-edge
+  namespace: grafana
+spec:
+  folderRef: external-grafana-dis-edge
+  instanceSelector:
+    matchLabels:
+      dashboards: "external-grafana"
+  configMapRef:
+    name: dashboard-dis-edge-sla-envoy-gateway-edge
+    key: sla-envoy-gateway-edge.json
 ---
 apiVersion: grafana.integreatly.org/v1beta1
 kind: GrafanaDashboard
