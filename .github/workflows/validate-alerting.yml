@@ -75,7 +75,7 @@ jobs:
             [ -f "$d/kustomization.yaml" ] || continue
             echo "::group::validate $d"
             if kustomize build "$d" \
-                | kubeconform -strict -skip ExternalSecret,Vault,ApplicationIdentity -summary -verbose \
+                | kubeconform -strict -skip ExternalSecret,SecretStore,Vault,ApplicationIdentity -summary -verbose \
                     -schema-location default \
                     -schema-location "$SCHEMA_LOC" -; then
               echo "OK: $d"

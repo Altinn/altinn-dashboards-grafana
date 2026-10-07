@@ -1,0 +1,27 @@
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDatasource
+metadata:
+  name: altinn-studio-traces
+  namespace: grafana
+spec:
+  uid: altinn-studio-traces
+  instanceSelector:
+    matchLabels:
+      dashboards: external-grafana
+  datasource:
+    name: altinn-studio-traces
+    type: tempo
+    access: proxy
+    url: https://altinn.studio/internal/observability/traces
+    isDefault: false
+    editable: false
+    jsonData:
+      httpHeaderName1: Authorization
+    secureJsonData:
+      httpHeaderValue1: "${authorization}"
+  valuesFrom:
+    - targetPath: secureJsonData.httpHeaderValue1
+      valueFrom:
+        secretKeyRef:
+          name: altinn-studio-traces-auth
+          key: authorization

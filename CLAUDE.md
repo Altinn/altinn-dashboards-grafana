@@ -43,7 +43,7 @@ products/<product>/
     └── rules-*.yaml              # GrafanaAlertRuleGroup(s)
 products/<product>/datasources/   # optional GrafanaDatasource + ExternalSecret overlay
 platform/datasources/             # optional shared datasource overlay
-platform/secrets/                 # shared Key Vault + Slack ExternalSecret wiring
+platform/secrets/                 # shared Key Vault, datasource SecretStore + Slack secret wiring
 examples/datasources/             # validated templates, excluded from the root aggregate
 schemas/                          # vendored CRD JSON schemas for offline kubeconform
 kustomization.yaml                # repo-root aggregator for registered product/platform overlays
@@ -103,7 +103,9 @@ at the repo root. Never register the examples or deploy their placeholder endpoi
 - Set stable `spec.uid`, namespace `grafana` and selector `dashboards: external-grafana`.
 - Keep `isDefault: false` and `editable: false`; edit managed connections through Git.
 - Store complete Authorization values in Key Vault, with separate `ExternalSecret` targets per
-  datasource. Use `valuesFrom` → `secureJsonData.httpHeaderValue1`, retaining the
+  datasource through `grafana-datasource-secret-store`. It reuses the `grafana-alerting` service
+  account and Key Vault; Slack retains `grafana-alerting-secret-store`.
+  Use `valuesFrom` → `secureJsonData.httpHeaderValue1`, retaining the
   `${authorization}` placeholder and matching Secret key. Never commit credential values.
 - Product datasource paths request platform review through `CODEOWNERS`. Later product ownership
   rules must preserve platform ownership of the datasource subdirectory.
@@ -227,17 +229,17 @@ kustomize build .
 
 # 2. kubeconform -strict against the vendored schemas (CI pins v0.6.7)
 kustomize build products/<product>/alerting \
-  | kubeconform -strict -skip ExternalSecret,Vault,ApplicationIdentity -summary -verbose \
+  | kubeconform -strict -skip ExternalSecret,SecretStore,Vault,ApplicationIdentity -summary -verbose \
       -schema-location default -schema-location "$SCHEMA_LOC" -
 kustomize build . \
-  | kubeconform -strict -skip ExternalSecret,Vault,ApplicationIdentity -summary -verbose \
+  | kubeconform -strict -skip ExternalSecret,SecretStore,Vault,ApplicationIdentity -summary -verbose \
       -schema-location default -schema-location "$SCHEMA_LOC" -
 
 # 3. relaxed yamllint (long-line warnings are OK; errors are not)
 yamllint -d relaxed products platform dashboards examples kustomization.yaml
 ```
 
-`ExternalSecret`, `Vault`, and `ApplicationIdentity` are explicitly skipped because their
+`ExternalSecret`, `SecretStore`, `Vault`, and `ApplicationIdentity` are explicitly skipped because their
 schemas are not vendored. Missing schemas for Grafana resources must fail validation.
 Also render and validate `examples/datasources` when changing datasource schemas or examples.
 

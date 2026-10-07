@@ -181,8 +181,8 @@ The existing operator manages these connections in the external production insta
    as `studio-prometheus-experimental`, and reuse it in dashboards and alerts. Keep namespace
    `grafana`, the `external-grafana` selector, `isDefault: false` and `editable: false`.
 3. Store each complete Authorization header value (including its authentication scheme) in
-   the existing `grafana-alerting` Key Vault. Point `remoteRef.key` at that secret's actual name.
-   Each datasource gets its own Kubernetes Secret through `grafana-alerting-secret-store`;
+   Azure Key Vault `grafana-grafana-b607eb82`. Point `remoteRef.key` at that secret's actual name.
+   Each datasource gets its own Kubernetes Secret through `grafana-datasource-secret-store`;
    `valuesFrom` substitutes its `authorization` key into `secureJsonData.httpHeaderValue1`.
    Leave `${authorization}` in Git. Rotate credentials in Key Vault.
 4. Verify the endpoint is reachable from **Azure Managed Grafana**, and that its telemetry may
@@ -198,13 +198,23 @@ Prometheus and Tempo are supported core types. Before adding VictoriaLogs, confi
 is available and enabled through [Azure plugin management](https://learn.microsoft.com/en-us/azure/managed-grafana/how-to-manage-plugins).
 The operator [cannot install plugins on external Grafana](https://grafana.github.io/grafana-operator/docs/examples/grafana/external_grafana/readme/).
 
+Studio's three connections in `products/studio/datasources` share the Key Vault secret
+`datasource-altinn-studio-authorization` in Azure Key Vault `grafana-grafana-b607eb82`
+(managed by the `grafana-alerting` Vault resource). Store the complete `Bearer <token>` value
+there; each connection syncs it into its own Kubernetes Secret.
+The datasource SecretStore reuses the `grafana-alerting` service account and its Azure permissions;
+Slack keeps the operator-managed `grafana-alerting-secret-store`. If the vault URL changes,
+update `platform/secrets/datasource-secret-store.yaml`.
+Before deploying the overlay, populate the secret and enable `victoriametrics-logs-datasource`
+in Azure Managed Grafana. Prometheus and Tempo use built-in plugins.
+
 Validate a datasource overlay and the root aggregate before opening the PR:
 
 ```bash
 SCHEMA_LOC='schemas/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json'
 for target in examples/datasources .; do  # replace the example path with the new overlay
   kustomize build "$target" \
-    | kubeconform -strict -skip ExternalSecret,Vault,ApplicationIdentity -summary \
+    | kubeconform -strict -skip ExternalSecret,SecretStore,Vault,ApplicationIdentity -summary \
         -schema-location default -schema-location "$SCHEMA_LOC" -
 done
 ```
