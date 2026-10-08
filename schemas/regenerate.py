@@ -8,7 +8,7 @@ import json
 import subprocess
 
 # renovate: datasource=github-releases depName=grafana/grafana-operator
-OPERATOR_VERSION = "v5.23.0"
+OPERATOR_VERSION = "v5.25.0"
 
 KINDS = {
     "GrafanaAlertRuleGroup": "grafanaalertrulegroups",
