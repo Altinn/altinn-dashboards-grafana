@@ -12,6 +12,9 @@ metadata:
 spec:
   # The grafana-public instance runs in the grafana-public namespace.
   allowCrossNamespaceImport: true
+  # grafana-public runs on ephemeral storage and comes back empty after a restart;
+  # the operator does not notice and only re-adds content on resync (default 10m).
+  resyncPeriod: 1m
   folderRef: public-grafana-altinn-uptime
   instanceSelector:
     matchLabels:
@@ -32,6 +35,9 @@ metadata:
 spec:
   # The grafana-public instance runs in the grafana-public namespace.
   allowCrossNamespaceImport: true
+  # grafana-public runs on ephemeral storage and comes back empty after a restart;
+  # the operator does not notice and only re-adds content on resync (default 10m).
+  resyncPeriod: 1m
   folderRef: public-grafana-altinn-uptime
   instanceSelector:
     matchLabels:

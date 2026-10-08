@@ -127,8 +127,9 @@ To publish another dashboard:
 1. Add it to `SOURCES` in `scripts/build-public-dashboards.py` (and its datasource UID to
    `DATASOURCES`, if the public instance has a matching datasource) and run the script.
 2. Add a `configMapGenerator` entry in `public/kustomization.yaml` and a `GrafanaDashboard` in
-   `public/dashboards.yaml` with `allowCrossNamespaceImport: true`, the `public-grafana`
-   selector, a `public-grafana-*` folder and a new random `publicSharing.accessToken`
+   `public/dashboards.yaml` with `allowCrossNamespaceImport: true`, `resyncPeriod: 1m`, the
+   `public-grafana` selector, a `public-grafana-*` folder and a new random
+   `publicSharing.accessToken`
    (`python3 -c "import uuid; print(uuid.uuid4())"`).
 3. Add its title to `public/dashboards/<group>/.lint`.
 
