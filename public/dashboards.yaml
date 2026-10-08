@@ -1,0 +1,44 @@
+# Each dashboard is shared publicly at
+# https://dashboards.altinn.cloud/public-dashboards/<accessToken>.
+# The accessToken is pinned so the link survives the grafana-public pod being recreated
+# (it runs on ephemeral storage). It is immutable: never change it, since customers hold
+# the link.
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: public-grafana-altinn-uptime-sla-altinn-product
+  namespace: grafana
+spec:
+  # The grafana-public instance runs in the grafana-public namespace.
+  allowCrossNamespaceImport: true
+  folderRef: public-grafana-altinn-uptime
+  instanceSelector:
+    matchLabels:
+      dashboards: "public-grafana"
+  configMapRef:
+    name: public-dashboard-altinn-uptime-sla-altinn-product
+    key: sla-altinn-product.json
+  publicSharing:
+    accessToken: f78639a0-4924-4c32-aa75-92110334e28c
+    # The SLA is read per calendar month: let viewers pick "Previous month".
+    timeSelectionEnabled: true
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: public-grafana-altinn-uptime-sla-service-owners
+  namespace: grafana
+spec:
+  # The grafana-public instance runs in the grafana-public namespace.
+  allowCrossNamespaceImport: true
+  folderRef: public-grafana-altinn-uptime
+  instanceSelector:
+    matchLabels:
+      dashboards: "public-grafana"
+  configMapRef:
+    name: public-dashboard-altinn-uptime-sla-service-owners
+    key: sla-service-owners.json
+  publicSharing:
+    accessToken: 05040001-fe4c-4b2d-8b22-5597f15be856
+    # The SLA is read per calendar month: let viewers pick "Previous month".
+    timeSelectionEnabled: true

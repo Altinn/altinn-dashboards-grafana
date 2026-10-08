@@ -1,0 +1,16 @@
+exclusions:
+  panel-datasource-rule:
+    reason: >-
+      Generated from dashboards/altinn-uptime/, which pins its datasource UID on
+      purpose (see that directory's .lint and CLAUDE.md). The generator rewrites
+      the pin to the grafana-public datasource; public dashboards cannot use a
+      datasource variable anyway.
+    entries:
+      - dashboard: SLA - Service Owners
+      - dashboard: SLA - Altinn Products
+  template-datasource-rule:
+    reason: >-
+      Public dashboards cannot use template variables; the generator removes them.
+    entries:
+      - dashboard: SLA - Service Owners
+      - dashboard: SLA - Altinn Products

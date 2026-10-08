@@ -1,16 +1,19 @@
 #!/usr/bin/env python3
 """Validate that every dashboard JSON is wired into a ConfigMap + GrafanaDashboard CR.
 
-Covers two layouts:
+Covers three layouts:
   * platform dashboards  -- dashboards/<group>/*.json, wired in dashboards/kustomization.yaml
                             with the CRs in dashboards/dashboards.yaml
   * product dashboards   -- products/<product>/dashboards/*.json, wired in that directory's
                             own kustomization.yaml with the CRs alongside it
+  * public dashboards    -- public/dashboards/<group>/*.json, wired in public/kustomization.yaml
+                            with the CRs in public/dashboards.yaml
 
 Enforces a 1:1:1 correspondence (JSON <-> configMapGenerator entry <-> GrafanaDashboard CR),
 that each CR's folderRef resolves to a GrafanaFolder somewhere in the repo, and that every
-product dashboard overlay is registered in the repo-root kustomization.yaml; exits non-zero
-listing every problem.
+product dashboard overlay is registered in the repo-root kustomization.yaml. Public CRs must
+pin a publicSharing.accessToken and use only public folders, and only public/ may target the
+public-grafana instance. Exits non-zero listing every problem.
 """
 import os
 import sys
@@ -20,6 +23,8 @@ import yaml
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DASH = os.path.join(ROOT, "dashboards")
 PRODUCTS = os.path.join(ROOT, "products")
+PUBLIC = os.path.join(ROOT, "public")
+PUBLIC_INSTANCE = "public-grafana"
 
 
 def load_all(path):
@@ -179,6 +184,49 @@ def main():
         total += check_set(
             f"product/{product}", json_files, kust_path, cr_paths,
             folders, product_hint(product), errors)
+
+    # ---- public dashboards --------------------------------------------------
+    public_files = sorted(
+        os.path.relpath(p, PUBLIC).replace(os.sep, "/")
+        for p in glob.glob(os.path.join(PUBLIC, "dashboards", "*", "*.json")))
+    if public_files:
+        if "public" not in registered:
+            errors.append(
+                "public: overlay 'public' is not listed in the repo-root kustomization.yaml, "
+                "so it is never published in the OCI artifact.")
+        public_folders = {
+            d.get("metadata", {}).get("name")
+            for d in load_all(os.path.join(PUBLIC, "folders.yaml"))
+            if d.get("kind") == "GrafanaFolder"}
+        public_crs = os.path.join(PUBLIC, "dashboards.yaml")
+        total += check_set(
+            "public", public_files, os.path.join(PUBLIC, "kustomization.yaml"), [public_crs],
+            public_folders,
+            lambda jf: "    Add it to SOURCES in scripts/build-public-dashboards.py, then wire "
+                       "it in public/kustomization.yaml and public/dashboards.yaml.",
+            errors)
+        for doc in load_all(public_crs):
+            if doc.get("kind") != "GrafanaDashboard":
+                continue
+            name = doc.get("metadata", {}).get("name")
+            if not (doc.get("spec", {}).get("publicSharing") or {}).get("accessToken"):
+                errors.append(
+                    f"public: GrafanaDashboard '{name}' has no spec.publicSharing.accessToken; "
+                    f"without a pinned token the public link changes when the pod restarts.")
+
+    # Only public/ may target the public instance, so a mislabelled CR cannot publish an
+    # internal dashboard.
+    for path in glob.glob(os.path.join(ROOT, "**", "*.yaml"), recursive=True):
+        if path.startswith(PUBLIC + os.sep) or "/examples/" in path or "/.github/" in path:
+            continue
+        for doc in load_all(path):
+            if not isinstance(doc, dict):
+                continue
+            selector = (doc.get("spec") or {}).get("instanceSelector") or {}
+            if (selector.get("matchLabels") or {}).get("dashboards") == PUBLIC_INSTANCE:
+                errors.append(
+                    f"{rel(path)}: {doc.get('kind')} '{doc.get('metadata', {}).get('name')}' "
+                    f"targets the {PUBLIC_INSTANCE} instance outside public/.")
 
     if errors:
         print(f"FAIL: dashboard wiring validation ({len(errors)} problem(s)):\n")
