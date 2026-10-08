@@ -113,8 +113,8 @@ that workspace.
 
 | Dashboard | Public link |
 |-----------|-------------|
-| SLA - Altinn Products | https://dashboards.altinn.cloud/public-dashboards/f78639a0-4924-4c32-aa75-92110334e28c |
-| SLA - Service Owners | https://dashboards.altinn.cloud/public-dashboards/05040001-fe4c-4b2d-8b22-5597f15be856 |
+| SLA - Altinn Products | https://dashboards.altinn.cloud/public-dashboards/f78639a049244c32aa7592110334e28c |
+| SLA - Service Owners | https://dashboards.altinn.cloud/public-dashboards/05040001fe4c4b2d8b225597f15be856 |
 
 Public dashboards cannot use template variables, so the JSON in `public/dashboards/` is
 generated from the platform dashboards by `scripts/build-public-dashboards.py`: it drops the
@@ -132,7 +132,9 @@ To publish another dashboard:
    (`python3 -c "import uuid; print(uuid.uuid4())"`).
 3. Add its title to `public/dashboards/<group>/.lint`.
 
-The `accessToken` is the public link and is immutable: never change it once customers have
+Grafana stores the token without dashes, so the link is `/public-dashboards/<accessToken without
+dashes>`; the operator also reports it in the CR's `status.publicSharingPath`. The `accessToken`
+is the public link and is immutable: never change it once customers have
 it. `scripts/validate-dashboards.py` fails if a public dashboard has no token, or if any CR
 outside `public/` targets the public instance. Everything under `public/` is visible on the
 internet, so check panel titles, text and queries for anything internal before merging.
