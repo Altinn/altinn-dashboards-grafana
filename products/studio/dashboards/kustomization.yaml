@@ -1,0 +1,8 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: grafana
+generatorOptions:
+  # The GrafanaDashboard CRs reference the ConfigMaps by name, so the names must be stable.
+  disableNameSuffixHash: true
+resources: []
+configMapGenerator: []
