@@ -247,6 +247,10 @@ the steps and the live links. What matters when working on them:
   CR's `status.publicSharingPath` has it). **It is immutable** (the CRD rejects a
   change). Generate a new UUID per dashboard; never reuse or rotate one customers hold.
   The instance runs on ephemeral storage, so an unpinned token would change on every restart.
+- **Every public CR sets `resyncPeriod: 1m`** (enforced by `scripts/validate-dashboards.py`).
+  The instance runs on ephemeral storage and comes back empty after every restart; the
+  operator does not notice and only re-adds content on resync. At the default 10m, customers
+  saw up to 10 minutes of "Dashboard not found" after a deploy (2026-10-08).
 - **Only `public/` may select `dashboards: public-grafana`.** `scripts/validate-dashboards.py`
   enforces it. Internal CRs cannot reach the instance by accident anyway: they lack
   `allowCrossNamespaceImport`, and the instance is in another namespace.

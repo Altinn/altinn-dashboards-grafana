@@ -12,8 +12,8 @@ Covers three layouts:
 Enforces a 1:1:1 correspondence (JSON <-> configMapGenerator entry <-> GrafanaDashboard CR),
 that each CR's folderRef resolves to a GrafanaFolder somewhere in the repo, and that every
 product dashboard overlay is registered in the repo-root kustomization.yaml. Public CRs must
-pin a publicSharing.accessToken and use only public folders, and only public/ may target the
-public-grafana instance. Exits non-zero listing every problem.
+pin a publicSharing.accessToken, resync every minute and use only public folders, and only
+public/ may target the public-grafana instance. Exits non-zero listing every problem.
 """
 import os
 import sys
@@ -25,6 +25,7 @@ DASH = os.path.join(ROOT, "dashboards")
 PRODUCTS = os.path.join(ROOT, "products")
 PUBLIC = os.path.join(ROOT, "public")
 PUBLIC_INSTANCE = "public-grafana"
+PUBLIC_RESYNC = "1m"
 
 
 def load_all(path):
@@ -205,11 +206,15 @@ def main():
             lambda jf: "    Add it to SOURCES in scripts/build-public-dashboards.py, then wire "
                        "it in public/kustomization.yaml and public/dashboards.yaml.",
             errors)
-        for doc in load_all(public_crs):
-            if doc.get("kind") != "GrafanaDashboard":
-                continue
+        for doc in load_all(public_crs) + load_all(os.path.join(PUBLIC, "folders.yaml")):
+            kind = doc.get("kind")
             name = doc.get("metadata", {}).get("name")
-            if not (doc.get("spec", {}).get("publicSharing") or {}).get("accessToken"):
+            spec = doc.get("spec", {})
+            if spec.get("resyncPeriod") != PUBLIC_RESYNC:
+                errors.append(
+                    f"public: {kind} '{name}' needs spec.resyncPeriod: {PUBLIC_RESYNC}; the "
+                    f"instance comes back empty after a restart and is only refilled on resync.")
+            if kind == "GrafanaDashboard" and not (spec.get("publicSharing") or {}).get("accessToken"):
                 errors.append(
                     f"public: GrafanaDashboard '{name}' has no spec.publicSharing.accessToken; "
                     f"without a pinned token the public link changes when the pod restarts.")
