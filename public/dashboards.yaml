@@ -1,5 +1,6 @@
 # Each dashboard is shared publicly at
-# https://dashboards.altinn.cloud/public-dashboards/<accessToken>.
+# https://dashboards.altinn.cloud/public-dashboards/<accessToken without dashes>
+# (Grafana strips them; see status.publicSharingPath).
 # The accessToken is pinned so the link survives the grafana-public pod being recreated
 # (it runs on ephemeral storage). It is immutable: never change it, since customers hold
 # the link.

@@ -242,7 +242,9 @@ the steps and the live links. What matters when working on them:
   `admin-prod-obs-amw`). The script maps `admin-prod-obs-amw` to it and fails on any other UID.
   A dashboard using Azure Monitor / App Insights needs a new datasource and identity grant in
   gitops-manifests `oci/grafana-public` and adminservices first.
-- **`publicSharing.accessToken` is the public link and is immutable** (the CRD rejects a
+- **`publicSharing.accessToken` is the public link, minus its dashes**
+  (`/public-dashboards/f78639a049244c32aa7592110334e28c`, not the UUID form, which 404s; the
+  CR's `status.publicSharingPath` has it). **It is immutable** (the CRD rejects a
   change). Generate a new UUID per dashboard; never reuse or rotate one customers hold.
   The instance runs on ephemeral storage, so an unpinned token would change on every restart.
 - **Only `public/` may select `dashboards: public-grafana`.** `scripts/validate-dashboards.py`
