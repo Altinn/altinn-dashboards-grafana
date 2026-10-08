@@ -12,3 +12,7 @@
 
 # Platform review for connections in the shared Grafana instance.
 /products/*/datasources/   @Altinn/team-platform
+
+# Everything here is published on the internet (dashboards.altinn.cloud).
+/public/                   @Altinn/team-platform
+/scripts/build-public-dashboards.py  @Altinn/team-platform
