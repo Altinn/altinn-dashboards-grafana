@@ -9,6 +9,7 @@
 /products/dialogporten/    @Altinn/team-dialogporten-infra
 /products/infoportal/      @Altinn/team-portal
 /products/ki-norge/        @Altinn/team-ai-lab
+/products/studio/          @Altinn/team-altinn-studio
 
 # Platform review for connections in the shared Grafana instance.
 /products/*/datasources/   @Altinn/team-platform
