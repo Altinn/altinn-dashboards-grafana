@@ -13,7 +13,7 @@ imported by hand.
 ```
 dashboards/                     # platform dashboards (self-contained configMapRef CRs)
 ├── kustomization.yaml          #   wraps each JSON into a ConfigMap + lists the CRs
-├── folders.yaml                #   5 GrafanaFolder CRs (Altinn/Altinn Uptime/Fluxcd/Kubernetes/Linkerd)
+├── folders.yaml                #   GrafanaFolder CRs (Altinn/Altinn Uptime/Altinn Studio/DIS Edge/Fluxcd/Kubernetes/Linkerd)
 ├── dashboards.yaml             #   14 GrafanaDashboard CRs
 ├── altinn/                     #   Altinn dashboard JSON
 ├── altinn-uptime/              #   Altinn Uptime dashboard JSON (SLA per service owner and per product, status, endpoint statistics)
