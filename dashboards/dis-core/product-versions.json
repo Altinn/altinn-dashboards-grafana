@@ -442,7 +442,7 @@
       "type": "table"
     }
   ],
-  "refresh": "5m",
+  "refresh": "auto",
   "schemaVersion": 42,
   "tags": [
     "dis-core",
