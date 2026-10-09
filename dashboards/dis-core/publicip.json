@@ -1,0 +1,219 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "Inbound and outbound public IP addresses of the dis-core and dis-edge AKS clusters, per environment. Read from Azure Resource Graph across the dis-core-test, dis-core-staging and dis-core-prod subscriptions.",
+  "editable": false,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "datasource": {
+        "type": "grafana-azure-monitor-datasource",
+        "uid": "azure-monitor-oob"
+      },
+      "description": "Public addresses of the dis-core AKS clusters, one row per environment. Inbound: the cluster load balancer's public IP. Outbound: the public IP prefix the cluster's traffic leaves from; allow-list this range when a remote service filters on source IP. \"—\" means the environment has no such address.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": true
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "empty",
+                "result": {
+                  "text": "—"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Environment"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 120
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "options": {
+        "cellHeight": "sm",
+        "showHeader": true
+      },
+      "pluginVersion": "12.4.8",
+      "targets": [
+        {
+          "azureResourceGraph": {
+            "query": "Resources\n| where type in (\"microsoft.network/publicipaddresses\", \"microsoft.network/publicipprefixes\")\n| where name matches regex @\"^dis-core-[a-z0-9]+-aks-(pip|prefix)[46]$\"\n| extend Env = extract(@\"^dis-[a-z]+-([a-z0-9]+)-aks-\", 1, name),\n         Kind = extract(@\"-aks-(pip|prefix)[46]$\", 1, name),\n         Ver = extract(@\"([46])$\", 1, name)\n| extend Address = iff(Kind == \"pip\", tostring(properties.ipAddress), tostring(properties.ipPrefix))\n| summarize\n    ['Inbound IPv4'] = take_anyif(Address, Kind == \"pip\" and Ver == \"4\"),\n    ['Inbound IPv6'] = take_anyif(Address, Kind == \"pip\" and Ver == \"6\"),\n    ['Outbound IPv4'] = take_anyif(Address, Kind == \"prefix\" and Ver == \"4\"),\n    ['Outbound IPv6'] = take_anyif(Address, Kind == \"prefix\" and Ver == \"6\")\n    by Env\n| extend Order = case(Env == \"at22\", 1, Env == \"at23\", 2, Env == \"at24\", 3, Env == \"yt01\", 4, Env == \"tt02\", 5, Env == \"prod\", 6, 9)\n| order by Order asc\n| project Environment = toupper(Env), ['Inbound IPv4'], ['Inbound IPv6'], ['Outbound IPv4'], ['Outbound IPv6']",
+            "resultFormat": "table"
+          },
+          "datasource": {
+            "type": "grafana-azure-monitor-datasource",
+            "uid": "azure-monitor-oob"
+          },
+          "queryType": "Azure Resource Graph",
+          "refId": "A",
+          "subscriptions": [
+            "3be00243-992b-41a2-8bb5-34ed04f7d653",
+            "b946eabe-2509-4652-abfc-6aa3b991fe25",
+            "f272e0dd-c13f-413a-a5d7-a6a7cf4a8622"
+          ]
+        }
+      ],
+      "title": "DIS Core",
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "grafana-azure-monitor-datasource",
+        "uid": "azure-monitor-oob"
+      },
+      "description": "Public addresses of the dis-edge AKS clusters, one row per environment. Inbound: the cluster load balancer's public IP. Outbound: the public IP prefix the cluster's traffic leaves from; allow-list this range when a remote service filters on source IP. \"—\" means the environment has no such address.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": true
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "empty",
+                "result": {
+                  "text": "—"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Environment"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 120
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 9
+      },
+      "id": 2,
+      "options": {
+        "cellHeight": "sm",
+        "showHeader": true
+      },
+      "pluginVersion": "12.4.8",
+      "targets": [
+        {
+          "azureResourceGraph": {
+            "query": "Resources\n| where type in (\"microsoft.network/publicipaddresses\", \"microsoft.network/publicipprefixes\")\n| where name matches regex @\"^dis-edge-[a-z0-9]+-aks-(pip|prefix)[46]$\"\n| extend Env = extract(@\"^dis-[a-z]+-([a-z0-9]+)-aks-\", 1, name),\n         Kind = extract(@\"-aks-(pip|prefix)[46]$\", 1, name),\n         Ver = extract(@\"([46])$\", 1, name)\n| extend Address = iff(Kind == \"pip\", tostring(properties.ipAddress), tostring(properties.ipPrefix))\n| summarize\n    ['Inbound IPv4'] = take_anyif(Address, Kind == \"pip\" and Ver == \"4\"),\n    ['Inbound IPv6'] = take_anyif(Address, Kind == \"pip\" and Ver == \"6\"),\n    ['Outbound IPv4'] = take_anyif(Address, Kind == \"prefix\" and Ver == \"4\"),\n    ['Outbound IPv6'] = take_anyif(Address, Kind == \"prefix\" and Ver == \"6\")\n    by Env\n| extend Order = case(Env == \"at22\", 1, Env == \"at23\", 2, Env == \"at24\", 3, Env == \"yt01\", 4, Env == \"tt02\", 5, Env == \"prod\", 6, 9)\n| order by Order asc\n| project Environment = toupper(Env), ['Inbound IPv4'], ['Inbound IPv6'], ['Outbound IPv4'], ['Outbound IPv6']",
+            "resultFormat": "table"
+          },
+          "datasource": {
+            "type": "grafana-azure-monitor-datasource",
+            "uid": "azure-monitor-oob"
+          },
+          "queryType": "Azure Resource Graph",
+          "refId": "A",
+          "subscriptions": [
+            "3be00243-992b-41a2-8bb5-34ed04f7d653",
+            "b946eabe-2509-4652-abfc-6aa3b991fe25",
+            "f272e0dd-c13f-413a-a5d7-a6a7cf4a8622"
+          ]
+        }
+      ],
+      "title": "DIS Edge",
+      "type": "table"
+    }
+  ],
+  "refresh": "",
+  "schemaVersion": 42,
+  "tags": [
+    "dis-core",
+    "dis-edge",
+    "network",
+    "resource-graph"
+  ],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "timepicker": {
+    "hidden": true
+  },
+  "timezone": "browser",
+  "title": "Public IPs",
+  "uid": "de1a1z1zluwaod",
+  "version": 1,
+  "weekStart": ""
+}

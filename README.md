@@ -13,13 +13,13 @@ imported by hand.
 ```
 dashboards/                     # platform dashboards (self-contained configMapRef CRs)
 ├── kustomization.yaml          #   wraps each JSON into a ConfigMap + lists the CRs
-├── folders.yaml                #   5 GrafanaFolder CRs (Altinn/Altinn Uptime/Fluxcd/Kubernetes/Linkerd)
-├── dashboards.yaml             #   14 GrafanaDashboard CRs
-├── altinn/                     #   Altinn dashboard JSON
+├── folders.yaml                #   5 GrafanaFolder CRs (Altinn Uptime/DIS Core/DIS Edge/Fluxcd/Kubernetes)
+├── dashboards.yaml             #   17 GrafanaDashboard CRs
 ├── altinn-uptime/              #   Altinn Uptime dashboard JSON (SLA per service owner and per product, status, endpoint statistics)
+├── dis-core/                   #   DIS Core dashboard JSON (Traefik, Linkerd Deployment, Product Versions, Public IPs, + .lint exclusions)
+├── dis-edge/                   #   DIS Edge Envoy dashboard JSON (+ .lint exclusions)
 ├── fluxcd/                     #   FluxCD dashboard JSON
-├── kubernetes/                 #   Kubernetes events dashboard JSON (+ .lint exclusions)
-└── linkerd/                    #   Linkerd dashboard JSON
+└── kubernetes/                 #   Kubernetes events dashboard JSON (+ .lint exclusions)
 products/                       # product dashboards, alerts and optional datasources/ overlays
 ├── dialogporten/
 │   ├── dashboards/             #   product dashboard JSON
@@ -55,12 +55,6 @@ scripts/publish-grafana-artifact-manual.sh    # manual `flux push artifact` (mir
 
 ## Dashboards
 
-**Altinn** (`dashboards/altinn/`)
-- `blackbox-exporter.json` — Blackbox Exporter endpoint, TLS and DNS monitoring
-- `pod-console-error-logs.json` — Kubernetes pod console error log aggregation
-- `publicip.json` — inbound/outbound public IP tracking
-- `traefik-official.json` — Traefik reverse proxy health and routing metrics
-
 **FluxCD** (`dashboards/fluxcd/`)
 - `flux-cluster-stats.json` — cluster-wide FluxCD statistics
 - `flux-control-plane.json` — FluxCD control plane monitoring
@@ -80,9 +74,28 @@ scripts/publish-grafana-artifact-manual.sh    # manual `flux push artifact` (mir
   of every product Kustomization. The product Service Health dashboards link here with their
   product preselected.
 
-**Linkerd** (`dashboards/linkerd/`)
-- `daemonset.json` — DaemonSet monitoring and metrics
-- `deployment.json` — Deployment health and performance
+**DIS Core** (`dashboards/dis-core/`)
+- `traefik-official.json` — Traefik reverse proxy health and routing metrics. The *Data Source*
+  dropdown lists only the `dis-core` Prometheus workspaces (regex `/dis-core/`), defaulting to
+  prod.
+- `linkerd-deployment.json` — Linkerd proxy metrics for one meshed deployment: inbound and
+  outbound success rate, request rate and latency, TCP connections and errors, and a collapsed
+  row per calling and called deployment. Same `/dis-core/` *Data source* filter, defaulting to
+  prod and `traefik/altinn-traefik`.
+- `product-versions.json` — rollout progress across AT22, AT23, TT02 and PROD. One table shows
+  the image tag every running container in the `product-*` namespaces runs, one column per
+  environment, coloured by the product's worst Flux Kustomization state there (green Ready,
+  yellow reconciling, red Not ready, uncoloured no Flux). Each query appends the state to the
+  version (`test165|ready`) and regex value mappings colour the cell and strip the suffix,
+  because a table cell can only be coloured from its own value. A second table shows each
+  product's Flux Kustomizations as Ready / Not ready / Reconciling. Both use the `-- Mixed --` datasource with one target pinned to each
+  `dis-core-<env>-products-amw` (kube-state-metrics), joined on the app. Flux artifact digests
+  are not shown: every environment pulls its own tag (`at22@sha256:…`), so they never match
+  across environments even when the same version is deployed.
+- `publicip.json` — inbound and outbound public IPs of the dis-core and dis-edge AKS clusters,
+  one table per platform and one row per environment, from Azure Resource Graph across the
+  three `dis-core-*` subscriptions. Inbound is the load balancer IP; outbound is the IP prefix
+  to allow-list.
 
 **Infoportal** (`products/infoportal/dashboards/`) — product-owned, lands in the `Infoportal`
 folder beside that product's alert rules

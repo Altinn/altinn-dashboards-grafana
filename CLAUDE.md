@@ -213,8 +213,10 @@ traces
   (`dis-edge-prod-products-amw`), not `default`. Keep that default when editing, and don't
   "fix" these back to pinned UIDs. A templated Prometheus datasource also switches on the
   linter's query rules (job/instance matchers, `$__rate_interval`), which is why
-  `dashboards/dis-edge/.lint` is longer than the others. The older dashboards in `altinn/`,
-  `fluxcd/` and `linkerd/` predate the pin convention and save a name or nothing; they are
+  `dashboards/dis-edge/.lint` is longer than the others. The Traefik and Linkerd Deployment dashboards in
+  `dashboards/dis-core/` follow the same pattern for the `dis-core-<env>-products-amw`
+  workspaces (regex `/dis-core/`, default `dis-core-prod-products-amw`). The older dashboards in
+  `fluxcd/` predate the pin convention and save a name or nothing; they are
   not a precedent for either style.
 - **Show every environment in one dashboard** rather than behind an env variable: give the
   Azure Logs target **all four** `resources[]` at once and derive the environment from
