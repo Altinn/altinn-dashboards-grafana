@@ -1,0 +1,10 @@
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaFolder
+metadata:
+  name: external-grafana-studio
+  namespace: grafana
+spec:
+  title: Altinn Studio
+  instanceSelector:
+    matchLabels:
+      dashboards: external-grafana

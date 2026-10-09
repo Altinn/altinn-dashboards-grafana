@@ -7,6 +7,8 @@ resources:
   - products/infoportal/dashboards
   - products/ki-norge/alerting
   - products/ki-norge/dashboards
+  - products/studio/alerting
+  - products/studio/dashboards
   - products/studio/datasources
   - platform/secrets
   - public
