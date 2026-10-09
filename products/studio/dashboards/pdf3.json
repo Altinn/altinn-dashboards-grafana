@@ -1,0 +1,560 @@
+{
+  "uid": "altinn-studio-pdf3",
+  "title": "Altinn Studio — PDF3",
+  "description": "PDF generation in pdf3 (proxy and workers) in the runtime environments. Requests, latency and status codes come from the services' HTTP server metrics; the outcome of each generation from the altinn.pdf3.generations counter; failed generations from traces, which tail sampling always keeps. Datasource UIDs are pinned, matching the other Altinn Studio dashboards.",
+  "tags": [
+    "altinn-studio",
+    "pdf3"
+  ],
+  "editable": false,
+  "schemaVersion": 42,
+  "refresh": "1m",
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "timezone": "browser",
+  "graphTooltip": 1,
+  "templating": {
+    "list": [
+      {
+        "name": "env",
+        "label": "Environment",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "altinn-studio-metrics"
+        },
+        "query": {
+          "qryType": 1,
+          "query": "label_values({\"http.server.request.duration_count\", \"service.name\"=\"pdf3-proxy\"}, \"deployment.environment.name\")",
+          "refId": "env"
+        },
+        "definition": "label_values({\"http.server.request.duration_count\", \"service.name\"=\"pdf3-proxy\"}, \"deployment.environment.name\")",
+        "refresh": 2,
+        "includeAll": true,
+        "multi": true,
+        "allValue": ".*",
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "sort": 1
+      }
+    ]
+  },
+  "annotations": {
+    "list": []
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "row",
+      "title": "Requests (proxy, POST /pdf)",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Requests per second",
+      "description": "PDF requests the proxy received per second.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "altinn-studio-metrics"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 1,
+        "w": 6,
+        "h": 4
+      },
+      "interval": "2m",
+      "targets": [
+        {
+          "expr": "sum(rate({\"http.server.request.duration_count\", \"service.name\"=\"pdf3-proxy\", \"http.route\"=\"/pdf\", \"deployment.environment.name\"=~\"$env\"}[$__rate_interval]))",
+          "legendFormat": "__auto",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "value"
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Server errors",
+      "description": "Share of PDF requests that failed in pdf3 (5xx). Invalid requests from apps (4xx) are shown under Proxy responses by status code.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "altinn-studio-metrics"
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 1,
+        "w": 6,
+        "h": 4
+      },
+      "interval": "2m",
+      "targets": [
+        {
+          "expr": "(sum(rate({\"http.server.request.duration_count\", \"service.name\"=\"pdf3-proxy\", \"http.route\"=\"/pdf\", \"deployment.environment.name\"=~\"$env\", \"http.response.status_code\"=~\"5..\"}[$__rate_interval])) or vector(0)) / sum(rate({\"http.server.request.duration_count\", \"service.name\"=\"pdf3-proxy\", \"http.route\"=\"/pdf\", \"deployment.environment.name\"=~\"$env\"}[$__rate_interval]))",
+          "legendFormat": "__auto",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 0.01
+              },
+              {
+                "color": "red",
+                "value": 0.05
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "value"
+      }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "p95 latency",
+      "description": "95th percentile of the proxy's response time, including the retries when every worker is busy.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "altinn-studio-metrics"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 1,
+        "w": 6,
+        "h": 4
+      },
+      "interval": "2m",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le) (rate({\"http.server.request.duration_bucket\", \"service.name\"=\"pdf3-proxy\", \"http.route\"=\"/pdf\", \"deployment.environment.name\"=~\"$env\"}[$__rate_interval])))",
+          "legendFormat": "__auto",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "value"
+      }
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Worker rejections per second",
+      "description": "Requests a worker turned away because it was already generating a PDF (429). The proxy retries them on another worker; a sustained rate means pdf3 needs more workers.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "altinn-studio-metrics"
+      },
+      "gridPos": {
+        "x": 18,
+        "y": 1,
+        "w": 6,
+        "h": 4
+      },
+      "interval": "2m",
+      "targets": [
+        {
+          "expr": "sum(rate({\"http.server.request.duration_count\", \"service.name\"=\"pdf3-worker\", \"http.route\"=\"/generate\", \"deployment.environment.name\"=~\"$env\", \"http.response.status_code\"=\"429\"}[$__rate_interval])) or vector(0)",
+          "legendFormat": "__auto",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "value"
+      }
+    },
+    {
+      "id": 6,
+      "type": "row",
+      "title": "Traffic and latency",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 5,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Proxy responses by status code",
+      "description": "PDF requests per second by the status the proxy returned.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "altinn-studio-metrics"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 6,
+        "w": 12,
+        "h": 8
+      },
+      "interval": "2m",
+      "targets": [
+        {
+          "expr": "sum by (\"http.response.status_code\") (rate({\"http.server.request.duration_count\", \"service.name\"=\"pdf3-proxy\", \"http.route\"=\"/pdf\", \"deployment.environment.name\"=~\"$env\"}[$__rate_interval]))",
+          "legendFormat": "{{http.response.status_code}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps"
+        },
+        "overrides": []
+      },
+      "options": {}
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "Proxy latency",
+      "description": "Response time of successful PDF requests at the proxy, including retries.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "altinn-studio-metrics"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 6,
+        "w": 12,
+        "h": 8
+      },
+      "interval": "2m",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.5, sum by (le) (rate({\"http.server.request.duration_bucket\", \"service.name\"=\"pdf3-proxy\", \"http.route\"=\"/pdf\", \"deployment.environment.name\"=~\"$env\", \"http.response.status_code\"=~\"2..\"}[$__rate_interval])))",
+          "legendFormat": "p50",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum by (le) (rate({\"http.server.request.duration_bucket\", \"service.name\"=\"pdf3-proxy\", \"http.route\"=\"/pdf\", \"deployment.environment.name\"=~\"$env\", \"http.response.status_code\"=~\"2..\"}[$__rate_interval])))",
+          "legendFormat": "p95",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "B"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum by (le) (rate({\"http.server.request.duration_bucket\", \"service.name\"=\"pdf3-proxy\", \"http.route\"=\"/pdf\", \"deployment.environment.name\"=~\"$env\", \"http.response.status_code\"=~\"2..\"}[$__rate_interval])))",
+          "legendFormat": "p99",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "C"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "options": {}
+    },
+    {
+      "id": 9,
+      "type": "row",
+      "title": "Workers",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 14,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "Generations by outcome",
+      "description": "PDF generations per second in the workers, by outcome: success, or the reason the generation failed (queue_full is a busy worker, which the proxy retries on another). From the altinn.pdf3.generations counter, so unaffected by trace sampling.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "altinn-studio-metrics"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 15,
+        "w": 12,
+        "h": 8
+      },
+      "interval": "2m",
+      "targets": [
+        {
+          "expr": "label_replace(label_replace(sum by (\"error.type\") (rate({\"altinn.pdf3.generations\", \"service.name\"=\"pdf3-worker\", \"deployment.environment.name\"=~\"$env\"}[$__rate_interval])), \"outcome\", \"$1\", \"error.type\", \"(.+)\"), \"outcome\", \"success\", \"error.type\", \"\")",
+          "legendFormat": "{{outcome}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {
+            "stacking": {
+              "mode": "normal"
+            },
+            "fillOpacity": 30
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "success"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "queue_full"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^(?!success$|queue_full$).+"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {}
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "Worker busy time",
+      "description": "Share of time each worker spends generating a PDF. A worker generates one PDF at a time (PDF3_QUEUE_SIZE=0), so 1 means always busy.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "altinn-studio-metrics"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 15,
+        "w": 12,
+        "h": 8
+      },
+      "interval": "2m",
+      "targets": [
+        {
+          "expr": "sum by (\"k8s.pod.name\") (rate({\"http.server.request.duration_sum\", \"service.name\"=\"pdf3-worker\", \"http.route\"=\"/generate\", \"deployment.environment.name\"=~\"$env\", \"http.response.status_code\"!=\"429\"}[$__rate_interval]))",
+          "legendFormat": "{{k8s.pod.name}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1
+        },
+        "overrides": []
+      },
+      "options": {}
+    },
+    {
+      "id": 12,
+      "type": "row",
+      "title": "Failed generations (sampled traces)",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 23,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 13,
+      "type": "table",
+      "title": "Recent failed generations",
+      "description": "Worker traces that ended in an error. Tail sampling keeps every failed trace, so this lists them all; open one to see the pdf.request.summary event with the request's details.",
+      "datasource": {
+        "type": "tempo",
+        "uid": "altinn-studio-traces"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 24,
+        "w": 24,
+        "h": 8
+      },
+      "interval": "2m",
+      "targets": [
+        {
+          "queryType": "traceql",
+          "query": "{resource.service.name=\"pdf3-worker\" && status=error && resource.deployment.environment.name=~\"$env\"}",
+          "limit": 20,
+          "tableType": "traces",
+          "datasource": {
+            "type": "tempo",
+            "uid": "altinn-studio-traces"
+          },
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "options": {}
+    }
+  ]
+}

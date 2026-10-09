@@ -1,0 +1,15 @@
+# PDF generation in pdf3 across the runtime environments. Lands in the Altinn Studio folder
+# (external-grafana-studio, defined in ../alerting/folder.yaml) beside Studio's alert rules.
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: external-grafana-studio-pdf3
+  namespace: grafana
+spec:
+  folderRef: external-grafana-studio
+  instanceSelector:
+    matchLabels:
+      dashboards: external-grafana
+  configMapRef:
+    name: dashboard-studio-pdf3
+    key: pdf3.json
