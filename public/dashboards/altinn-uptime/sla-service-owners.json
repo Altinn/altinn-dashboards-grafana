@@ -35,7 +35,9 @@
     "from": "now-30d",
     "to": "now"
   },
-  "timepicker": {},
+  "timepicker": {
+    "refresh_intervals": []
+  },
   "timezone": "Europe/Oslo",
   "title": "SLA - Service Owners",
   "uid": "altinn-uptime-sla-service-owners",

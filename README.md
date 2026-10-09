@@ -119,7 +119,10 @@ that workspace.
 Public dashboards cannot use template variables, so the JSON in `public/dashboards/` is
 generated from the platform dashboards by `scripts/build-public-dashboards.py`: it drops the
 variables, substitutes each one's "All" value, and points the datasource at the public
-instance. Edit the source in `dashboards/`, then run the script and commit both. CI fails when
+instance. It also makes the copies refresh manually only (no refresh intervals to pick) and
+leaves out per-dashboard time picker presets, so the instance-wide presets apply: those stop at
+one calendar month, because Azure Monitor Prometheus rejects ranges over 32 days. Both limits
+are set on the instance (gitops-manifests `oci/grafana-public`, "Time picker and refresh"). Edit the source in `dashboards/`, then run the script and commit both. CI fails when
 the generated copy is out of date.
 
 To publish another dashboard:

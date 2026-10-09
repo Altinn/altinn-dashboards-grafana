@@ -14,6 +14,11 @@ For every dashboard in SOURCES this script writes a copy under public/dashboards
   * datasource references rewritten from the dis-grafana-prod UID to the grafana-public
     datasource (gitops-manifests oci/grafana-public/datasource.yaml), which reads the same
     Azure Monitor workspace.
+  * manual refresh only: no saved refresh and no refresh intervals to pick. Grafana still
+    shows "Auto", which the instance's min_refresh_interval (1h) keeps in check.
+  * no time picker presets of their own, so the grafana-public instance-wide presets apply.
+    Those stop at one calendar month, since Azure Monitor Prometheus rejects ranges over
+    32 days.
 
 The source JSON stays the only thing to edit. Run with --check (CI) to fail when a
 generated copy is out of date.
@@ -98,6 +103,11 @@ def build(src):
             errors.append(f"{src}: variable '{name}' still referenced after substitution")
 
     dash = rewrite_datasources(dash, src, errors)
+
+    dash["refresh"] = ""
+    timepicker = dash.setdefault("timepicker", {})
+    timepicker["refresh_intervals"] = []
+    timepicker.pop("quick_ranges", None)
     return json.dumps(dash, indent=2, ensure_ascii=False) + "\n", errors
 
 
