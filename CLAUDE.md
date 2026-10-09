@@ -237,6 +237,11 @@ the steps and the live links. What matters when working on them:
   resolves them in the browser; a shared dashboard queries server-side). It drops them and
   substitutes each variable's `allValue`, so a source variable needs `includeAll` + `allValue`.
   Built-ins (`$__range`, `$__range_ms`) are resolved by the datasource backend and are fine.
+- **Manual refresh, instance-wide presets.** The script sets `refresh: ""` and
+  `timepicker.refresh_intervals: []` and drops `timepicker.quick_ranges`, so the
+  grafana-public presets (one calendar month at most: Azure Monitor Prometheus rejects ranges
+  over 32 days) and `min_refresh_interval: 1h` (caps the "Auto" option, which cannot be
+  hidden) apply. Keep a source dashboard's default `time` range within 32 days too.
 - **Datasource UIDs are mapped, not shared.** The public instance only has
   `azure-managed-prometheus` (type `grafana-azureprometheus-datasource`, reading
   `admin-prod-obs-amw`). The script maps `admin-prod-obs-amw` to it and fails on any other UID.

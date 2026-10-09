@@ -36,7 +36,9 @@
     "from": "now-30d",
     "to": "now"
   },
-  "timepicker": {},
+  "timepicker": {
+    "refresh_intervals": []
+  },
   "timezone": "Europe/Oslo",
   "title": "SLA - Altinn Products",
   "uid": "altinn-uptime-sla-altinn-product",
