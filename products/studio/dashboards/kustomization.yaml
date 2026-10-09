@@ -4,5 +4,9 @@ namespace: grafana
 generatorOptions:
   # The GrafanaDashboard CRs reference the ConfigMaps by name, so the names must be stable.
   disableNameSuffixHash: true
-resources: []
-configMapGenerator: []
+resources:
+  - pdf3.yaml
+configMapGenerator:
+  - name: dashboard-studio-pdf3
+    files:
+      - pdf3.json
