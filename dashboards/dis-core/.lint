@@ -1,0 +1,50 @@
+exclusions:
+  template-job-rule:
+    reason: >-
+      Each metric family in the dis-core workspaces comes from a single job
+      (traefik for Traefik, linkerd/linkerd-proxy for the Linkerd proxies,
+      kube-state-metrics for Product Versions), so a job template would filter
+      nothing.
+    entries:
+      - dashboard: Traefik Dashboard
+      - dashboard: Linkerd Deployment
+      - dashboard: Product Versions
+  template-instance-rule:
+    reason: >-
+      No instance template by design; Traefik panels aggregate per service and
+      entrypoint, Linkerd panels per namespace and deployment, not per pod.
+    entries:
+      - dashboard: Traefik Dashboard
+      - dashboard: Linkerd Deployment
+      - dashboard: Product Versions
+  target-job-rule:
+    reason: >-
+      Single job per metric family; see template-job-rule.
+    entries:
+      - dashboard: Traefik Dashboard
+      - dashboard: Linkerd Deployment
+      - dashboard: Product Versions
+  target-instance-rule:
+    reason: >-
+      No instance template; see template-instance-rule.
+    entries:
+      - dashboard: Traefik Dashboard
+      - dashboard: Linkerd Deployment
+      - dashboard: Product Versions
+  panel-datasource-rule:
+    reason: >-
+      Datasources are pinned on purpose. Public IPs reads Azure Resource Graph
+      through azure-monitor-oob; a ${datasource} variable would save "default"
+      instead of a real UID. Product Versions shows every dis-core environment
+      side by side, which one PromQL query cannot do across workspaces, so its
+      panels use "-- Mixed --" with one target pinned to each
+      dis-core-<env>-products-amw.
+    entries:
+      - dashboard: Public IPs
+      - dashboard: Product Versions
+  template-datasource-rule:
+    reason: >-
+      No datasource template variable by design; see panel-datasource-rule.
+    entries:
+      - dashboard: Public IPs
+      - dashboard: Product Versions

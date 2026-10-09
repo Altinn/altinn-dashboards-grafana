@@ -1,0 +1,466 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "Rollout progress of the products in the dis-core clusters: the version every product container runs in AT22, AT23, TT02 and PROD, and whether each product's Flux Kustomizations are ready. Reads kube-state-metrics from each dis-core-<env>-products-amw workspace. Values are as of the end of the selected time range.",
+  "editable": false,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [
+    {
+      "asDropdown": false,
+      "icon": "dashboard",
+      "includeVars": false,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "Kubernetes Events",
+      "type": "link",
+      "url": "/d/kubernetes-events/kubernetes-events"
+    }
+  ],
+  "panels": [
+    {
+      "datasource": {
+        "type": "datasource",
+        "uid": "-- Mixed --"
+      },
+      "description": "Image tag of every running container in the product-* namespaces, one column per dis-core environment. Read a row left to right to follow a rollout. The colour is the product's Flux state in that environment, the worst of its Kustomizations: green = all Ready, yellow = reconciling a new revision, red = at least one Not ready (see the Flux Kustomizations table below), no colour = no Flux Kustomization in the namespace. Two rows for the same app mean two versions are running in one environment (a rollout in progress). An image pulled by digest only shows the first 12 characters of its digest. \"—\" means the app has no running pod in that environment.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "color-background",
+              "mode": "basic",
+              "applyToRow": false,
+              "wrapText": false
+            },
+            "inspect": true
+          },
+          "mappings": [
+            {
+              "type": "regex",
+              "options": {
+                "pattern": "^(.*)\\|ready$",
+                "result": {
+                  "text": "$1",
+                  "color": "green"
+                }
+              }
+            },
+            {
+              "type": "regex",
+              "options": {
+                "pattern": "^(.*)\\|reconciling$",
+                "result": {
+                  "text": "$1",
+                  "color": "yellow"
+                }
+              }
+            },
+            {
+              "type": "regex",
+              "options": {
+                "pattern": "^(.*)\\|notready$",
+                "result": {
+                  "text": "$1",
+                  "color": "red"
+                }
+              }
+            },
+            {
+              "type": "regex",
+              "options": {
+                "pattern": "^(.*)\\|noflux$",
+                "result": {
+                  "text": "$1",
+                  "color": "transparent"
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "null+nan",
+                "result": {
+                  "text": "—",
+                  "color": "transparent"
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "empty",
+                "result": {
+                  "text": "—",
+                  "color": "transparent"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Product / container"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 320
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "auto"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 22,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "options": {
+        "cellHeight": "sm",
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": false,
+            "displayName": "Product / container"
+          }
+        ]
+      },
+      "pluginVersion": "12.4.8",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "dis-core-at22-products-amw"
+          },
+          "editorMode": "code",
+          "expr": "max by (app, AT22) (\nlabel_replace(\n  (\n    label_replace(label_replace(label_replace(\n      label_join(\n        label_replace(kube_pod_container_info{namespace=~\"^product-.+$\", container!=\"linkerd-proxy\"}, \"product\", \"$1\", \"namespace\", \"^product-(.+)$\"),\n        \"app\", \" / \", \"product\", \"container\"),\n      \"AT22\", \"$1\", \"image_spec\", \"(.*)\"),\n      \"AT22\", \"sha256:$1\", \"image_spec\", \"^[^@]*@sha256:([0-9a-f]{12}).*$\"),\n      \"AT22\", \"$1\", \"image_spec\", \"^[^@]*:([^:@/]+)(@sha256:[0-9a-f]+)?$\")\n    * on (namespace, pod) group_left() (kube_pod_status_phase{phase=\"Running\"} == 1)\n  )\n  * on (namespace) group_left() max by (namespace) (label_replace(gotk_resource_info{exported_namespace=~\"^product-.+$\", customresource_kind=\"kustomization\", ready=~\"^(false)$\"}, \"namespace\", \"$1\", \"exported_namespace\", \"(.*)\")),\n  \"AT22\", \"$1|notready\", \"AT22\", \"(.*)\")\nor\nlabel_replace(\n  ((\n    label_replace(label_replace(label_replace(\n      label_join(\n        label_replace(kube_pod_container_info{namespace=~\"^product-.+$\", container!=\"linkerd-proxy\"}, \"product\", \"$1\", \"namespace\", \"^product-(.+)$\"),\n        \"app\", \" / \", \"product\", \"container\"),\n      \"AT22\", \"$1\", \"image_spec\", \"(.*)\"),\n      \"AT22\", \"sha256:$1\", \"image_spec\", \"^[^@]*@sha256:([0-9a-f]{12}).*$\"),\n      \"AT22\", \"$1\", \"image_spec\", \"^[^@]*:([^:@/]+)(@sha256:[0-9a-f]+)?$\")\n    * on (namespace, pod) group_left() (kube_pod_status_phase{phase=\"Running\"} == 1)\n  )\n  unless on (namespace) max by (namespace) (label_replace(gotk_resource_info{exported_namespace=~\"^product-.+$\", customresource_kind=\"kustomization\", ready=~\"^(false)$\"}, \"namespace\", \"$1\", \"exported_namespace\", \"(.*)\")))\n  * on (namespace) group_left() max by (namespace) (label_replace(gotk_resource_info{exported_namespace=~\"^product-.+$\", customresource_kind=\"kustomization\", ready=~\"^(unknown)$\"}, \"namespace\", \"$1\", \"exported_namespace\", \"(.*)\")),\n  \"AT22\", \"$1|reconciling\", \"AT22\", \"(.*)\")\nor\nlabel_replace(\n  ((\n    label_replace(label_replace(label_replace(\n      label_join(\n        label_replace(kube_pod_container_info{namespace=~\"^product-.+$\", container!=\"linkerd-proxy\"}, \"product\", \"$1\", \"namespace\", \"^product-(.+)$\"),\n        \"app\", \" / \", \"product\", \"container\"),\n      \"AT22\", \"$1\", \"image_spec\", \"(.*)\"),\n      \"AT22\", \"sha256:$1\", \"image_spec\", \"^[^@]*@sha256:([0-9a-f]{12}).*$\"),\n      \"AT22\", \"$1\", \"image_spec\", \"^[^@]*:([^:@/]+)(@sha256:[0-9a-f]+)?$\")\n    * on (namespace, pod) group_left() (kube_pod_status_phase{phase=\"Running\"} == 1)\n  )\n  unless on (namespace) max by (namespace) (label_replace(gotk_resource_info{exported_namespace=~\"^product-.+$\", customresource_kind=\"kustomization\", ready=~\"^(false|unknown)$\"}, \"namespace\", \"$1\", \"exported_namespace\", \"(.*)\")))\n  * on (namespace) group_left() max by (namespace) (label_replace(gotk_resource_info{exported_namespace=~\"^product-.+$\", customresource_kind=\"kustomization\", ready=~\"^(true)$\"}, \"namespace\", \"$1\", \"exported_namespace\", \"(.*)\")),\n  \"AT22\", \"$1|ready\", \"AT22\", \"(.*)\")\nor\nlabel_replace(\n  (\n    label_replace(label_replace(label_replace(\n      label_join(\n        label_replace(kube_pod_container_info{namespace=~\"^product-.+$\", container!=\"linkerd-proxy\"}, \"product\", \"$1\", \"namespace\", \"^product-(.+)$\"),\n        \"app\", \" / \", \"product\", \"container\"),\n      \"AT22\", \"$1\", \"image_spec\", \"(.*)\"),\n      \"AT22\", \"sha256:$1\", \"image_spec\", \"^[^@]*@sha256:([0-9a-f]{12}).*$\"),\n      \"AT22\", \"$1\", \"image_spec\", \"^[^@]*:([^:@/]+)(@sha256:[0-9a-f]+)?$\")\n    * on (namespace, pod) group_left() (kube_pod_status_phase{phase=\"Running\"} == 1)\n  )\n  unless on (namespace) max by (namespace) (label_replace(gotk_resource_info{exported_namespace=~\"^product-.+$\", customresource_kind=\"kustomization\", ready=~\"^(true|false|unknown)$\"}, \"namespace\", \"$1\", \"exported_namespace\", \"(.*)\")),\n  \"AT22\", \"$1|noflux\", \"AT22\", \"(.*)\")\n)",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "AT22"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "dis-core-at23-products-amw"
+          },
+          "editorMode": "code",
+          "expr": "max by (app, AT23) (\nlabel_replace(\n  (\n    label_replace(label_replace(label_replace(\n      label_join(\n        label_replace(kube_pod_container_info{namespace=~\"^product-.+$\", container!=\"linkerd-proxy\"}, \"product\", \"$1\", \"namespace\", \"^product-(.+)$\"),\n        \"app\", \" / \", \"product\", \"container\"),\n      \"AT23\", \"$1\", \"image_spec\", \"(.*)\"),\n      \"AT23\", \"sha256:$1\", \"image_spec\", \"^[^@]*@sha256:([0-9a-f]{12}).*$\"),\n      \"AT23\", \"$1\", \"image_spec\", \"^[^@]*:([^:@/]+)(@sha256:[0-9a-f]+)?$\")\n    * on (namespace, pod) group_left() (kube_pod_status_phase{phase=\"Running\"} == 1)\n  )\n  * on (namespace) group_left() max by (namespace) (label_replace(gotk_resource_info{exported_namespace=~\"^product-.+$\", customresource_kind=\"kustomization\", ready=~\"^(false)$\"}, \"namespace\", \"$1\", \"exported_namespace\", \"(.*)\")),\n  \"AT23\", \"$1|notready\", \"AT23\", \"(.*)\")\nor\nlabel_replace(\n  ((\n    label_replace(label_replace(label_replace(\n      label_join(\n        label_replace(kube_pod_container_info{namespace=~\"^product-.+$\", container!=\"linkerd-proxy\"}, \"product\", \"$1\", \"namespace\", \"^product-(.+)$\"),\n        \"app\", \" / \", \"product\", \"container\"),\n      \"AT23\", \"$1\", \"image_spec\", \"(.*)\"),\n      \"AT23\", \"sha256:$1\", \"image_spec\", \"^[^@]*@sha256:([0-9a-f]{12}).*$\"),\n      \"AT23\", \"$1\", \"image_spec\", \"^[^@]*:([^:@/]+)(@sha256:[0-9a-f]+)?$\")\n    * on (namespace, pod) group_left() (kube_pod_status_phase{phase=\"Running\"} == 1)\n  )\n  unless on (namespace) max by (namespace) (label_replace(gotk_resource_info{exported_namespace=~\"^product-.+$\", customresource_kind=\"kustomization\", ready=~\"^(false)$\"}, \"namespace\", \"$1\", \"exported_namespace\", \"(.*)\")))\n  * on (namespace) group_left() max by (namespace) (label_replace(gotk_resource_info{exported_namespace=~\"^product-.+$\", customresource_kind=\"kustomization\", ready=~\"^(unknown)$\"}, \"namespace\", \"$1\", \"exported_namespace\", \"(.*)\")),\n  \"AT23\", \"$1|reconciling\", \"AT23\", \"(.*)\")\nor\nlabel_replace(\n  ((\n    label_replace(label_replace(label_replace(\n      label_join(\n        label_replace(kube_pod_container_info{namespace=~\"^product-.+$\", container!=\"linkerd-proxy\"}, \"product\", \"$1\", \"namespace\", \"^product-(.+)$\"),\n        \"app\", \" / \", \"product\", \"container\"),\n      \"AT23\", \"$1\", \"image_spec\", \"(.*)\"),\n      \"AT23\", \"sha256:$1\", \"image_spec\", \"^[^@]*@sha256:([0-9a-f]{12}).*$\"),\n      \"AT23\", \"$1\", \"image_spec\", \"^[^@]*:([^:@/]+)(@sha256:[0-9a-f]+)?$\")\n    * on (namespace, pod) group_left() (kube_pod_status_phase{phase=\"Running\"} == 1)\n  )\n  unless on (namespace) max by (namespace) (label_replace(gotk_resource_info{exported_namespace=~\"^product-.+$\", customresource_kind=\"kustomization\", ready=~\"^(false|unknown)$\"}, \"namespace\", \"$1\", \"exported_namespace\", \"(.*)\")))\n  * on (namespace) group_left() max by (namespace) (label_replace(gotk_resource_info{exported_namespace=~\"^product-.+$\", customresource_kind=\"kustomization\", ready=~\"^(true)$\"}, \"namespace\", \"$1\", \"exported_namespace\", \"(.*)\")),\n  \"AT23\", \"$1|ready\", \"AT23\", \"(.*)\")\nor\nlabel_replace(\n  (\n    label_replace(label_replace(label_replace(\n      label_join(\n        label_replace(kube_pod_container_info{namespace=~\"^product-.+$\", container!=\"linkerd-proxy\"}, \"product\", \"$1\", \"namespace\", \"^product-(.+)$\"),\n        \"app\", \" / \", \"product\", \"container\"),\n      \"AT23\", \"$1\", \"image_spec\", \"(.*)\"),\n      \"AT23\", \"sha256:$1\", \"image_spec\", \"^[^@]*@sha256:([0-9a-f]{12}).*$\"),\n      \"AT23\", \"$1\", \"image_spec\", \"^[^@]*:([^:@/]+)(@sha256:[0-9a-f]+)?$\")\n    * on (namespace, pod) group_left() (kube_pod_status_phase{phase=\"Running\"} == 1)\n  )\n  unless on (namespace) max by (namespace) (label_replace(gotk_resource_info{exported_namespace=~\"^product-.+$\", customresource_kind=\"kustomization\", ready=~\"^(true|false|unknown)$\"}, \"namespace\", \"$1\", \"exported_namespace\", \"(.*)\")),\n  \"AT23\", \"$1|noflux\", \"AT23\", \"(.*)\")\n)",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "AT23"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "dis-core-tt02-products-amw"
+          },
+          "editorMode": "code",
+          "expr": "max by (app, TT02) (\nlabel_replace(\n  (\n    label_replace(label_replace(label_replace(\n      label_join(\n        label_replace(kube_pod_container_info{namespace=~\"^product-.+$\", container!=\"linkerd-proxy\"}, \"product\", \"$1\", \"namespace\", \"^product-(.+)$\"),\n        \"app\", \" / \", \"product\", \"container\"),\n      \"TT02\", \"$1\", \"image_spec\", \"(.*)\"),\n      \"TT02\", \"sha256:$1\", \"image_spec\", \"^[^@]*@sha256:([0-9a-f]{12}).*$\"),\n      \"TT02\", \"$1\", \"image_spec\", \"^[^@]*:([^:@/]+)(@sha256:[0-9a-f]+)?$\")\n    * on (namespace, pod) group_left() (kube_pod_status_phase{phase=\"Running\"} == 1)\n  )\n  * on (namespace) group_left() max by (namespace) (label_replace(gotk_resource_info{exported_namespace=~\"^product-.+$\", customresource_kind=\"kustomization\", ready=~\"^(false)$\"}, \"namespace\", \"$1\", \"exported_namespace\", \"(.*)\")),\n  \"TT02\", \"$1|notready\", \"TT02\", \"(.*)\")\nor\nlabel_replace(\n  ((\n    label_replace(label_replace(label_replace(\n      label_join(\n        label_replace(kube_pod_container_info{namespace=~\"^product-.+$\", container!=\"linkerd-proxy\"}, \"product\", \"$1\", \"namespace\", \"^product-(.+)$\"),\n        \"app\", \" / \", \"product\", \"container\"),\n      \"TT02\", \"$1\", \"image_spec\", \"(.*)\"),\n      \"TT02\", \"sha256:$1\", \"image_spec\", \"^[^@]*@sha256:([0-9a-f]{12}).*$\"),\n      \"TT02\", \"$1\", \"image_spec\", \"^[^@]*:([^:@/]+)(@sha256:[0-9a-f]+)?$\")\n    * on (namespace, pod) group_left() (kube_pod_status_phase{phase=\"Running\"} == 1)\n  )\n  unless on (namespace) max by (namespace) (label_replace(gotk_resource_info{exported_namespace=~\"^product-.+$\", customresource_kind=\"kustomization\", ready=~\"^(false)$\"}, \"namespace\", \"$1\", \"exported_namespace\", \"(.*)\")))\n  * on (namespace) group_left() max by (namespace) (label_replace(gotk_resource_info{exported_namespace=~\"^product-.+$\", customresource_kind=\"kustomization\", ready=~\"^(unknown)$\"}, \"namespace\", \"$1\", \"exported_namespace\", \"(.*)\")),\n  \"TT02\", \"$1|reconciling\", \"TT02\", \"(.*)\")\nor\nlabel_replace(\n  ((\n    label_replace(label_replace(label_replace(\n      label_join(\n        label_replace(kube_pod_container_info{namespace=~\"^product-.+$\", container!=\"linkerd-proxy\"}, \"product\", \"$1\", \"namespace\", \"^product-(.+)$\"),\n        \"app\", \" / \", \"product\", \"container\"),\n      \"TT02\", \"$1\", \"image_spec\", \"(.*)\"),\n      \"TT02\", \"sha256:$1\", \"image_spec\", \"^[^@]*@sha256:([0-9a-f]{12}).*$\"),\n      \"TT02\", \"$1\", \"image_spec\", \"^[^@]*:([^:@/]+)(@sha256:[0-9a-f]+)?$\")\n    * on (namespace, pod) group_left() (kube_pod_status_phase{phase=\"Running\"} == 1)\n  )\n  unless on (namespace) max by (namespace) (label_replace(gotk_resource_info{exported_namespace=~\"^product-.+$\", customresource_kind=\"kustomization\", ready=~\"^(false|unknown)$\"}, \"namespace\", \"$1\", \"exported_namespace\", \"(.*)\")))\n  * on (namespace) group_left() max by (namespace) (label_replace(gotk_resource_info{exported_namespace=~\"^product-.+$\", customresource_kind=\"kustomization\", ready=~\"^(true)$\"}, \"namespace\", \"$1\", \"exported_namespace\", \"(.*)\")),\n  \"TT02\", \"$1|ready\", \"TT02\", \"(.*)\")\nor\nlabel_replace(\n  (\n    label_replace(label_replace(label_replace(\n      label_join(\n        label_replace(kube_pod_container_info{namespace=~\"^product-.+$\", container!=\"linkerd-proxy\"}, \"product\", \"$1\", \"namespace\", \"^product-(.+)$\"),\n        \"app\", \" / \", \"product\", \"container\"),\n      \"TT02\", \"$1\", \"image_spec\", \"(.*)\"),\n      \"TT02\", \"sha256:$1\", \"image_spec\", \"^[^@]*@sha256:([0-9a-f]{12}).*$\"),\n      \"TT02\", \"$1\", \"image_spec\", \"^[^@]*:([^:@/]+)(@sha256:[0-9a-f]+)?$\")\n    * on (namespace, pod) group_left() (kube_pod_status_phase{phase=\"Running\"} == 1)\n  )\n  unless on (namespace) max by (namespace) (label_replace(gotk_resource_info{exported_namespace=~\"^product-.+$\", customresource_kind=\"kustomization\", ready=~\"^(true|false|unknown)$\"}, \"namespace\", \"$1\", \"exported_namespace\", \"(.*)\")),\n  \"TT02\", \"$1|noflux\", \"TT02\", \"(.*)\")\n)",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "TT02"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "dis-core-prod-products-amw"
+          },
+          "editorMode": "code",
+          "expr": "max by (app, PROD) (\nlabel_replace(\n  (\n    label_replace(label_replace(label_replace(\n      label_join(\n        label_replace(kube_pod_container_info{namespace=~\"^product-.+$\", container!=\"linkerd-proxy\"}, \"product\", \"$1\", \"namespace\", \"^product-(.+)$\"),\n        \"app\", \" / \", \"product\", \"container\"),\n      \"PROD\", \"$1\", \"image_spec\", \"(.*)\"),\n      \"PROD\", \"sha256:$1\", \"image_spec\", \"^[^@]*@sha256:([0-9a-f]{12}).*$\"),\n      \"PROD\", \"$1\", \"image_spec\", \"^[^@]*:([^:@/]+)(@sha256:[0-9a-f]+)?$\")\n    * on (namespace, pod) group_left() (kube_pod_status_phase{phase=\"Running\"} == 1)\n  )\n  * on (namespace) group_left() max by (namespace) (label_replace(gotk_resource_info{exported_namespace=~\"^product-.+$\", customresource_kind=\"kustomization\", ready=~\"^(false)$\"}, \"namespace\", \"$1\", \"exported_namespace\", \"(.*)\")),\n  \"PROD\", \"$1|notready\", \"PROD\", \"(.*)\")\nor\nlabel_replace(\n  ((\n    label_replace(label_replace(label_replace(\n      label_join(\n        label_replace(kube_pod_container_info{namespace=~\"^product-.+$\", container!=\"linkerd-proxy\"}, \"product\", \"$1\", \"namespace\", \"^product-(.+)$\"),\n        \"app\", \" / \", \"product\", \"container\"),\n      \"PROD\", \"$1\", \"image_spec\", \"(.*)\"),\n      \"PROD\", \"sha256:$1\", \"image_spec\", \"^[^@]*@sha256:([0-9a-f]{12}).*$\"),\n      \"PROD\", \"$1\", \"image_spec\", \"^[^@]*:([^:@/]+)(@sha256:[0-9a-f]+)?$\")\n    * on (namespace, pod) group_left() (kube_pod_status_phase{phase=\"Running\"} == 1)\n  )\n  unless on (namespace) max by (namespace) (label_replace(gotk_resource_info{exported_namespace=~\"^product-.+$\", customresource_kind=\"kustomization\", ready=~\"^(false)$\"}, \"namespace\", \"$1\", \"exported_namespace\", \"(.*)\")))\n  * on (namespace) group_left() max by (namespace) (label_replace(gotk_resource_info{exported_namespace=~\"^product-.+$\", customresource_kind=\"kustomization\", ready=~\"^(unknown)$\"}, \"namespace\", \"$1\", \"exported_namespace\", \"(.*)\")),\n  \"PROD\", \"$1|reconciling\", \"PROD\", \"(.*)\")\nor\nlabel_replace(\n  ((\n    label_replace(label_replace(label_replace(\n      label_join(\n        label_replace(kube_pod_container_info{namespace=~\"^product-.+$\", container!=\"linkerd-proxy\"}, \"product\", \"$1\", \"namespace\", \"^product-(.+)$\"),\n        \"app\", \" / \", \"product\", \"container\"),\n      \"PROD\", \"$1\", \"image_spec\", \"(.*)\"),\n      \"PROD\", \"sha256:$1\", \"image_spec\", \"^[^@]*@sha256:([0-9a-f]{12}).*$\"),\n      \"PROD\", \"$1\", \"image_spec\", \"^[^@]*:([^:@/]+)(@sha256:[0-9a-f]+)?$\")\n    * on (namespace, pod) group_left() (kube_pod_status_phase{phase=\"Running\"} == 1)\n  )\n  unless on (namespace) max by (namespace) (label_replace(gotk_resource_info{exported_namespace=~\"^product-.+$\", customresource_kind=\"kustomization\", ready=~\"^(false|unknown)$\"}, \"namespace\", \"$1\", \"exported_namespace\", \"(.*)\")))\n  * on (namespace) group_left() max by (namespace) (label_replace(gotk_resource_info{exported_namespace=~\"^product-.+$\", customresource_kind=\"kustomization\", ready=~\"^(true)$\"}, \"namespace\", \"$1\", \"exported_namespace\", \"(.*)\")),\n  \"PROD\", \"$1|ready\", \"PROD\", \"(.*)\")\nor\nlabel_replace(\n  (\n    label_replace(label_replace(label_replace(\n      label_join(\n        label_replace(kube_pod_container_info{namespace=~\"^product-.+$\", container!=\"linkerd-proxy\"}, \"product\", \"$1\", \"namespace\", \"^product-(.+)$\"),\n        \"app\", \" / \", \"product\", \"container\"),\n      \"PROD\", \"$1\", \"image_spec\", \"(.*)\"),\n      \"PROD\", \"sha256:$1\", \"image_spec\", \"^[^@]*@sha256:([0-9a-f]{12}).*$\"),\n      \"PROD\", \"$1\", \"image_spec\", \"^[^@]*:([^:@/]+)(@sha256:[0-9a-f]+)?$\")\n    * on (namespace, pod) group_left() (kube_pod_status_phase{phase=\"Running\"} == 1)\n  )\n  unless on (namespace) max by (namespace) (label_replace(gotk_resource_info{exported_namespace=~\"^product-.+$\", customresource_kind=\"kustomization\", ready=~\"^(true|false|unknown)$\"}, \"namespace\", \"$1\", \"exported_namespace\", \"(.*)\")),\n  \"PROD\", \"$1|noflux\", \"PROD\", \"(.*)\")\n)",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "PROD"
+        }
+      ],
+      "title": "Running versions",
+      "transformations": [
+        {
+          "id": "joinByField",
+          "options": {
+            "byField": "app",
+            "mode": "outerTabular"
+          }
+        },
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "pattern": "^(app|AT22|AT23|TT02|PROD)$"
+            }
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "indexByName": {
+              "app": 0,
+              "AT22": 1,
+              "AT23": 2,
+              "TT02": 3,
+              "PROD": 4
+            },
+            "renameByName": {
+              "app": "Product / container"
+            }
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "datasource",
+        "uid": "-- Mixed --"
+      },
+      "description": "Ready state of every Flux Kustomization in the product-* namespaces, per dis-core environment. Not ready means the last apply failed; Reconciling means Flux is applying a new revision. The failure message is on the Kubernetes Events dashboard.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "color-text"
+            },
+            "inspect": true
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "true": {
+                  "text": "Ready",
+                  "color": "green",
+                  "index": 0
+                },
+                "false": {
+                  "text": "Not ready",
+                  "color": "red",
+                  "index": 1
+                },
+                "unknown": {
+                  "text": "Reconciling",
+                  "color": "yellow",
+                  "index": 2
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "null+nan",
+                "result": {
+                  "text": "—"
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "empty",
+                "result": {
+                  "text": "—"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Product / Kustomization"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 320
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 18,
+        "w": 24,
+        "x": 0,
+        "y": 22
+      },
+      "id": 2,
+      "options": {
+        "cellHeight": "sm",
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": false,
+            "displayName": "Product / Kustomization"
+          }
+        ]
+      },
+      "pluginVersion": "12.4.8",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "dis-core-at22-products-amw"
+          },
+          "editorMode": "code",
+          "expr": "max by (kustomization, AT22) (\n  label_replace(\n    label_join(\n      label_replace(\n        label_replace(gotk_resource_info{exported_namespace=~\"^product-.+$\", customresource_kind=\"kustomization\"}, \"product\", \"$1\", \"exported_namespace\", \"^product-(.+)$\"),\n        \"name\", \"syncroot\", \"name\", \"^product-.+-syncroot$\"),\n      \"kustomization\", \" / \", \"product\", \"name\"),\n    \"AT22\", \"$1\", \"ready\", \"(.*)\")\n)",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "AT22"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "dis-core-at23-products-amw"
+          },
+          "editorMode": "code",
+          "expr": "max by (kustomization, AT23) (\n  label_replace(\n    label_join(\n      label_replace(\n        label_replace(gotk_resource_info{exported_namespace=~\"^product-.+$\", customresource_kind=\"kustomization\"}, \"product\", \"$1\", \"exported_namespace\", \"^product-(.+)$\"),\n        \"name\", \"syncroot\", \"name\", \"^product-.+-syncroot$\"),\n      \"kustomization\", \" / \", \"product\", \"name\"),\n    \"AT23\", \"$1\", \"ready\", \"(.*)\")\n)",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "AT23"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "dis-core-tt02-products-amw"
+          },
+          "editorMode": "code",
+          "expr": "max by (kustomization, TT02) (\n  label_replace(\n    label_join(\n      label_replace(\n        label_replace(gotk_resource_info{exported_namespace=~\"^product-.+$\", customresource_kind=\"kustomization\"}, \"product\", \"$1\", \"exported_namespace\", \"^product-(.+)$\"),\n        \"name\", \"syncroot\", \"name\", \"^product-.+-syncroot$\"),\n      \"kustomization\", \" / \", \"product\", \"name\"),\n    \"TT02\", \"$1\", \"ready\", \"(.*)\")\n)",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "TT02"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "dis-core-prod-products-amw"
+          },
+          "editorMode": "code",
+          "expr": "max by (kustomization, PROD) (\n  label_replace(\n    label_join(\n      label_replace(\n        label_replace(gotk_resource_info{exported_namespace=~\"^product-.+$\", customresource_kind=\"kustomization\"}, \"product\", \"$1\", \"exported_namespace\", \"^product-(.+)$\"),\n        \"name\", \"syncroot\", \"name\", \"^product-.+-syncroot$\"),\n      \"kustomization\", \" / \", \"product\", \"name\"),\n    \"PROD\", \"$1\", \"ready\", \"(.*)\")\n)",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "PROD"
+        }
+      ],
+      "title": "Flux Kustomizations",
+      "transformations": [
+        {
+          "id": "joinByField",
+          "options": {
+            "byField": "kustomization",
+            "mode": "outerTabular"
+          }
+        },
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "pattern": "^(kustomization|AT22|AT23|TT02|PROD)$"
+            }
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "indexByName": {
+              "kustomization": 0,
+              "AT22": 1,
+              "AT23": 2,
+              "TT02": 3,
+              "PROD": 4
+            },
+            "renameByName": {
+              "kustomization": "Product / Kustomization"
+            }
+          }
+        }
+      ],
+      "type": "table"
+    }
+  ],
+  "refresh": "5m",
+  "schemaVersion": 42,
+  "tags": [
+    "dis-core",
+    "flux",
+    "kubernetes",
+    "rollout"
+  ],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Product Versions",
+  "uid": "dis-core-product-versions",
+  "version": 1,
+  "weekStart": ""
+}

@@ -1,57 +1,33 @@
 apiVersion: grafana.integreatly.org/v1beta1
 kind: GrafanaDashboard
 metadata:
-  name: external-grafana-altinn-blackbox-exporter
-  namespace: grafana
-spec:
-  folderRef: external-grafana-altinn
-  instanceSelector:
-    matchLabels:
-      dashboards: "external-grafana"
-  configMapRef:
-    name: dashboard-altinn-blackbox-exporter
-    key: blackbox-exporter.json
----
-apiVersion: grafana.integreatly.org/v1beta1
-kind: GrafanaDashboard
-metadata:
-  name: external-grafana-altinn-pod-console-error-logs
-  namespace: grafana
-spec:
-  folderRef: external-grafana-altinn
-  instanceSelector:
-    matchLabels:
-      dashboards: "external-grafana"
-  configMapRef:
-    name: dashboard-altinn-pod-console-error-logs
-    key: pod-console-error-logs.json
----
-apiVersion: grafana.integreatly.org/v1beta1
-kind: GrafanaDashboard
-metadata:
+  # Name kept from the Altinn folder: renaming the CR would make the operator
+  # delete the dashboard (same UID) when Flux prunes the old CR.
   name: external-grafana-altinn-publicip
   namespace: grafana
 spec:
-  folderRef: external-grafana-altinn
+  folderRef: external-grafana-dis-core
   instanceSelector:
     matchLabels:
       dashboards: "external-grafana"
   configMapRef:
-    name: dashboard-altinn-publicip
+    name: dashboard-dis-core-publicip
     key: publicip.json
 ---
 apiVersion: grafana.integreatly.org/v1beta1
 kind: GrafanaDashboard
 metadata:
+  # Name kept from the Altinn folder: renaming the CR would make the operator
+  # delete the dashboard (same UID) when Flux prunes the old CR.
   name: external-grafana-altinn-traefik-official
   namespace: grafana
 spec:
-  folderRef: external-grafana-altinn
+  folderRef: external-grafana-dis-core
   instanceSelector:
     matchLabels:
       dashboards: "external-grafana"
   configMapRef:
-    name: dashboard-altinn-traefik-official
+    name: dashboard-dis-core-traefik-official
     key: traefik-official.json
 ---
 apiVersion: grafana.integreatly.org/v1beta1
@@ -225,30 +201,18 @@ spec:
 apiVersion: grafana.integreatly.org/v1beta1
 kind: GrafanaDashboard
 metadata:
-  name: external-grafana-linkerd-daemonset
-  namespace: grafana
-spec:
-  folderRef: external-grafana-linkerd
-  instanceSelector:
-    matchLabels:
-      dashboards: "external-grafana"
-  configMapRef:
-    name: dashboard-linkerd-daemonset
-    key: daemonset.json
----
-apiVersion: grafana.integreatly.org/v1beta1
-kind: GrafanaDashboard
-metadata:
+  # Name kept from the Linkerd folder: renaming the CR would make the operator
+  # delete the dashboard (same UID) when Flux prunes the old CR.
   name: external-grafana-linkerd-deployment
   namespace: grafana
 spec:
-  folderRef: external-grafana-linkerd
+  folderRef: external-grafana-dis-core
   instanceSelector:
     matchLabels:
       dashboards: "external-grafana"
   configMapRef:
-    name: dashboard-linkerd-deployment
-    key: deployment.json
+    name: dashboard-dis-core-linkerd-deployment
+    key: linkerd-deployment.json
 ---
 apiVersion: grafana.integreatly.org/v1beta1
 kind: GrafanaDashboard
@@ -263,3 +227,17 @@ spec:
   configMapRef:
     name: dashboard-kubernetes-events
     key: events.json
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: external-grafana-dis-core-product-versions
+  namespace: grafana
+spec:
+  folderRef: external-grafana-dis-core
+  instanceSelector:
+    matchLabels:
+      dashboards: "external-grafana"
+  configMapRef:
+    name: dashboard-dis-core-product-versions
+    key: product-versions.json

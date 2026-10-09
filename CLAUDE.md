@@ -1,8 +1,12 @@
 # CLAUDE.md
 
 Guidance for Claude instances working in this repo. Keep it accurate — if you change a
-convention, update this file in the same PR. The human-facing narrative lives in
-[`README.md`](README.md); this file is the agent-facing, copy-paste playbook.
+convention, update this file in the same PR. [`README.md`](README.md) is written for **product
+teams onboarding a product**: keep it to that audience, and do not list dashboards or platform
+internals there. Platform-team internals (repo map, delivery, secrets plumbing) live in
+[`docs/platform.md`](docs/platform.md), public dashboards in [`public/README.md`](public/README.md),
+and dashboard details in each dashboard's own `description`. This file is the agent-facing,
+copy-paste playbook.
 
 ## What this repo is
 
@@ -213,8 +217,10 @@ traces
   (`dis-edge-prod-products-amw`), not `default`. Keep that default when editing, and don't
   "fix" these back to pinned UIDs. A templated Prometheus datasource also switches on the
   linter's query rules (job/instance matchers, `$__rate_interval`), which is why
-  `dashboards/dis-edge/.lint` is longer than the others. The older dashboards in `altinn/`,
-  `fluxcd/` and `linkerd/` predate the pin convention and save a name or nothing; they are
+  `dashboards/dis-edge/.lint` is longer than the others. The Traefik and Linkerd Deployment dashboards in
+  `dashboards/dis-core/` follow the same pattern for the `dis-core-<env>-products-amw`
+  workspaces (regex `/dis-core/`, default `dis-core-prod-products-amw`). The older dashboards in
+  `fluxcd/` predate the pin convention and save a name or nothing; they are
   not a precedent for either style.
 - **Show every environment in one dashboard** rather than behind an env variable: give the
   Azure Logs target **all four** `resources[]` at once and derive the environment from
@@ -228,7 +234,7 @@ traces
 
 ## Public dashboards
 
-Shared publicly (no login) from `grafana-public`; the README's "Public dashboards" section has
+Shared publicly (no login) from `grafana-public`; [`public/README.md`](public/README.md) has
 the steps and the live links. What matters when working on them:
 
 - **Never edit `public/dashboards/**/*.json`.** Edit the source in `dashboards/` and run

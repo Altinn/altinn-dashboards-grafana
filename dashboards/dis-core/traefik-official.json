@@ -44,9 +44,9 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "${datasource}"
       },
-      "description": "Total number of HTTP requests processed by Traefik",
+      "description": "Requests handled in the selected time range, across all services.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -66,7 +66,8 @@
               }
             ]
           },
-          "unit": "short"
+          "unit": "short",
+          "decimals": 0
         },
         "overrides": []
       },
@@ -92,21 +93,21 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "11.0.0",
+      "pluginVersion": "12.4.8",
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "${datasource}"
           },
           "disableTextWrap": false,
           "editorMode": "code",
-          "expr": "sum(traefik_service_requests_total)",
+          "expr": "sum(increase(traefik_service_requests_total[$__range]))",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
-          "instant": false,
+          "instant": true,
           "legendFormat": "__auto",
-          "range": true,
+          "range": false,
           "refId": "A",
           "useBackend": false
         }
@@ -117,7 +118,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "${datasource}"
       },
       "description": "Current request rate across all services",
       "fieldConfig": {
@@ -169,21 +170,21 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "11.0.0",
+      "pluginVersion": "12.4.8",
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "${datasource}"
           },
           "disableTextWrap": false,
           "editorMode": "code",
-          "expr": "sum(rate(traefik_service_requests_total[5m]))",
+          "expr": "sum(rate(traefik_service_requests_total[$__rate_interval]))",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
-          "instant": false,
+          "instant": true,
           "legendFormat": "__auto",
-          "range": true,
+          "range": false,
           "refId": "A",
           "useBackend": false
         }
@@ -194,7 +195,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "${datasource}"
       },
       "description": "Average response time (95th percentile)",
       "fieldConfig": {
@@ -246,21 +247,21 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "11.0.0",
+      "pluginVersion": "12.4.8",
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "${datasource}"
           },
           "disableTextWrap": false,
           "editorMode": "code",
-          "expr": "histogram_quantile(0.95, sum(rate(traefik_service_request_duration_seconds_bucket[5m])) by (le))",
+          "expr": "histogram_quantile(0.95, sum(rate(traefik_service_request_duration_seconds_bucket[$__rate_interval])) by (le))",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
-          "instant": false,
+          "instant": true,
           "legendFormat": "__auto",
-          "range": true,
+          "range": false,
           "refId": "A",
           "useBackend": false
         }
@@ -271,16 +272,16 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "${datasource}"
       },
-      "description": "SLO - Error Rate (5xx and 499 responses)",
+      "description": "Share of requests answered with a 5xx in the selected time range. SLO target 99.9% (error budget 0.1%): yellow at half the budget, red when it is spent. 499 (client closed the connection) is not counted.",
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "thresholds"
           },
           "mappings": [],
-          "max": 100,
+          "max": 0.2,
           "min": 0,
           "thresholds": {
             "mode": "absolute",
@@ -291,19 +292,16 @@
               },
               {
                 "color": "yellow",
-                "value": 1
-              },
-              {
-                "color": "orange",
-                "value": 5
+                "value": 0.05
               },
               {
                 "color": "red",
-                "value": 10
+                "value": 0.1
               }
             ]
           },
-          "unit": "percent"
+          "unit": "percent",
+          "decimals": 3
         },
         "overrides": []
       },
@@ -327,32 +325,32 @@
         "showThresholdMarkers": true,
         "sizing": "auto"
       },
-      "pluginVersion": "11.0.0",
+      "pluginVersion": "12.4.8",
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "${datasource}"
           },
           "disableTextWrap": false,
           "editorMode": "code",
-          "expr": "(\n  sum(rate(traefik_service_requests_total{code=~\"5..|499\", service=~\"$service\"}[5m]))\n  /\n  sum(rate(traefik_service_requests_total{service=~\"$service\"}[5m]))\n) * 100",
+          "expr": "100 * (sum(increase(traefik_service_requests_total{code=~\"^5..$\", service=~\"$service\"}[$__range])) or vector(0))\n  /  sum(increase(traefik_service_requests_total{service=~\"$service\"}[$__range]))",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
-          "instant": false,
+          "instant": true,
           "legendFormat": "Error Rate %",
-          "range": true,
+          "range": false,
           "refId": "A",
           "useBackend": false
         }
       ],
-      "title": "SLO - Error Rate",
+      "title": "SLO 99.9% - Error Rate",
       "type": "gauge"
     },
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "${datasource}"
       },
       "description": "HTTP response codes distribution",
       "fieldConfig": {
@@ -401,27 +399,28 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "${datasource}"
           },
           "disableTextWrap": false,
           "editorMode": "code",
-          "expr": "sum(rate(traefik_service_requests_total[5m])) by (code)",
+          "expr": "sum(rate(traefik_service_requests_total[$__rate_interval])) by (code)",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
-          "instant": false,
+          "instant": true,
           "legendFormat": "{{code}}",
-          "range": true,
+          "range": false,
           "refId": "A",
           "useBackend": false
         }
       ],
       "title": "Response Codes Distribution",
-      "type": "piechart"
+      "type": "piechart",
+      "pluginVersion": "12.4.8"
     },
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "${datasource}"
       },
       "description": "Request rate over time by HTTP method",
       "fieldConfig": {
@@ -502,11 +501,11 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "${datasource}"
           },
           "disableTextWrap": false,
           "editorMode": "code",
-          "expr": "sum(rate(traefik_service_requests_total[5m])) by (method)",
+          "expr": "sum(rate(traefik_service_requests_total[$__rate_interval])) by (method)",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
           "instant": false,
@@ -517,7 +516,8 @@
         }
       ],
       "title": "Request Rate by Method",
-      "type": "timeseries"
+      "type": "timeseries",
+      "pluginVersion": "12.4.8"
     },
     {
       "collapsed": false,
@@ -535,9 +535,9 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "${datasource}"
       },
-      "description": "Error rate trend over time by service (5xx and 499 responses)",
+      "description": "Share of requests answered with a 5xx, per service. The red line is the 0.1% error budget of the 99.9% SLO. 499 (client closed the connection) is not counted.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -576,7 +576,6 @@
             }
           },
           "mappings": [],
-          "max": 100,
           "min": 0,
           "thresholds": {
             "mode": "absolute",
@@ -587,15 +586,16 @@
               },
               {
                 "color": "yellow",
-                "value": 1
+                "value": 0.05
               },
               {
                 "color": "red",
-                "value": 5
+                "value": 0.1
               }
             ]
           },
-          "unit": "percent"
+          "unit": "percent",
+          "decimals": 3
         },
         "overrides": []
       },
@@ -622,27 +622,28 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "${datasource}"
           },
           "disableTextWrap": false,
           "editorMode": "code",
-          "expr": "(\n  sum(rate(traefik_service_requests_total{code=~\"5..|499\", service=~\"$service\"}[5m])) by (service)\n  /\n  sum(rate(traefik_service_requests_total{service=~\"$service\"}[5m])) by (service)\n) * 100",
+          "expr": "100 * (\n    sum by (service) (rate(traefik_service_requests_total{code=~\"^5..$\", service=~\"$service\"}[$__rate_interval]))\n  or 0 * sum by (service) (rate(traefik_service_requests_total{service=~\"$service\"}[$__rate_interval]))\n) / sum by (service) (rate(traefik_service_requests_total{service=~\"$service\"}[$__rate_interval]))",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
           "instant": false,
-          "legendFormat": "{{service}} - Error Rate %",
+          "legendFormat": "{{service}}",
           "range": true,
           "refId": "A",
           "useBackend": false
         }
       ],
-      "title": "SLO - Error Rate Trend by Service",
-      "type": "timeseries"
+      "title": "SLO 99.9% - Error Rate Trend by Service",
+      "type": "timeseries",
+      "pluginVersion": "12.4.8"
     },
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "${datasource}"
       },
       "description": "Request rate per service",
       "fieldConfig": {
@@ -723,11 +724,11 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "${datasource}"
           },
           "disableTextWrap": false,
           "editorMode": "code",
-          "expr": "sum(rate(traefik_service_requests_total{service=~\"$service\"}[5m])) by (service)",
+          "expr": "sum(rate(traefik_service_requests_total{service=~\"$service\"}[$__rate_interval])) by (service)",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
           "instant": false,
@@ -738,12 +739,13 @@
         }
       ],
       "title": "Request Rate by Service",
-      "type": "timeseries"
+      "type": "timeseries",
+      "pluginVersion": "12.4.8"
     },
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "${datasource}"
       },
       "description": "Response time percentiles by service",
       "fieldConfig": {
@@ -824,11 +826,11 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "${datasource}"
           },
           "disableTextWrap": false,
           "editorMode": "code",
-          "expr": "histogram_quantile(0.99, sum(rate(traefik_service_request_duration_seconds_bucket{service=~\"$service\"}[5m])) by (service, le))",
+          "expr": "histogram_quantile(0.99, sum(rate(traefik_service_request_duration_seconds_bucket{service=~\"$service\"}[$__rate_interval])) by (service, le))",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
           "instant": false,
@@ -840,11 +842,11 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "${datasource}"
           },
           "disableTextWrap": false,
           "editorMode": "code",
-          "expr": "histogram_quantile(0.95, sum(rate(traefik_service_request_duration_seconds_bucket{service=~\"$service\"}[5m])) by (service, le))",
+          "expr": "histogram_quantile(0.95, sum(rate(traefik_service_request_duration_seconds_bucket{service=~\"$service\"}[$__rate_interval])) by (service, le))",
           "fullMetaSearch": false,
           "hide": false,
           "includeNullMetadata": true,
@@ -857,11 +859,11 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "${datasource}"
           },
           "disableTextWrap": false,
           "editorMode": "code",
-          "expr": "histogram_quantile(0.50, sum(rate(traefik_service_request_duration_seconds_bucket{service=~\"$service\"}[5m])) by (service, le))",
+          "expr": "histogram_quantile(0.50, sum(rate(traefik_service_request_duration_seconds_bucket{service=~\"$service\"}[$__rate_interval])) by (service, le))",
           "fullMetaSearch": false,
           "hide": false,
           "includeNullMetadata": true,
@@ -873,7 +875,8 @@
         }
       ],
       "title": "Response Time by Service",
-      "type": "timeseries"
+      "type": "timeseries",
+      "pluginVersion": "12.4.8"
     },
     {
       "collapsed": false,
@@ -891,7 +894,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "${datasource}"
       },
       "description": "Request rate by entrypoint",
       "fieldConfig": {
@@ -972,11 +975,11 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "${datasource}"
           },
           "disableTextWrap": false,
           "editorMode": "code",
-          "expr": "sum(rate(traefik_entrypoint_requests_total{entrypoint=~\"$entrypoint\"}[5m])) by (entrypoint)",
+          "expr": "sum(rate(traefik_entrypoint_requests_total{entrypoint=~\"$entrypoint\"}[$__rate_interval])) by (entrypoint)",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
           "instant": false,
@@ -987,29 +990,29 @@
         }
       ],
       "title": "Request Rate by Entrypoint",
-      "type": "timeseries"
+      "type": "timeseries",
+      "pluginVersion": "12.4.8"
     }
   ],
   "refresh": "30s",
-  "schemaVersion": 39,
-  "tags": ["traefik", "grafana-11"],
+  "schemaVersion": 42,
+  "tags": ["traefik"],
   "templating": {
     "list": [
       {
         "current": {
-          "selected": false,
-          "text": "Prometheus",
-          "value": "Prometheus"
+          "text": "Managed_Prometheus_dis-core-prod-products-amw",
+          "value": "dis-core-prod-products-amw"
         },
         "hide": 0,
         "includeAll": false,
-        "label": "Data Source",
+        "label": "Data source",
         "multi": false,
-        "name": "DS_PROMETHEUS",
+        "name": "datasource",
         "options": [],
         "query": "prometheus",
         "refresh": 1,
-        "regex": "",
+        "regex": "/dis-core/",
         "skipUrlSync": false,
         "type": "datasource"
       },
@@ -1021,7 +1024,7 @@
         },
         "datasource": {
           "type": "prometheus",
-          "uid": "${DS_PROMETHEUS}"
+          "uid": "${datasource}"
         },
         "definition": "label_values(traefik_entrypoint_requests_total, entrypoint)",
         "hide": 0,
@@ -1049,7 +1052,7 @@
         },
         "datasource": {
           "type": "prometheus",
-          "uid": "${DS_PROMETHEUS}"
+          "uid": "${datasource}"
         },
         "definition": "label_values(traefik_service_requests_total, service)",
         "hide": 0,
