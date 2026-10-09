@@ -1,8 +1,12 @@
 # CLAUDE.md
 
 Guidance for Claude instances working in this repo. Keep it accurate — if you change a
-convention, update this file in the same PR. The human-facing narrative lives in
-[`README.md`](README.md); this file is the agent-facing, copy-paste playbook.
+convention, update this file in the same PR. [`README.md`](README.md) is written for **product
+teams onboarding a product**: keep it to that audience, and do not list dashboards or platform
+internals there. Platform-team internals (repo map, delivery, secrets plumbing) live in
+[`docs/platform.md`](docs/platform.md), public dashboards in [`public/README.md`](public/README.md),
+and dashboard details in each dashboard's own `description`. This file is the agent-facing,
+copy-paste playbook.
 
 ## What this repo is
 
@@ -230,7 +234,7 @@ traces
 
 ## Public dashboards
 
-Shared publicly (no login) from `grafana-public`; the README's "Public dashboards" section has
+Shared publicly (no login) from `grafana-public`; [`public/README.md`](public/README.md) has
 the steps and the live links. What matters when working on them:
 
 - **Never edit `public/dashboards/**/*.json`.** Edit the source in `dashboards/` and run
