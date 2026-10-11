@@ -17,6 +17,8 @@ spec:
     editable: false
     jsonData:
       httpHeaderName1: Authorization
+      # Services export metrics every 15 s, so $__rate_interval spans at least four samples.
+      timeInterval: 15s
     secureJsonData:
       httpHeaderValue1: "${authorization}"
   valuesFrom:
