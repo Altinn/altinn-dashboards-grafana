@@ -46,6 +46,9 @@ configMapGenerator:
   - name: dashboard-kubernetes-events
     files:
       - kubernetes/events.json
+  - name: dashboard-dis-core-caches
+    files:
+      - dis-core/caches.json
   - name: dashboard-dis-core-linkerd-deployment
     files:
       - dis-core/linkerd-deployment.json

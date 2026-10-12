@@ -201,6 +201,20 @@ spec:
 apiVersion: grafana.integreatly.org/v1beta1
 kind: GrafanaDashboard
 metadata:
+  name: external-grafana-dis-core-caches
+  namespace: grafana
+spec:
+  folderRef: external-grafana-dis-core
+  instanceSelector:
+    matchLabels:
+      dashboards: "external-grafana"
+  configMapRef:
+    name: dashboard-dis-core-caches
+    key: caches.json
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
   # Name kept from the Linkerd folder: renaming the CR would make the operator
   # delete the dashboard (same UID) when Flux prunes the old CR.
   name: external-grafana-linkerd-deployment
