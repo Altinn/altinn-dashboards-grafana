@@ -515,6 +515,15 @@
                   "mode": "fixed",
                   "fixedColor": "red"
                 }
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Worker traces with this failure reason",
+                    "url": "/explore?schemaVersion=1&orgId=1&panes=%7B%22a%22%3A%7B%22datasource%22%3A%22altinn-studio-traces%22%2C%22queries%22%3A%5B%7B%22refId%22%3A%22A%22%2C%22datasource%22%3A%7B%22type%22%3A%22tempo%22%2C%22uid%22%3A%22altinn-studio-traces%22%7D%2C%22queryType%22%3A%22traceql%22%2C%22tableType%22%3A%22traces%22%2C%22limit%22%3A20%2C%22query%22%3A%22%7Bresource.service.name%3D%5C%22pdf3-worker%5C%22%20%26%26%20span.http.route%3D%5C%22%2Fgenerate%5C%22%20%26%26%20span.http.response.status_code%3D${__field.labels[\"http.response.status_code\"]}%20%26%26%20span.error.type%3D%5C%22${__field.labels[\"error.type\"]}%5C%22%20%26%26%20resource.deployment.environment.name%3D~%5C%22${env:regex}%5C%22%7D%22%7D%5D%2C%22range%22%3A%7B%22from%22%3A%22${__from}%22%2C%22to%22%3A%22${__to}%22%7D%7D%7D"
+                  }
+                ]
               }
             ]
           }
@@ -663,7 +672,7 @@
       "id": 13,
       "type": "table",
       "title": "Recent failed generations",
-      "description": "Worker traces that ended in an error. Tail sampling keeps every failed trace, so this lists them all; open one to see the pdf.request.summary event with the request's details.",
+      "description": "Worker requests that ended in an error: the POST /generate span, one per failed generation. Tail sampling keeps every failed trace, so this lists them all. The span carries the failure reason as error.type and the request's details (target URL, options, wait condition, cookies, queue state) as attributes; open the trace to see which step failed.",
       "datasource": {
         "type": "tempo",
         "uid": "altinn-studio-traces"
@@ -677,7 +686,7 @@
       "targets": [
         {
           "queryType": "traceql",
-          "query": "{resource.service.name=\"pdf3-worker\" && status=error && resource.deployment.environment.name=~\"$env\"}",
+          "query": "{resource.service.name=\"pdf3-worker\" && span.http.route=\"/generate\" && status=error && resource.deployment.environment.name=~\"$env\"}",
           "limit": 20,
           "tableType": "traces",
           "datasource": {
