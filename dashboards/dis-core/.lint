@@ -3,20 +3,24 @@ exclusions:
     reason: >-
       Each metric family in the dis-core workspaces comes from a single job
       (traefik for Traefik, linkerd/linkerd-proxy for the Linkerd proxies,
-      kube-state-metrics for Product Versions), so a job template would filter
-      nothing.
+      kube-state-metrics for Product Versions, caches for the Cache exporters),
+      so a job template would filter nothing.
     entries:
       - dashboard: Traefik Dashboard
       - dashboard: Linkerd Deployment
       - dashboard: Product Versions
+      - dashboard: Caches
   template-instance-rule:
     reason: >-
       No instance template by design; Traefik panels aggregate per service and
       entrypoint, Linkerd panels per namespace and deployment, not per pod.
+      Caches panels filter on namespace and cache, and the pod label names
+      the node.
     entries:
       - dashboard: Traefik Dashboard
       - dashboard: Linkerd Deployment
       - dashboard: Product Versions
+      - dashboard: Caches
   target-job-rule:
     reason: >-
       Single job per metric family; see template-job-rule.
@@ -24,6 +28,7 @@ exclusions:
       - dashboard: Traefik Dashboard
       - dashboard: Linkerd Deployment
       - dashboard: Product Versions
+      - dashboard: Caches
   target-instance-rule:
     reason: >-
       No instance template; see template-instance-rule.
@@ -31,6 +36,7 @@ exclusions:
       - dashboard: Traefik Dashboard
       - dashboard: Linkerd Deployment
       - dashboard: Product Versions
+      - dashboard: Caches
   panel-datasource-rule:
     reason: >-
       Datasources are pinned on purpose. Public IPs reads Azure Resource Graph
