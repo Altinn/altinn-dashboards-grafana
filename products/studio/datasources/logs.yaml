@@ -17,6 +17,13 @@ spec:
     editable: false
     jsonData:
       httpHeaderName1: Authorization
+      derivedFields:
+        - name: trace_id
+          matcherType: label
+          matcherRegex: trace_id
+          datasourceUid: altinn-studio-traces
+          url: '${__value.raw}'
+          urlDisplayLabel: View trace
     secureJsonData:
       httpHeaderValue1: "${authorization}"
   valuesFrom:

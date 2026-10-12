@@ -17,6 +17,28 @@ spec:
     editable: false
     jsonData:
       httpHeaderName1: Authorization
+      # All logs in the span's trace, by trace ID. A custom query avoids Grafana's default
+      # tag filter, which maps service.name to service_name and matches nothing in VictoriaLogs.
+      tracesToLogsV2:
+        datasourceUid: altinn-studio-logs
+        customQuery: true
+        query: 'trace_id:="${__span.traceId}"'
+        spanStartTimeShift: -5m
+        spanEndTimeShift: 5m
+      # The span's service in the HTTP server metrics. Without queries, Grafana falls back to
+      # span metrics, which nothing produces. Dotted label names must be quoted in the selector.
+      tracesToMetrics:
+        datasourceUid: altinn-studio-metrics
+        spanStartTimeShift: -15m
+        spanEndTimeShift: 15m
+        tags:
+          - key: service.name
+            value: '"service.name"'
+        queries:
+          - name: Request rate
+            query: 'sum by ("http.route", "http.response.status_code") (rate({"http.server.request.duration_count", $__tags}[$__rate_interval]))'
+          - name: Request duration p95
+            query: 'histogram_quantile(0.95, sum by (le, "http.route") (rate({"http.server.request.duration_bucket", $__tags}[$__rate_interval])))'
     secureJsonData:
       httpHeaderValue1: "${authorization}"
   valuesFrom:
