@@ -1,7 +1,7 @@
 {
   "uid": "altinn-studio-pdf3",
   "title": "Altinn Studio — PDF3",
-  "description": "PDF generation in pdf3 (proxy and workers) in the runtime environments. Requests, latency, status codes and the outcome of each generation come from the services' HTTP server metrics, where the worker sets error.type on failed generations; failed and slow requests from traces, which tail sampling always keeps, with example traces and links from the metric panels to the matching traces. Datasource UIDs are pinned, matching the other Altinn Studio dashboards.",
+  "description": "PDF generation in pdf3 (proxy and workers) in the runtime environments. Requests, latency, status codes and the outcome of each generation come from the services' HTTP server metrics, where the worker sets error.type on failed generations; failed and slow requests from traces, which tail sampling always keeps, with example traces and links from the metric panels to the matching traces. The Request URLs row shows what the requested URLs point to, per cluster, which in the runtime clusters is per service owner. Datasource UIDs are pinned, matching the other Altinn Studio dashboards.",
   "tags": [
     "altinn-studio",
     "pdf3"
@@ -31,6 +31,36 @@
           "refId": "env"
         },
         "definition": "label_values({\"http.server.request.duration_count\", \"service.name\"=\"pdf3-proxy\"}, \"deployment.environment.name\")",
+        "refresh": 2,
+        "includeAll": true,
+        "multi": true,
+        "allValue": ".*",
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "sort": 1
+      },
+      {
+        "name": "cluster",
+        "label": "Cluster",
+        "description": "Filters the Request URLs panels only. In the runtime clusters, a cluster is a service owner.",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "altinn-studio-metrics"
+        },
+        "query": {
+          "qryType": 1,
+          "query": "label_values({\"http.server.request.duration_count\", \"service.name\"=\"pdf3-proxy\", \"deployment.environment.name\"=~\"$env\"}, \"k8s.cluster.name\")",
+          "refId": "cluster"
+        },
+        "definition": "label_values({\"http.server.request.duration_count\", \"service.name\"=\"pdf3-proxy\", \"deployment.environment.name\"=~\"$env\"}, \"k8s.cluster.name\")",
         "refresh": 2,
         "includeAll": true,
         "multi": true,
@@ -376,13 +406,258 @@
       "options": {}
     },
     {
+      "id": 16,
+      "type": "row",
+      "title": "Request URLs",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 14,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 17,
+      "type": "timeseries",
+      "title": "Request URLs by kind",
+      "description": "PDF requests per second by what the requested URL points to. standard is the app's normal PDF page; app_other is another page on the app's own host and under /{org}/{app}/; other is anything else (another host, scheme or path, or an invalid URL). The proxy records the kind as altinn.pdf.url_kind from Altinn/altinn-studio#21115 onwards, and only where it knows the environment's app hostname (at22, at23, at24, yt01, tt02, prod). unknown is requests without the attribute: from proxy versions before it, and requests rejected before the URL is read (wrong method or content type, too large, invalid JSON). Filtered by the Cluster variable. Each runtime cluster belongs to one service owner, so a cluster (k8s.cluster.name) is a service owner there; after pdf3 moves to the shared DIS core cluster there is one cluster per environment, and this no longer holds.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "altinn-studio-metrics"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 15,
+        "w": 12,
+        "h": 9
+      },
+      "targets": [
+        {
+          "expr": "label_replace(sum by (\"altinn.pdf.url_kind\") (rate({\"http.server.request.duration_count\", \"service.name\"=\"pdf3-proxy\", \"http.route\"=\"/pdf\", \"deployment.environment.name\"=~\"$env\", \"k8s.cluster.name\"=~\"$cluster\"}[$__rate_interval])), \"altinn.pdf.url_kind\", \"unknown\", \"altinn.pdf.url_kind\", \"\")",
+          "legendFormat": "{{altinn.pdf.url_kind}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": {
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            },
+            "fillOpacity": 30
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "standard"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "app_other"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "other"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "unknown"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "text"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        }
+      }
+    },
+    {
+      "id": 18,
+      "type": "table",
+      "title": "Clusters sending other URLs",
+      "description": "Per cluster, the PDF requests over the dashboard's time range whose URL is not the app's normal PDF page: app_other and other, their sum (non-standard), and their share of the requests that have a kind. Clusters that only requested standard pages are not listed. standard is the app's normal PDF page; app_other is another page on the app's own host and under /{org}/{app}/; other is anything else (another host, scheme or path, or an invalid URL). The proxy records the kind as altinn.pdf.url_kind from Altinn/altinn-studio#21115 onwards, and only where it knows the environment's app hostname (at22, at23, at24, yt01, tt02, prod). Requests without the attribute are left out, so pick a time range after #21115 reached the environment. Filtered by the Cluster variable. Each runtime cluster belongs to one service owner, so a cluster (k8s.cluster.name) is a service owner there; after pdf3 moves to the shared DIS core cluster there is one cluster per environment, and this no longer holds.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "altinn-studio-metrics"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 15,
+        "w": 12,
+        "h": 9
+      },
+      "targets": [
+        {
+          "expr": "sum by (\"k8s.cluster.name\") (increase({\"http.server.request.duration_count\", \"service.name\"=\"pdf3-proxy\", \"http.route\"=\"/pdf\", \"deployment.environment.name\"=~\"$env\", \"k8s.cluster.name\"=~\"$cluster\", \"altinn.pdf.url_kind\"=\"app_other\"}[$__range])) > 0",
+          "instant": true,
+          "range": false,
+          "format": "table",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "A"
+        },
+        {
+          "expr": "sum by (\"k8s.cluster.name\") (increase({\"http.server.request.duration_count\", \"service.name\"=\"pdf3-proxy\", \"http.route\"=\"/pdf\", \"deployment.environment.name\"=~\"$env\", \"k8s.cluster.name\"=~\"$cluster\", \"altinn.pdf.url_kind\"=\"other\"}[$__range])) > 0",
+          "instant": true,
+          "range": false,
+          "format": "table",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "B"
+        },
+        {
+          "expr": "sum by (\"k8s.cluster.name\") (increase({\"http.server.request.duration_count\", \"service.name\"=\"pdf3-proxy\", \"http.route\"=\"/pdf\", \"deployment.environment.name\"=~\"$env\", \"k8s.cluster.name\"=~\"$cluster\", \"altinn.pdf.url_kind\"=~\"app_other|other\"}[$__range])) > 0",
+          "instant": true,
+          "range": false,
+          "format": "table",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "C"
+        },
+        {
+          "expr": "(sum by (\"k8s.cluster.name\") (increase({\"http.server.request.duration_count\", \"service.name\"=\"pdf3-proxy\", \"http.route\"=\"/pdf\", \"deployment.environment.name\"=~\"$env\", \"k8s.cluster.name\"=~\"$cluster\", \"altinn.pdf.url_kind\"=~\"app_other|other\"}[$__range])) > 0) / sum by (\"k8s.cluster.name\") (increase({\"http.server.request.duration_count\", \"service.name\"=\"pdf3-proxy\", \"http.route\"=\"/pdf\", \"deployment.environment.name\"=~\"$env\", \"k8s.cluster.name\"=~\"$cluster\", \"altinn.pdf.url_kind\"!=\"\"}[$__range]))",
+          "instant": true,
+          "range": false,
+          "format": "table",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "D"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "indexByName": {
+              "k8s.cluster.name": 0,
+              "Value #A": 1,
+              "Value #B": 2,
+              "Value #C": 3,
+              "Value #D": 4
+            },
+            "renameByName": {
+              "k8s.cluster.name": "Cluster",
+              "Value #A": "app_other",
+              "Value #B": "other",
+              "Value #C": "Non-standard",
+              "Value #D": "Non-standard share"
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "noValue": "0"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Non-standard share"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "sortBy": [
+          {
+            "displayName": "Non-standard",
+            "desc": true
+          }
+        ]
+      }
+    },
+    {
       "id": 9,
       "type": "row",
       "title": "Workers",
       "collapsed": false,
       "gridPos": {
         "x": 0,
-        "y": 14,
+        "y": 24,
         "w": 24,
         "h": 1
       },
@@ -399,7 +674,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 15,
+        "y": 25,
         "w": 12,
         "h": 8
       },
@@ -542,7 +817,7 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 15,
+        "y": 25,
         "w": 12,
         "h": 8
       },
@@ -574,7 +849,7 @@
       "collapsed": false,
       "gridPos": {
         "x": 0,
-        "y": 23,
+        "y": 33,
         "w": 24,
         "h": 1
       },
@@ -591,7 +866,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 24,
+        "y": 34,
         "w": 12,
         "h": 8
       },
@@ -635,7 +910,7 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 24,
+        "y": 34,
         "w": 12,
         "h": 8
       },
@@ -679,7 +954,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 32,
+        "y": 42,
         "w": 24,
         "h": 8
       },
