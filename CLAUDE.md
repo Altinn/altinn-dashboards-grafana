@@ -198,6 +198,11 @@ traces
   `folderRef: external-grafana-<product>` so it lands beside the product's alerts. Then register
   `products/<product>/dashboards` in the repo-root `kustomization.yaml`.
   **Copy `products/infoportal/dashboards/`** — it is the reference implementation.
+  For a subfolder inside the product folder, add a second `GrafanaFolder` to
+  `products/<product>/alerting/folder.yaml` with `parentFolderRef: external-grafana-<product>`
+  and point the dashboards' `folderRef` at it; `products/studio/` does this for its
+  Observability folder. The JSON stays flat in `dashboards/`, since the validator only reads
+  `products/*/dashboards/*.json`.
   `scripts/validate-dashboards.py` (a CI gate) covers both `dashboards/*/*.json` and
   `products/*/dashboards/*.json`, and **fails if a dashboard JSON is not wired into both a
   ConfigMap and a CR**, if a `folderRef` doesn't resolve, or if a product overlay is missing from
@@ -222,6 +227,11 @@ traces
   workspaces (regex `/dis-core/`, default `dis-core-prod-products-amw`). The older dashboards in
   `fluxcd/` predate the pin convention and save a name or nothing; they are
   not a precedent for either style.
+- **Vendored upstream dashboards are generated, not edited.** `products/studio/dashboards/
+  observability-v*.json` and `observability-operator.json` are VictoriaMetrics' official
+  dashboards, adapted (pinned datasource, stable uid, title, links) by
+  `products/studio/scripts/vendor-victoria-dashboards.py`. Bump its tags with the Victoria images
+  in `Altinn/altinn-studio` and re-run it; hand edits are lost on the next run.
 - **Show every environment in one dashboard** rather than behind an env variable: give the
   Azure Logs target **all four** `resources[]` at once and derive the environment from
   `_ResourceId` in KQL. `dis-grafana-prod`'s identity has `Monitoring Reader` on each

@@ -4,11 +4,42 @@ exclusions:
       Datasource UIDs are pinned on purpose (altinn-studio-metrics for the
       services' metrics, altinn-studio-traces for their traces), so the panels
       cannot bind to another datasource; see CLAUDE.md. The dashboard also mixes
-      the two in one view, which a single template variable cannot express.
+      the two in one view, which a single template variable cannot express. The
+      observability dashboards read only the Victoria stack's own metrics, which
+      only altinn-studio-metrics holds; the vendored ones are pinned by
+      products/studio/scripts/vendor-victoria-dashboards.py.
     entries:
       - dashboard: "Altinn Studio — PDF3"
+      - dashboard: "Altinn Studio — Observability"
+      - dashboard: "Altinn Studio — VictoriaMetrics single-node"
+      - dashboard: "Altinn Studio — vmagent"
+      - dashboard: "Altinn Studio — VictoriaMetrics operator"
+      - dashboard: "Altinn Studio — VictoriaLogs single-node"
+      - dashboard: "Altinn Studio — vlagent"
+      - dashboard: "Altinn Studio — VictoriaTraces single-node"
   template-datasource-rule:
     reason: >-
       No datasource template variable by design; see panel-datasource-rule.
     entries:
       - dashboard: "Altinn Studio — PDF3"
+      - dashboard: "Altinn Studio — Observability"
+      - dashboard: "Altinn Studio — VictoriaMetrics single-node"
+      - dashboard: "Altinn Studio — vmagent"
+      - dashboard: "Altinn Studio — VictoriaMetrics operator"
+      - dashboard: "Altinn Studio — VictoriaLogs single-node"
+      - dashboard: "Altinn Studio — vlagent"
+      - dashboard: "Altinn Studio — VictoriaTraces single-node"
+  panel-title-description-rule:
+    reason: >-
+      Vendored from VictoriaMetrics' official dashboards by
+      products/studio/scripts/vendor-victoria-dashboards.py, with only the
+      datasource, identity and links changed. Some upstream panels have
+      self-explanatory titles but no description; descriptions added by hand
+      would be lost on the next upgrade.
+    entries:
+      - dashboard: "Altinn Studio — VictoriaMetrics single-node"
+      - dashboard: "Altinn Studio — vmagent"
+      - dashboard: "Altinn Studio — VictoriaMetrics operator"
+      - dashboard: "Altinn Studio — VictoriaLogs single-node"
+      - dashboard: "Altinn Studio — vlagent"
+      - dashboard: "Altinn Studio — VictoriaTraces single-node"

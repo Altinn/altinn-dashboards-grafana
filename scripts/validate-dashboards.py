@@ -10,8 +10,9 @@ Covers three layouts:
                             with the CRs in public/dashboards.yaml
 
 Enforces a 1:1:1 correspondence (JSON <-> configMapGenerator entry <-> GrafanaDashboard CR),
-that each CR's folderRef resolves to a GrafanaFolder somewhere in the repo, and that every
-product dashboard overlay is registered in the repo-root kustomization.yaml. Public CRs must
+that each CR's folderRef and each nested folder's parentFolderRef resolves to a GrafanaFolder
+somewhere in the repo, and that every product dashboard overlay is registered in the
+repo-root kustomization.yaml. Public CRs must
 pin a publicSharing.accessToken, resync every minute and use only public folders, and only
 public/ may target the public-grafana instance. Exits non-zero listing every problem.
 """
@@ -37,9 +38,11 @@ def rel(path):
     return os.path.relpath(path, ROOT).replace(os.sep, "/")
 
 
-def known_folders():
-    """GrafanaFolder names from the platform folders file and every product overlay."""
-    names = set()
+def known_folders(errors):
+    """GrafanaFolder names from the platform folders file and every product overlay.
+
+    A nested folder's parentFolderRef must name one of them too."""
+    names, parents = set(), []
     sources = [os.path.join(DASH, "folders.yaml")]
     sources += glob.glob(os.path.join(PRODUCTS, "*", "alerting", "*.yaml"))
     for src in sources:
@@ -47,7 +50,16 @@ def known_folders():
             continue
         for doc in load_all(src):
             if doc.get("kind") == "GrafanaFolder":
-                names.add(doc.get("metadata", {}).get("name"))
+                name = doc.get("metadata", {}).get("name")
+                names.add(name)
+                parent = (doc.get("spec") or {}).get("parentFolderRef")
+                if parent:
+                    parents.append((rel(src), name, parent))
+    for src, name, parent in parents:
+        if parent not in names:
+            errors.append(
+                f"{src}: GrafanaFolder '{name}': parentFolderRef '{parent}' has no "
+                f"GrafanaFolder in dashboards/folders.yaml or products/*/alerting/.")
     return names
 
 
@@ -144,7 +156,7 @@ def product_hint(product):
 
 def main():
     errors = []
-    folders = known_folders()
+    folders = known_folders(errors)
     total = 0
 
     # ---- platform dashboards ------------------------------------------------

@@ -1,0 +1,15 @@
+# VictoriaLogs' official dashboard for vlagent, vendored by
+# ../scripts/vendor-victoria-dashboards.py.
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: external-grafana-studio-observability-vlagent
+  namespace: grafana
+spec:
+  folderRef: external-grafana-studio-observability
+  instanceSelector:
+    matchLabels:
+      dashboards: external-grafana
+  configMapRef:
+    name: dashboard-studio-observability-vlagent
+    key: observability-vlagent.json

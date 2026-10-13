@@ -1,0 +1,15 @@
+# VictoriaTraces' official dashboard for the traces storage (VTSingle), vendored by
+# ../scripts/vendor-victoria-dashboards.py.
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: external-grafana-studio-observability-vtsingle
+  namespace: grafana
+spec:
+  folderRef: external-grafana-studio-observability
+  instanceSelector:
+    matchLabels:
+      dashboards: external-grafana
+  configMapRef:
+    name: dashboard-studio-observability-vtsingle
+    key: observability-vtsingle.json

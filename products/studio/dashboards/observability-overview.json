@@ -1,0 +1,1791 @@
+{
+  "uid": "altinn-studio-observability",
+  "title": "Altinn Studio — Observability",
+  "description": "Health of the Victoria observability stack in Studio prod (namespace observability): the metrics, logs and traces storage pairs (copies a and b), the agents replicating to them, and the VictoriaMetrics operator. From the stack's own metrics, scraped every 30 s by vmagent-self into the stack itself. The row and panel links lead to the official VictoriaMetrics dashboards in this folder for detail.",
+  "tags": [
+    "altinn-studio-observability"
+  ],
+  "editable": false,
+  "graphTooltip": 1,
+  "id": null,
+  "schemaVersion": 41,
+  "version": 1,
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "browser",
+  "refresh": "",
+  "fiscalYearStartMonth": 0,
+  "liveNow": false,
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "links": [
+    {
+      "type": "dashboards",
+      "tags": [
+        "altinn-studio-observability"
+      ],
+      "asDropdown": true,
+      "title": "Observability",
+      "includeVars": false,
+      "keepTime": true,
+      "targetBlank": false,
+      "icon": "external link",
+      "tooltip": "",
+      "url": ""
+    }
+  ],
+  "templating": {
+    "list": []
+  },
+  "panels": [
+    {
+      "type": "row",
+      "title": "Availability",
+      "id": 1,
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "panels": []
+    },
+    {
+      "type": "stat",
+      "title": "Scrape targets",
+      "id": 2,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "altinn-studio-metrics"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 1,
+        "w": 4,
+        "h": 8
+      },
+      "description": "Targets of vmagent-self that answered (up) and did not (down) at the last scrape: two copies of each storage, two replicas of each agent, the operator and vmagent-self. With no data at all, vmagent-self or the metrics storage is down.",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "A",
+          "expr": "sum(up{job=~\"vmsingle|vlsingle|vtsingle|vmagent|vlagent|vtagent|operator|vmagent-self\"})",
+          "legendFormat": "Up",
+          "range": false,
+          "editorMode": "code",
+          "instant": true
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "B",
+          "expr": "count(up{job=~\"vmsingle|vlsingle|vtsingle|vmagent|vlagent|vtagent|operator|vmagent-self\"} == 0) or vector(0)",
+          "legendFormat": "Down",
+          "range": false,
+          "editorMode": "code",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Down"
+            },
+            "properties": [
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "red",
+                      "value": 1
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "vertical",
+        "textMode": "value_and_name",
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "wideLayout": true
+      },
+      "links": []
+    },
+    {
+      "type": "state-timeline",
+      "title": "Scrape targets over time",
+      "id": 3,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "altinn-studio-metrics"
+      },
+      "gridPos": {
+        "x": 4,
+        "y": 1,
+        "w": 12,
+        "h": 8
+      },
+      "description": "up per scrape target, every 30 s. The storage targets are the two copies (…-a, …-b) of each signal; the agents are scraped per replica.",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "A",
+          "expr": "label_replace(up{job=~\"vmsingle|vlsingle|vtsingle|vmagent|vlagent|vtagent|operator|vmagent-self\"}, \"instance\", \"vmagent-self\", \"job\", \"vmagent-self\")",
+          "legendFormat": "{{instance}}",
+          "range": true,
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "Down",
+                  "color": "red",
+                  "index": 0
+                },
+                "1": {
+                  "text": "Up",
+                  "color": "green",
+                  "index": 1
+                }
+              }
+            }
+          ],
+          "custom": {
+            "fillOpacity": 80,
+            "lineWidth": 0
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showValue": "never",
+        "mergeValues": true,
+        "rowHeight": 0.8,
+        "alignValue": "left",
+        "legend": {
+          "showLegend": false
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "links": []
+    },
+    {
+      "type": "timeseries",
+      "title": "Restarts",
+      "description": "Process restarts per target: process_start_time_seconds is later than its last value in the hour before, so a restart after downtime counts too. A storage copy or agent replica that restarts repeatedly is crash-looping or being OOM-killed; see Memory against the limit below.",
+      "id": 4,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "altinn-studio-metrics"
+      },
+      "gridPos": {
+        "x": 16,
+        "y": 1,
+        "w": 8,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "A",
+          "expr": "label_replace(count by (job, instance) (process_start_time_seconds{job=~\"vmsingle|vlsingle|vtsingle|vmagent|vlagent|vtagent|operator|vmagent-self\"} > last_over_time(process_start_time_seconds{job=~\"vmsingle|vlsingle|vtsingle|vmagent|vlagent|vtagent|operator|vmagent-self\"}[1h] offset $__interval)), \"instance\", \"vmagent-self\", \"job\", \"vmagent-self\")",
+          "legendFormat": "{{instance}}",
+          "range": true,
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 1,
+            "fillOpacity": 80,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisSoftMin": 0,
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 0,
+          "noValue": "No restarts"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "calcs": [
+            "sum"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "links": [],
+      "interval": "1m"
+    },
+    {
+      "type": "row",
+      "title": "Replication",
+      "id": 5,
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 9
+      },
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "title": "Metrics ingest per copy",
+      "description": "Per second, samples written to each VMSingle (vm_rows_inserted_total). The agents write everything to both copies, so the two lines should match; a gap means one copy is behind (its agent queue grows) or missing data.",
+      "id": 6,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "altinn-studio-metrics"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 10,
+        "w": 8,
+        "h": 7
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "A",
+          "expr": "sum by (copy) (rate(vm_rows_inserted_total{job=\"vmsingle\"}[$__rate_interval]))",
+          "legendFormat": "copy {{copy}}",
+          "range": true,
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 0,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisSoftMin": 0,
+            "thresholdsStyle": {
+              "mode": "off"
+            },
+            "axisLabel": "samples/s"
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "mean",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "links": [
+        {
+          "title": "VictoriaMetrics single-node",
+          "url": "/d/altinn-studio-victoria-vmsingle?${__url_time_range}"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Logs ingest per copy",
+      "description": "Per second, log entries written to each VLSingle (vl_rows_ingested_total). The agents write everything to both copies, so the two lines should match; a gap means one copy is behind (its agent queue grows) or missing data.",
+      "id": 7,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "altinn-studio-metrics"
+      },
+      "gridPos": {
+        "x": 8,
+        "y": 10,
+        "w": 8,
+        "h": 7
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "A",
+          "expr": "sum by (copy) (rate(vl_rows_ingested_total{job=\"vlsingle\"}[$__rate_interval]))",
+          "legendFormat": "copy {{copy}}",
+          "range": true,
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 0,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisSoftMin": 0,
+            "thresholdsStyle": {
+              "mode": "off"
+            },
+            "axisLabel": "log entries/s"
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "mean",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "links": [
+        {
+          "title": "VictoriaLogs single-node",
+          "url": "/d/altinn-studio-victoria-vlsingle?${__url_time_range}"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Traces ingest per copy",
+      "description": "Per second, spans written to each VTSingle (vt_rows_ingested_total, without the trace index rows the storage adds itself). The agents write everything to both copies, so the two lines should match; a gap means one copy is behind (its agent queue grows) or missing data.",
+      "id": 8,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "altinn-studio-metrics"
+      },
+      "gridPos": {
+        "x": 16,
+        "y": 10,
+        "w": 8,
+        "h": 7
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "A",
+          "expr": "sum by (copy) (rate(vt_rows_ingested_total{job=\"vtsingle\", type!=\"internalinsert_index\"}[$__rate_interval]))",
+          "legendFormat": "copy {{copy}}",
+          "range": true,
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 0,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisSoftMin": 0,
+            "thresholdsStyle": {
+              "mode": "off"
+            },
+            "axisLabel": "spans/s"
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "mean",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "links": [
+        {
+          "title": "VictoriaTraces single-node",
+          "url": "/d/altinn-studio-victoria-vtsingle?${__url_time_range}"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Agent queue per copy",
+      "description": "Data each agent holds for a storage copy it cannot write to yet (in memory and in its on-disk queue), for the replica holding the most. Each replica queues up to 20 GiB per copy (maxDiskUsagePerURL) on its 50 GiB volume and then drops the oldest data. Copy a is the first remote-write URL (1:secret-url), copy b the second.",
+      "id": 9,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "altinn-studio-metrics"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 17,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "A",
+          "expr": "max by (job, copy) (label_replace(label_replace(max by (job, url) (vmagent_remotewrite_pending_data_bytes{job=\"vmagent\"}), \"copy\", \"a\", \"url\", \"1:.*\"), \"copy\", \"b\", \"url\", \"2:.*\") or label_replace(label_replace(max by (job, url) (vlagent_remotewrite_pending_data_bytes{job=\"vlagent\"}), \"copy\", \"a\", \"url\", \"1:.*\"), \"copy\", \"b\", \"url\", \"2:.*\") or label_replace(label_replace(max by (job, url) (vtagent_remotewrite_pending_data_bytes{job=\"vtagent\"}), \"copy\", \"a\", \"url\", \"1:.*\"), \"copy\", \"b\", \"url\", \"2:.*\"))",
+          "legendFormat": "{{job}} → copy {{copy}}",
+          "range": true,
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 0,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisSoftMin": 0,
+            "thresholdsStyle": {
+              "mode": "dashed"
+            },
+            "axisSoftMax": 21474836480
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "transparent",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 21474836480
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "calcs": [
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "links": [
+        {
+          "title": "vmagent",
+          "url": "/d/altinn-studio-victoria-vmagent?${__url_time_range}&var-job=vmagent"
+        },
+        {
+          "title": "vlagent",
+          "url": "/d/altinn-studio-victoria-vlagent?${__url_time_range}"
+        },
+        {
+          "title": "vtagent",
+          "url": "/d/altinn-studio-victoria-vtagent?${__url_time_range}&var-job=vtagent"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Data dropped by agents",
+      "description": "Blocks the agents dropped, per storage copy: queue overflow, when a copy has been unreachable long enough to fill its 20 GiB queue (vm_persistentqueue_blocks_dropped_total; vm_persistentqueue_bytes_dropped_total has the bytes), and blocks a copy rejected for good (*_remotewrite_packets_dropped_total). Should be zero: anything here is data missing from that copy.",
+      "id": 10,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "altinn-studio-metrics"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 17,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "A",
+          "expr": "label_replace(label_replace(sum by (job, path) (increase(vm_persistentqueue_blocks_dropped_total{job=~\"vmagent|vlagent|vtagent\"}[$__interval])), \"copy\", \"a\", \"path\", \".*/1_[^/]*\"), \"copy\", \"b\", \"path\", \".*/2_[^/]*\")",
+          "legendFormat": "{{job}} → copy {{copy}} queue overflow",
+          "range": true,
+          "editorMode": "code"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "B",
+          "expr": "label_replace(label_replace(sum by (job, url) (increase({__name__=~\"(vmagent|vlagent|vtagent)_remotewrite_packets_dropped_total\", job=~\"vmagent|vlagent|vtagent\"}[$__interval])), \"copy\", \"a\", \"url\", \"1:.*\"), \"copy\", \"b\", \"url\", \"2:.*\")",
+          "legendFormat": "{{job}} → copy {{copy}} rejected",
+          "range": true,
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 1,
+            "fillOpacity": 80,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisSoftMin": 0,
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "calcs": [
+            "sum"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "links": [
+        {
+          "title": "vmagent",
+          "url": "/d/altinn-studio-victoria-vmagent?${__url_time_range}&var-job=vmagent"
+        },
+        {
+          "title": "vlagent",
+          "url": "/d/altinn-studio-victoria-vlagent?${__url_time_range}"
+        },
+        {
+          "title": "vtagent",
+          "url": "/d/altinn-studio-victoria-vtagent?${__url_time_range}&var-job=vtagent"
+        }
+      ],
+      "interval": "1m"
+    },
+    {
+      "type": "row",
+      "title": "Storage and retention",
+      "id": 11,
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 25
+      },
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "title": "VMSingle free disk",
+      "description": "Free space on each VMSingle volume (512 GiB) against its floor, -storage.minFreeDiskSpaceBytes (100 GiB): below the floor VMSingle stops accepting writes and the agents queue. Metrics are kept 90 days and old data is not dropped to make room.",
+      "id": 12,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "altinn-studio-metrics"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 26,
+        "w": 8,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "A",
+          "expr": "vm_free_disk_space_bytes{job=\"vmsingle\"}",
+          "legendFormat": "copy {{copy}} free",
+          "range": true,
+          "editorMode": "code"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "B",
+          "expr": "max(vm_free_disk_space_limit_bytes{job=\"vmsingle\"})",
+          "legendFormat": "floor",
+          "range": true,
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 0,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisSoftMin": 0,
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "floor"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              },
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "fill": "dash",
+                  "dash": [
+                    10,
+                    10
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "min"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "links": [
+        {
+          "title": "VictoriaMetrics single-node",
+          "url": "/d/altinn-studio-victoria-vmsingle?${__url_time_range}"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Days until floor",
+      "id": 13,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "altinn-studio-metrics"
+      },
+      "gridPos": {
+        "x": 8,
+        "y": 26,
+        "w": 4,
+        "h": 8
+      },
+      "description": "Days until each VMSingle copy reaches its free space floor if free space keeps shrinking at the rate of the last 24 hours. Empty when it is not shrinking.",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "A",
+          "expr": "(vm_free_disk_space_bytes{job=\"vmsingle\"} - vm_free_disk_space_limit_bytes{job=\"vmsingle\"}) / (-deriv(vm_free_disk_space_bytes{job=\"vmsingle\"}[1d]) > 0) / 86400",
+          "legendFormat": "copy {{copy}}",
+          "range": false,
+          "editorMode": "code",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "d",
+          "decimals": 0,
+          "noValue": "Not filling",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 14
+              },
+              {
+                "color": "green",
+                "value": 60
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "textMode": "value_and_name",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "wideLayout": true
+      },
+      "links": [
+        {
+          "title": "VictoriaMetrics single-node",
+          "url": "/d/altinn-studio-victoria-vmsingle?${__url_time_range}"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Logs and traces disk used",
+      "description": "Used share of each VLSingle (256 GiB) and VTSingle (512 GiB) volume. Above -retention.maxDiskUsagePercent (80 %) the oldest daily partitions are dropped, so the retention window shrinks below one year rather than ingestion stopping.",
+      "id": 14,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "altinn-studio-metrics"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 26,
+        "w": 6,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "A",
+          "expr": "1 - vl_free_disk_space_bytes{job=\"vlsingle\"} / vl_total_disk_space_bytes{job=\"vlsingle\"}",
+          "legendFormat": "logs copy {{copy}}",
+          "range": true,
+          "editorMode": "code"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "B",
+          "expr": "1 - vt_free_disk_space_bytes{job=\"vtsingle\"} / vt_total_disk_space_bytes{job=\"vtsingle\"}",
+          "legendFormat": "traces copy {{copy}}",
+          "range": true,
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 0,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisSoftMin": 0,
+            "thresholdsStyle": {
+              "mode": "dashed"
+            },
+            "axisSoftMax": 1
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "transparent",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 0.8
+              }
+            ]
+          },
+          "max": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "links": [
+        {
+          "title": "VictoriaLogs single-node",
+          "url": "/d/altinn-studio-victoria-vlsingle?${__url_time_range}"
+        },
+        {
+          "title": "VictoriaTraces single-node",
+          "url": "/d/altinn-studio-victoria-vtsingle?${__url_time_range}"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Agent queue space left",
+      "description": "Room left in each agent's queue for a storage copy, for the replica with the least: the queue's 20 GiB allowance minus what it holds, or the free space on the agent's 50 GiB volume if that is less.",
+      "id": 15,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "altinn-studio-metrics"
+      },
+      "gridPos": {
+        "x": 18,
+        "y": 26,
+        "w": 6,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "A",
+          "expr": "min by (job, copy) (label_replace(label_replace(min by (job, path) (vm_persistentqueue_free_disk_space_bytes{job=~\"vmagent|vlagent|vtagent\"}), \"copy\", \"a\", \"path\", \".*/1_[^/]*\"), \"copy\", \"b\", \"path\", \".*/2_[^/]*\"))",
+          "legendFormat": "{{job}} → copy {{copy}}",
+          "range": true,
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 0,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisSoftMin": 0,
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "min"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "links": [
+        {
+          "title": "vmagent",
+          "url": "/d/altinn-studio-victoria-vmagent?${__url_time_range}&var-job=vmagent"
+        },
+        {
+          "title": "vlagent",
+          "url": "/d/altinn-studio-victoria-vlagent?${__url_time_range}"
+        },
+        {
+          "title": "vtagent",
+          "url": "/d/altinn-studio-victoria-vtagent?${__url_time_range}&var-job=vtagent"
+        }
+      ]
+    },
+    {
+      "type": "row",
+      "title": "Ingest quality",
+      "id": 16,
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 34
+      },
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "title": "Rows rejected",
+      "description": "Rows the storage or agents refused, by reason: too many labels or fields, timestamps outside the retention window, unparsable input, or the VMSingle series limits. VictoriaLogs and VictoriaTraces rows dropped for debug logging are left out.",
+      "id": 17,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "altinn-studio-metrics"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 35,
+        "w": 8,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "A",
+          "expr": "sum by (job, reason) (rate(vm_rows_ignored_total{job=~\"vmsingle|vmagent\", reason!~\"(hourly|daily)_limit_exceeded\"}[$__rate_interval]))",
+          "legendFormat": "{{job}} {{reason}}",
+          "range": true,
+          "editorMode": "code"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "B",
+          "expr": "sum by (job) (rate(vm_rows_invalid_total{job=~\"vmsingle|vmagent\"}[$__rate_interval]))",
+          "legendFormat": "{{job}} invalid",
+          "range": true,
+          "editorMode": "code"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "C",
+          "expr": "sum by (job, reason) (rate({__name__=~\"vl_rows_dropped_total|vt_rows_dropped_total\", job=~\"vlsingle|vlagent|vtsingle|vtagent\", reason!=\"debug\"}[$__rate_interval]))",
+          "legendFormat": "{{job}} {{reason}}",
+          "range": true,
+          "editorMode": "code"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "D",
+          "expr": "sum by (copy) (rate(vm_hourly_series_limit_rows_dropped_total{job=\"vmsingle\"}[$__rate_interval]))",
+          "legendFormat": "vmsingle copy {{copy}} hourly series limit",
+          "range": true,
+          "editorMode": "code"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "E",
+          "expr": "sum by (copy) (rate(vm_daily_series_limit_rows_dropped_total{job=\"vmsingle\"}[$__rate_interval]))",
+          "legendFormat": "vmsingle copy {{copy}} daily series limit",
+          "range": true,
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 0,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisSoftMin": 0,
+            "thresholdsStyle": {
+              "mode": "off"
+            },
+            "axisLabel": "rows/s"
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "links": [
+        {
+          "title": "VictoriaMetrics single-node",
+          "url": "/d/altinn-studio-victoria-vmsingle?${__url_time_range}"
+        },
+        {
+          "title": "VictoriaLogs single-node",
+          "url": "/d/altinn-studio-victoria-vlsingle?${__url_time_range}"
+        },
+        {
+          "title": "VictoriaTraces single-node",
+          "url": "/d/altinn-studio-victoria-vtsingle?${__url_time_range}"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Series limit usage",
+      "description": "New series in the last hour and day against -storage.maxHourlySeries (4 million) and -storage.maxDailySeries (8 million). At 100 % VMSingle drops the samples of further new series (Rows rejected, series limit) so a cardinality blow-up cannot exhaust memory.",
+      "id": 18,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "altinn-studio-metrics"
+      },
+      "gridPos": {
+        "x": 8,
+        "y": 35,
+        "w": 8,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "A",
+          "expr": "vm_hourly_series_limit_current_series{job=\"vmsingle\"} / vm_hourly_series_limit_max_series{job=\"vmsingle\"}",
+          "legendFormat": "hourly copy {{copy}}",
+          "range": true,
+          "editorMode": "code"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "B",
+          "expr": "vm_daily_series_limit_current_series{job=\"vmsingle\"} / vm_daily_series_limit_max_series{job=\"vmsingle\"}",
+          "legendFormat": "daily copy {{copy}}",
+          "range": true,
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 0,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisSoftMin": 0,
+            "thresholdsStyle": {
+              "mode": "dashed"
+            }
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "transparent",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 0.8
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "links": [
+        {
+          "title": "VictoriaMetrics single-node",
+          "url": "/d/altinn-studio-victoria-vmsingle?${__url_time_range}"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "New series per hour",
+      "description": "Series created in each VMSingle in the preceding hour (vm_new_timeseries_created_total). A step up is a new label value with high cardinality, such as an ID in a metric label.",
+      "id": 19,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "altinn-studio-metrics"
+      },
+      "gridPos": {
+        "x": 16,
+        "y": 35,
+        "w": 8,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "A",
+          "expr": "sum by (copy) (increase(vm_new_timeseries_created_total{job=\"vmsingle\"}[1h]))",
+          "legendFormat": "copy {{copy}}",
+          "range": true,
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 0,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisSoftMin": 0,
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "links": [
+        {
+          "title": "VictoriaMetrics single-node",
+          "url": "/d/altinn-studio-victoria-vmsingle?${__url_time_range}"
+        }
+      ]
+    },
+    {
+      "type": "row",
+      "title": "Resources",
+      "id": 20,
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 43
+      },
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "title": "Memory against the limit",
+      "description": "Resident memory of each process as a share of its container's memory limit (process_memory_limit_bytes, from the cgroup). At 100 % the container is OOM-killed (see Restarts). The operator reports no limit and is left out.",
+      "id": 21,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "altinn-studio-metrics"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 44,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "A",
+          "expr": "label_replace(process_resident_memory_bytes{job=~\"vmsingle|vlsingle|vtsingle|vmagent|vlagent|vtagent|operator|vmagent-self\"} / process_memory_limit_bytes{job=~\"vmsingle|vlsingle|vtsingle|vmagent|vlagent|vtagent|operator|vmagent-self\"}, \"instance\", \"vmagent-self\", \"job\", \"vmagent-self\")",
+          "legendFormat": "{{instance}}",
+          "range": true,
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 0,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisSoftMin": 0,
+            "thresholdsStyle": {
+              "mode": "dashed"
+            },
+            "axisSoftMax": 1
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "transparent",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 0.9
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "calcs": [
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "links": [
+        {
+          "title": "VictoriaMetrics single-node",
+          "url": "/d/altinn-studio-victoria-vmsingle?${__url_time_range}"
+        },
+        {
+          "title": "VictoriaLogs single-node",
+          "url": "/d/altinn-studio-victoria-vlsingle?${__url_time_range}"
+        },
+        {
+          "title": "VictoriaTraces single-node",
+          "url": "/d/altinn-studio-victoria-vtsingle?${__url_time_range}"
+        },
+        {
+          "title": "vmagent",
+          "url": "/d/altinn-studio-victoria-vmagent?${__url_time_range}&var-job=vmagent"
+        },
+        {
+          "title": "vlagent",
+          "url": "/d/altinn-studio-victoria-vlagent?${__url_time_range}"
+        },
+        {
+          "title": "vtagent",
+          "url": "/d/altinn-studio-victoria-vtagent?${__url_time_range}&var-job=vtagent"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Concurrent queries",
+      "description": "Peak queries running at once in each storage copy as a share of its limit (-search.maxConcurrentRequests, 8 for VMSingle). Further queries wait, and fail after -search.maxQueueDuration; see Queries waited or timed out. Sampled every 30 s, so short peaks can be missed.",
+      "id": 22,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "altinn-studio-metrics"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 44,
+        "w": 6,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "A",
+          "expr": "max by (job, copy) (max_over_time({__name__=~\"vm_concurrent_select_current|vl_concurrent_select_current|vt_concurrent_select_current\", job=~\"vmsingle|vlsingle|vtsingle\"}[$__interval])) / max by (job, copy) ({__name__=~\"vm_concurrent_select_capacity|vl_concurrent_select_capacity|vt_concurrent_select_capacity\", job=~\"vmsingle|vlsingle|vtsingle\"})",
+          "legendFormat": "{{job}} copy {{copy}}",
+          "range": true,
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 0,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisSoftMin": 0,
+            "thresholdsStyle": {
+              "mode": "dashed"
+            },
+            "axisSoftMax": 1
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "transparent",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "links": [
+        {
+          "title": "VictoriaMetrics single-node",
+          "url": "/d/altinn-studio-victoria-vmsingle?${__url_time_range}"
+        },
+        {
+          "title": "VictoriaLogs single-node",
+          "url": "/d/altinn-studio-victoria-vlsingle?${__url_time_range}"
+        },
+        {
+          "title": "VictoriaTraces single-node",
+          "url": "/d/altinn-studio-victoria-vtsingle?${__url_time_range}"
+        }
+      ],
+      "interval": "30s"
+    },
+    {
+      "type": "timeseries",
+      "title": "Queries waited or timed out",
+      "description": "Queries that found every slot taken and had to wait (…_concurrent_select_limit_reached_total) and those that gave up waiting (…_limit_timeout_total). Waits are queueing; timeouts are errors the reader saw.",
+      "id": 23,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "altinn-studio-metrics"
+      },
+      "gridPos": {
+        "x": 18,
+        "y": 44,
+        "w": 6,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "A",
+          "expr": "sum by (job, copy) (increase({__name__=~\"vm_concurrent_select_limit_reached_total|vl_concurrent_select_limit_reached_total|vt_concurrent_select_limit_reached_total\", job=~\"vmsingle|vlsingle|vtsingle\"}[$__interval]))",
+          "legendFormat": "{{job}} copy {{copy}} waited",
+          "range": true,
+          "editorMode": "code"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "B",
+          "expr": "sum by (job, copy) (increase({__name__=~\"vm_concurrent_select_limit_timeout_total|vl_concurrent_select_limit_timeout_total|vt_concurrent_select_limit_timeout_total\", job=~\"vmsingle|vlsingle|vtsingle\"}[$__interval]))",
+          "legendFormat": "{{job}} copy {{copy}} timed out",
+          "range": true,
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 1,
+            "fillOpacity": 80,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisSoftMin": 0,
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "sum"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "links": [
+        {
+          "title": "VictoriaMetrics single-node",
+          "url": "/d/altinn-studio-victoria-vmsingle?${__url_time_range}"
+        },
+        {
+          "title": "VictoriaLogs single-node",
+          "url": "/d/altinn-studio-victoria-vlsingle?${__url_time_range}"
+        },
+        {
+          "title": "VictoriaTraces single-node",
+          "url": "/d/altinn-studio-victoria-vtsingle?${__url_time_range}"
+        }
+      ],
+      "interval": "1m"
+    }
+  ]
+}
