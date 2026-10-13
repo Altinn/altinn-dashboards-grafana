@@ -4,4 +4,5 @@ resources:
   - metrics.yaml
   - traces.yaml
   - logs.yaml
+  - traces-logsql.yaml
   - external-secret.yaml
