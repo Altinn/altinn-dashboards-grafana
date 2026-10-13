@@ -10,9 +10,11 @@ spec:
       dashboards: external-grafana
   datasource:
     name: altinn-studio-traces-logsql
-    # VictoriaTraces' LogsQL API over the same spans as altinn-studio-traces, one row of fields
-    # per span: name, duration, kind, trace_id, resource_attr:service.name, span_attr:http.route
-    # and so on. For span tables with any attributes as columns, and stats by any attribute.
+    # VictoriaTraces' LogsQL API over the same spans as altinn-studio-traces, a row of fields per
+    # span: name, duration, kind, trace_id, resource_attr:service.name, span_attr:http.route and
+    # so on. Beside them are trace index rows (the trace_id_idx_stream stream, whose duration is
+    # the whole trace's), so filter on a span field before stats; see the README.
+    # For span tables with any attributes as columns, and stats by any attribute.
     type: victoriametrics-logs-datasource
     access: proxy
     url: https://altinn.studio/internal/observability/traces-logsql
