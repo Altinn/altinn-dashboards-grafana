@@ -1,0 +1,17 @@
+# Health of the Victoria observability stack in Studio prod: the overview, and the landing
+# page for its alerts.
+# Lands in Altinn Studio / Observability (external-grafana-studio-observability, defined
+# in ../alerting/folder.yaml).
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: external-grafana-studio-observability-overview
+  namespace: grafana
+spec:
+  folderRef: external-grafana-studio-observability
+  instanceSelector:
+    matchLabels:
+      dashboards: external-grafana
+  configMapRef:
+    name: dashboard-studio-observability-overview
+    key: observability-overview.json

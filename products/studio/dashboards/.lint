@@ -4,11 +4,15 @@ exclusions:
       Datasource UIDs are pinned on purpose (altinn-studio-metrics for the
       services' metrics, altinn-studio-traces for their traces), so the panels
       cannot bind to another datasource; see CLAUDE.md. The dashboard also mixes
-      the two in one view, which a single template variable cannot express.
+      the two in one view, which a single template variable cannot express. The
+      observability dashboard reads only the Victoria stack's own metrics, which
+      only altinn-studio-metrics holds.
     entries:
       - dashboard: "Altinn Studio — PDF3"
+      - dashboard: "Altinn Studio — Observability"
   template-datasource-rule:
     reason: >-
       No datasource template variable by design; see panel-datasource-rule.
     entries:
       - dashboard: "Altinn Studio — PDF3"
+      - dashboard: "Altinn Studio — Observability"

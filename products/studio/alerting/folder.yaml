@@ -8,3 +8,17 @@ spec:
   instanceSelector:
     matchLabels:
       dashboards: external-grafana
+---
+# The Victoria observability stack's own dashboards (and later its alert rules), nested
+# inside the Altinn Studio folder.
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaFolder
+metadata:
+  name: external-grafana-studio-observability
+  namespace: grafana
+spec:
+  title: Observability
+  parentFolderRef: external-grafana-studio
+  instanceSelector:
+    matchLabels:
+      dashboards: external-grafana

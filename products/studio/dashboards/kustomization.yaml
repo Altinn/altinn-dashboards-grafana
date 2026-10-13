@@ -6,7 +6,11 @@ generatorOptions:
   disableNameSuffixHash: true
 resources:
   - pdf3.yaml
+  - observability-overview.yaml
 configMapGenerator:
   - name: dashboard-studio-pdf3
     files:
       - pdf3.json
+  - name: dashboard-studio-observability-overview
+    files:
+      - observability-overview.json
