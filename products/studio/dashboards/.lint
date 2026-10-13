@@ -1,0 +1,14 @@
+exclusions:
+  panel-datasource-rule:
+    reason: >-
+      Datasource UIDs are pinned on purpose (altinn-studio-metrics for the
+      services' metrics, altinn-studio-traces for their traces), so the panels
+      cannot bind to another datasource; see CLAUDE.md. The dashboard also mixes
+      the two in one view, which a single template variable cannot express.
+    entries:
+      - dashboard: "Altinn Studio — PDF3"
+  template-datasource-rule:
+    reason: >-
+      No datasource template variable by design; see panel-datasource-rule.
+    entries:
+      - dashboard: "Altinn Studio — PDF3"
