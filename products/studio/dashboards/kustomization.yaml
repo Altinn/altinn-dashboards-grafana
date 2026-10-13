@@ -7,12 +7,6 @@ generatorOptions:
 resources:
   - pdf3.yaml
   - observability-overview.yaml
-  - observability-vmsingle.yaml
-  - observability-vmagent.yaml
-  - observability-operator.yaml
-  - observability-vlsingle.yaml
-  - observability-vlagent.yaml
-  - observability-vtsingle.yaml
 configMapGenerator:
   - name: dashboard-studio-pdf3
     files:
@@ -20,21 +14,3 @@ configMapGenerator:
   - name: dashboard-studio-observability-overview
     files:
       - observability-overview.json
-  - name: dashboard-studio-observability-vmsingle
-    files:
-      - observability-vmsingle.json
-  - name: dashboard-studio-observability-vmagent
-    files:
-      - observability-vmagent.json
-  - name: dashboard-studio-observability-operator
-    files:
-      - observability-operator.json
-  - name: dashboard-studio-observability-vlsingle
-    files:
-      - observability-vlsingle.json
-  - name: dashboard-studio-observability-vlagent
-    files:
-      - observability-vlagent.json
-  - name: dashboard-studio-observability-vtsingle
-    files:
-      - observability-vtsingle.json

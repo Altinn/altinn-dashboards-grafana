@@ -1,7 +1,7 @@
 {
   "uid": "altinn-studio-observability",
   "title": "Altinn Studio — Observability",
-  "description": "Health of the Victoria observability stack in Studio prod (namespace observability): the metrics, logs and traces storage pairs (copies a and b), the agents replicating to them, and the VictoriaMetrics operator. From the stack's own metrics, scraped every 30 s by vmagent-self into the stack itself. The row and panel links lead to the official VictoriaMetrics dashboards in this folder for detail.",
+  "description": "Health of the Victoria observability stack in Studio prod (namespace observability): the metrics, logs and traces storage pairs (copies a and b), the agents replicating to them, and the VictoriaMetrics operator. From the stack's own metrics, scraped every 30 s by vmagent-self into the stack itself.",
   "tags": [
     "altinn-studio-observability"
   ],
@@ -35,22 +35,7 @@
       }
     ]
   },
-  "links": [
-    {
-      "type": "dashboards",
-      "tags": [
-        "altinn-studio-observability"
-      ],
-      "asDropdown": true,
-      "title": "Observability",
-      "includeVars": false,
-      "keepTime": true,
-      "targetBlank": false,
-      "icon": "external link",
-      "tooltip": "",
-      "url": ""
-    }
-  ],
+  "links": [],
   "templating": {
     "list": []
   },
@@ -416,12 +401,7 @@
           "sort": "desc"
         }
       },
-      "links": [
-        {
-          "title": "VictoriaMetrics single-node",
-          "url": "/d/altinn-studio-victoria-vmsingle?${__url_time_range}"
-        }
-      ]
+      "links": []
     },
     {
       "type": "timeseries",
@@ -496,12 +476,7 @@
           "sort": "desc"
         }
       },
-      "links": [
-        {
-          "title": "VictoriaLogs single-node",
-          "url": "/d/altinn-studio-victoria-vlsingle?${__url_time_range}"
-        }
-      ]
+      "links": []
     },
     {
       "type": "timeseries",
@@ -576,12 +551,7 @@
           "sort": "desc"
         }
       },
-      "links": [
-        {
-          "title": "VictoriaTraces single-node",
-          "url": "/d/altinn-studio-victoria-vtsingle?${__url_time_range}"
-        }
-      ]
+      "links": []
     },
     {
       "type": "timeseries",
@@ -659,20 +629,7 @@
           "sort": "desc"
         }
       },
-      "links": [
-        {
-          "title": "vmagent",
-          "url": "/d/altinn-studio-victoria-vmagent?${__url_time_range}&var-job=vmagent"
-        },
-        {
-          "title": "vlagent",
-          "url": "/d/altinn-studio-victoria-vlagent?${__url_time_range}"
-        },
-        {
-          "title": "vtagent",
-          "url": "/d/altinn-studio-victoria-vtagent?${__url_time_range}&var-job=vtagent"
-        }
-      ]
+      "links": []
     },
     {
       "type": "timeseries",
@@ -757,20 +714,7 @@
           "sort": "desc"
         }
       },
-      "links": [
-        {
-          "title": "vmagent",
-          "url": "/d/altinn-studio-victoria-vmagent?${__url_time_range}&var-job=vmagent"
-        },
-        {
-          "title": "vlagent",
-          "url": "/d/altinn-studio-victoria-vlagent?${__url_time_range}"
-        },
-        {
-          "title": "vtagent",
-          "url": "/d/altinn-studio-victoria-vtagent?${__url_time_range}&var-job=vtagent"
-        }
-      ],
+      "links": [],
       "interval": "1m"
     },
     {
@@ -894,12 +838,7 @@
           "sort": "desc"
         }
       },
-      "links": [
-        {
-          "title": "VictoriaMetrics single-node",
-          "url": "/d/altinn-studio-victoria-vmsingle?${__url_time_range}"
-        }
-      ]
+      "links": []
     },
     {
       "type": "stat",
@@ -973,12 +912,7 @@
         "justifyMode": "auto",
         "wideLayout": true
       },
-      "links": [
-        {
-          "title": "VictoriaMetrics single-node",
-          "url": "/d/altinn-studio-victoria-vmsingle?${__url_time_range}"
-        }
-      ]
+      "links": []
     },
     {
       "type": "timeseries",
@@ -1068,16 +1002,7 @@
           "sort": "desc"
         }
       },
-      "links": [
-        {
-          "title": "VictoriaLogs single-node",
-          "url": "/d/altinn-studio-victoria-vlsingle?${__url_time_range}"
-        },
-        {
-          "title": "VictoriaTraces single-node",
-          "url": "/d/altinn-studio-victoria-vtsingle?${__url_time_range}"
-        }
-      ]
+      "links": []
     },
     {
       "type": "timeseries",
@@ -1150,20 +1075,7 @@
           "sort": "desc"
         }
       },
-      "links": [
-        {
-          "title": "vmagent",
-          "url": "/d/altinn-studio-victoria-vmagent?${__url_time_range}&var-job=vmagent"
-        },
-        {
-          "title": "vlagent",
-          "url": "/d/altinn-studio-victoria-vlagent?${__url_time_range}"
-        },
-        {
-          "title": "vtagent",
-          "url": "/d/altinn-studio-victoria-vtagent?${__url_time_range}&var-job=vtagent"
-        }
-      ]
+      "links": []
     },
     {
       "type": "row",
@@ -1294,20 +1206,7 @@
           "sort": "desc"
         }
       },
-      "links": [
-        {
-          "title": "VictoriaMetrics single-node",
-          "url": "/d/altinn-studio-victoria-vmsingle?${__url_time_range}"
-        },
-        {
-          "title": "VictoriaLogs single-node",
-          "url": "/d/altinn-studio-victoria-vlsingle?${__url_time_range}"
-        },
-        {
-          "title": "VictoriaTraces single-node",
-          "url": "/d/altinn-studio-victoria-vtsingle?${__url_time_range}"
-        }
-      ]
+      "links": []
     },
     {
       "type": "timeseries",
@@ -1395,12 +1294,7 @@
           "sort": "desc"
         }
       },
-      "links": [
-        {
-          "title": "VictoriaMetrics single-node",
-          "url": "/d/altinn-studio-victoria-vmsingle?${__url_time_range}"
-        }
-      ]
+      "links": []
     },
     {
       "type": "timeseries",
@@ -1473,12 +1367,7 @@
           "sort": "desc"
         }
       },
-      "links": [
-        {
-          "title": "VictoriaMetrics single-node",
-          "url": "/d/altinn-studio-victoria-vmsingle?${__url_time_range}"
-        }
-      ]
+      "links": []
     },
     {
       "type": "row",
@@ -1569,32 +1458,7 @@
           "sort": "desc"
         }
       },
-      "links": [
-        {
-          "title": "VictoriaMetrics single-node",
-          "url": "/d/altinn-studio-victoria-vmsingle?${__url_time_range}"
-        },
-        {
-          "title": "VictoriaLogs single-node",
-          "url": "/d/altinn-studio-victoria-vlsingle?${__url_time_range}"
-        },
-        {
-          "title": "VictoriaTraces single-node",
-          "url": "/d/altinn-studio-victoria-vtsingle?${__url_time_range}"
-        },
-        {
-          "title": "vmagent",
-          "url": "/d/altinn-studio-victoria-vmagent?${__url_time_range}&var-job=vmagent"
-        },
-        {
-          "title": "vlagent",
-          "url": "/d/altinn-studio-victoria-vlagent?${__url_time_range}"
-        },
-        {
-          "title": "vtagent",
-          "url": "/d/altinn-studio-victoria-vtagent?${__url_time_range}&var-job=vtagent"
-        }
-      ]
+      "links": []
     },
     {
       "type": "timeseries",
@@ -1672,20 +1536,7 @@
           "sort": "desc"
         }
       },
-      "links": [
-        {
-          "title": "VictoriaMetrics single-node",
-          "url": "/d/altinn-studio-victoria-vmsingle?${__url_time_range}"
-        },
-        {
-          "title": "VictoriaLogs single-node",
-          "url": "/d/altinn-studio-victoria-vlsingle?${__url_time_range}"
-        },
-        {
-          "title": "VictoriaTraces single-node",
-          "url": "/d/altinn-studio-victoria-vtsingle?${__url_time_range}"
-        }
-      ],
+      "links": [],
       "interval": "30s"
     },
     {
@@ -1771,20 +1622,7 @@
           "sort": "desc"
         }
       },
-      "links": [
-        {
-          "title": "VictoriaMetrics single-node",
-          "url": "/d/altinn-studio-victoria-vmsingle?${__url_time_range}"
-        },
-        {
-          "title": "VictoriaLogs single-node",
-          "url": "/d/altinn-studio-victoria-vlsingle?${__url_time_range}"
-        },
-        {
-          "title": "VictoriaTraces single-node",
-          "url": "/d/altinn-studio-victoria-vtsingle?${__url_time_range}"
-        }
-      ],
+      "links": [],
       "interval": "1m"
     }
   ]
