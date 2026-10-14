@@ -1,7 +1,7 @@
 {
   "uid": "altinn-studio-designer",
   "title": "Altinn Studio — Designer",
-  "description": "Errors and slow requests in Altinn Studio Designer (service studio-designer), for triage: lists of individual failed and slow requests, failed background jobs and failed outgoing calls, with a link from each to its trace, and breakdowns of them. From Designer's spans in VictoriaTraces through altinn-studio-traces-logsql (LogsQL), a row per span. Tail sampling keeps every trace with an error and every trace over 1 s, so the lists and breakdowns are complete; it keeps only 10 % of other traces, so request rates and latency of all requests belong in the HTTP server metrics, not here. Datasource UIDs are pinned, matching the other Altinn Studio dashboards.",
+  "description": "Altinn Studio Designer (service studio-designer) in the Studio environments. Traffic, errors and latency of its requests, its outgoing calls by host and its SignalR connections come from its HTTP and SignalR metrics (altinn-studio-metrics), with links from the panels to matching traces. Below them, for triage, lists of individual failed and slow requests, failed background jobs and failed outgoing calls, each linked to its trace, with breakdowns, from Designer's spans through altinn-studio-traces-logsql (LogsQL). Tail sampling keeps every trace with an error or over 1 s, so those lists are complete, but only 10 % of the other traces, so counts and latency of all requests come from the metrics. Datasource UIDs are pinned, matching the other Altinn Studio dashboards.",
   "tags": [
     "altinn-studio",
     "designer"
@@ -51,7 +51,7 @@
       {
         "name": "filters",
         "label": "Filters",
-        "description": "Filters on any span field, such as span_attr:altinn.service_owner, span_attr:altinn.app or span_attr:enduser.id.",
+        "description": "Filters the trace tables (LogsQL) on any span field, such as span_attr:altinn.service_owner, span_attr:altinn.app or span_attr:enduser.id. The metric panels have no such labels and are not filtered.",
         "type": "adhoc",
         "datasource": {
           "type": "victoriametrics-logs-datasource",
@@ -66,9 +66,9 @@
   },
   "panels": [
     {
-      "id": 1,
+      "id": 20,
       "type": "row",
-      "title": "Failed requests",
+      "title": "Requests",
       "collapsed": false,
       "gridPos": {
         "x": 0,
@@ -79,44 +79,914 @@
       "panels": []
     },
     {
-      "id": 2,
-      "type": "timeseries",
-      "title": "Failed requests by status code",
-      "description": "Designer requests that failed (server span with status error: a 5xx response or an unhandled exception), by HTTP status code. Tail sampling keeps every trace with an error, so these counts are complete. Request rates and latency for all requests come from the HTTP server metrics, not from traces.",
+      "id": 21,
+      "type": "stat",
+      "title": "Requests per second",
+      "description": "Requests Designer served, from its HTTP server metrics (http.server.request.duration). SignalR hub connections and health checks are not counted; hub negotiation and failed connection attempts are.",
       "datasource": {
-        "type": "victoriametrics-logs-datasource",
-        "uid": "altinn-studio-traces-logsql"
+        "type": "prometheus",
+        "uid": "altinn-studio-metrics"
       },
       "gridPos": {
         "x": 0,
         "y": 1,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "A",
+          "expr": "sum(rate({\"http.server.request.duration_count\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\"}[$__rate_interval]))",
+          "legendFormat": "__auto"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "value"
+      }
+    },
+    {
+      "id": 22,
+      "type": "stat",
+      "title": "Server errors",
+      "description": "Share of Designer requests that failed with a 5xx. Client errors (4xx) are in Responses by status code.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "altinn-studio-metrics"
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 1,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "A",
+          "expr": "(sum(rate({\"http.server.request.duration_count\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\", \"http.response.status_code\"=~\"5..\"}[$__rate_interval])) or vector(0)) / sum(rate({\"http.server.request.duration_count\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\"}[$__rate_interval]))",
+          "legendFormat": "__auto"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 0.01
+              },
+              {
+                "color": "red",
+                "value": 0.05
+              }
+            ]
+          },
+          "decimals": 2
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "value"
+      }
+    },
+    {
+      "id": 23,
+      "type": "stat",
+      "title": "p95 latency",
+      "description": "95th percentile duration of all Designer requests. The histogram's buckets end at 10 s, so a value of 10 s means 10 s or more; Slowest requests below has the actual durations.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "altinn-studio-metrics"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 1,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate({\"http.server.request.duration_bucket\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\"}[$__rate_interval])))",
+          "legendFormat": "__auto"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 5
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "value"
+      }
+    },
+    {
+      "id": 24,
+      "type": "stat",
+      "title": "Requests in flight",
+      "description": "Requests Designer is handling right now, summed over its pods (http.server.active_requests, sampled at each export). Rising in-flight requests without more traffic mean requests wait, such as on Gitea or a lock.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "altinn-studio-metrics"
+      },
+      "gridPos": {
+        "x": 18,
+        "y": 1,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "A",
+          "expr": "sum({\"http.server.active_requests\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\"})",
+          "legendFormat": "__auto"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "value"
+      }
+    },
+    {
+      "id": 35,
+      "type": "row",
+      "title": "Traffic and latency",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 5,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 25,
+      "type": "timeseries",
+      "title": "Responses by status code",
+      "description": "Designer requests per second by HTTP status code. Select a series to search the traces with that status; tail sampling keeps every trace with an error or over 1 s, but only 10 % of the others.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "altinn-studio-metrics"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 6,
         "w": 12,
         "h": 8
       },
       "targets": [
         {
           "datasource": {
-            "type": "victoriametrics-logs-datasource",
-            "uid": "altinn-studio-traces-logsql"
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
           },
           "refId": "A",
-          "queryType": "statsRange",
-          "expr": "{resource_attr:service.name=\"studio-designer\"} \"resource_attr:deployment.environment.name\":$env kind:2 status_code:2 | stats by (\"span_attr:http.response.status_code\") count() failures",
-          "legendFormat": "{{span_attr:http.response.status_code}}"
+          "expr": "sum by (\"http.response.status_code\") (rate({\"http.server.request.duration_count\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\"}[$__rate_interval]))",
+          "legendFormat": "{{http.response.status_code}}"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "short",
-          "decimals": 0,
+          "unit": "reqps",
           "min": 0,
           "custom": {
-            "drawStyle": "bars",
-            "fillOpacity": 60,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "showPoints": "never",
             "stacking": {
               "mode": "normal",
               "group": "A"
             }
+          },
+          "links": [
+            {
+              "title": "Traces with this status",
+              "url": "/explore?schemaVersion=1&orgId=1&panes=%7B%22a%22%3A%7B%22datasource%22%3A%22altinn-studio-traces%22%2C%22queries%22%3A%5B%7B%22refId%22%3A%22A%22%2C%22datasource%22%3A%7B%22type%22%3A%22tempo%22%2C%22uid%22%3A%22altinn-studio-traces%22%7D%2C%22queryType%22%3A%22traceql%22%2C%22tableType%22%3A%22traces%22%2C%22limit%22%3A20%2C%22query%22%3A%22%7Bresource.service.name%3D%5C%22studio-designer%5C%22%20%26%26%20resource.deployment.environment.name%3D~%5C%22${env:regex}%5C%22%20%26%26%20kind%3Dserver%20%26%26%20span.http.response.status_code%3D${__field.labels[\"http.response.status_code\"]}%7D%22%7D%5D%2C%22range%22%3A%7B%22from%22%3A%22${__from}%22%2C%22to%22%3A%22${__to}%22%7D%7D%7D"
+            }
+          ]
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^2..$"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^3..$"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^4..$"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^5..$"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "201"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "light-green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "204"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "semi-dark-green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "301"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "302"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "304"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "light-blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "400"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "401"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "light-orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "403"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "semi-dark-orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "404"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "500"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "502"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "503"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "light-red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "504"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "semi-dark-red"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 26,
+      "type": "timeseries",
+      "title": "Latency",
+      "description": "Duration of all Designer requests: median, 95th and 99th percentile. The buckets end at 10 s, so the percentiles cannot show more than 10 s; longer requests (clone, pull, push, deploy) are in Slowest requests. Select a series to search traces over 1 s.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "altinn-studio-metrics"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 6,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "A",
+          "expr": "histogram_quantile(0.5, sum by (le) (rate({\"http.server.request.duration_bucket\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\"}[$__rate_interval])))",
+          "legendFormat": "p50"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "B",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate({\"http.server.request.duration_bucket\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\"}[$__rate_interval])))",
+          "legendFormat": "p95"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "C",
+          "expr": "histogram_quantile(0.99, sum by (le) (rate({\"http.server.request.duration_bucket\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\"}[$__rate_interval])))",
+          "legendFormat": "p99"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "showPoints": "never"
+          },
+          "links": [
+            {
+              "title": "Slow traces (over 1 s)",
+              "url": "/explore?schemaVersion=1&orgId=1&panes=%7B%22a%22%3A%7B%22datasource%22%3A%22altinn-studio-traces%22%2C%22queries%22%3A%5B%7B%22refId%22%3A%22A%22%2C%22datasource%22%3A%7B%22type%22%3A%22tempo%22%2C%22uid%22%3A%22altinn-studio-traces%22%7D%2C%22queryType%22%3A%22traceql%22%2C%22tableType%22%3A%22traces%22%2C%22limit%22%3A20%2C%22query%22%3A%22%7Bresource.service.name%3D%5C%22studio-designer%5C%22%20%26%26%20resource.deployment.environment.name%3D~%5C%22${env:regex}%5C%22%20%26%26%20kind%3Dserver%20%26%26%20duration%20%3E%201s%7D%22%7D%5D%2C%22range%22%3A%7B%22from%22%3A%22${__from}%22%2C%22to%22%3A%22${__to}%22%7D%7D%7D"
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 27,
+      "type": "table",
+      "title": "Routes",
+      "description": "Every route over the dashboard's time range: requests, server errors (5xx) and their share, and the median and 95th percentile duration (at most 10 s, where the buckets end). (none) is requests that matched no endpoint, such as static files and unknown paths. Sorted by requests; select a column header to sort by another. Select a route to search its traces, or its server errors to search its failed traces.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "altinn-studio-metrics"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 14,
+        "w": 24,
+        "h": 10
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "A",
+          "expr": "label_replace(sum by (\"http.route\") (increase({\"http.server.request.duration_count\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\"}[$__range])), \"http.route\", \"(none)\", \"http.route\", \"\") > 0",
+          "legendFormat": "",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "B",
+          "expr": "label_replace(sum by (\"http.route\") (increase({\"http.server.request.duration_count\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\", \"http.response.status_code\"=~\"5..\"}[$__range])), \"http.route\", \"(none)\", \"http.route\", \"\") > 0",
+          "legendFormat": "",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "C",
+          "expr": "label_replace((sum by (\"http.route\") (increase({\"http.server.request.duration_count\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\", \"http.response.status_code\"=~\"5..\"}[$__range])) > 0) / sum by (\"http.route\") (increase({\"http.server.request.duration_count\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\"}[$__range])), \"http.route\", \"(none)\", \"http.route\", \"\")",
+          "legendFormat": "",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "D",
+          "expr": "label_replace(histogram_quantile(0.5, sum by (le, \"http.route\") (increase({\"http.server.request.duration_bucket\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\"}[$__range]))), \"http.route\", \"(none)\", \"http.route\", \"\")",
+          "legendFormat": "",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "E",
+          "expr": "label_replace(histogram_quantile(0.95, sum by (le, \"http.route\") (increase({\"http.server.request.duration_bucket\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\"}[$__range]))), \"http.route\", \"(none)\", \"http.route\", \"\")",
+          "legendFormat": "",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "indexByName": {
+              "http.route": 0,
+              "Value #A": 1,
+              "Value #B": 2,
+              "Value #C": 3,
+              "Value #D": 4,
+              "Value #E": 5
+            },
+            "renameByName": {
+              "http.route": "Route",
+              "Value #A": "Requests",
+              "Value #B": "Server errors",
+              "Value #C": "Error share",
+              "Value #D": "p50",
+              "Value #E": "p95"
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "noValue": "",
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": true,
+            "filterable": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Route"
+            },
+            "properties": [
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Traces for this route",
+                    "url": "/explore?schemaVersion=1&orgId=1&panes=%7B%22a%22%3A%7B%22datasource%22%3A%22altinn-studio-traces%22%2C%22queries%22%3A%5B%7B%22refId%22%3A%22A%22%2C%22datasource%22%3A%7B%22type%22%3A%22tempo%22%2C%22uid%22%3A%22altinn-studio-traces%22%7D%2C%22queryType%22%3A%22traceql%22%2C%22tableType%22%3A%22traces%22%2C%22limit%22%3A20%2C%22query%22%3A%22%7Bresource.service.name%3D%5C%22studio-designer%5C%22%20%26%26%20resource.deployment.environment.name%3D~%5C%22${env:regex}%5C%22%20%26%26%20kind%3Dserver%20%26%26%20span.http.route%3D%5C%22${__data.fields[\"Route\"]:percentencode}%5C%22%7D%22%7D%5D%2C%22range%22%3A%7B%22from%22%3A%22${__from}%22%2C%22to%22%3A%22${__to}%22%7D%7D%7D"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Server errors"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 130
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Failed traces for this route",
+                    "url": "/explore?schemaVersion=1&orgId=1&panes=%7B%22a%22%3A%7B%22datasource%22%3A%22altinn-studio-traces%22%2C%22queries%22%3A%5B%7B%22refId%22%3A%22A%22%2C%22datasource%22%3A%7B%22type%22%3A%22tempo%22%2C%22uid%22%3A%22altinn-studio-traces%22%7D%2C%22queryType%22%3A%22traceql%22%2C%22tableType%22%3A%22traces%22%2C%22limit%22%3A20%2C%22query%22%3A%22%7Bresource.service.name%3D%5C%22studio-designer%5C%22%20%26%26%20resource.deployment.environment.name%3D~%5C%22${env:regex}%5C%22%20%26%26%20kind%3Dserver%20%26%26%20status%3Derror%20%26%26%20span.http.route%3D%5C%22${__data.fields[\"Route\"]:percentencode}%5C%22%7D%22%7D%5D%2C%22range%22%3A%7B%22from%22%3A%22${__from}%22%2C%22to%22%3A%22${__to}%22%7D%7D%7D"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Requests"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 130
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Error share"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              },
+              {
+                "id": "decimals",
+                "value": 2
+              },
+              {
+                "id": "custom.width",
+                "value": 130
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^p(50|95)$"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "s"
+              },
+              {
+                "id": "decimals",
+                "value": 2
+              },
+              {
+                "id": "custom.width",
+                "value": 110
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "sortBy": [
+          {
+            "displayName": "Requests",
+            "desc": true
+          }
+        ]
+      }
+    },
+    {
+      "id": 28,
+      "type": "row",
+      "title": "Outgoing calls",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 24,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 29,
+      "type": "timeseries",
+      "title": "Outgoing calls by host",
+      "description": "HTTP calls per second from Designer by host (server.address): Gitea (altinn-repositories), Azure DevOps, the runtime environments' platform APIs and others, from the HTTP client metrics (http.client.request.duration).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "altinn-studio-metrics"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 25,
+        "w": 8,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "A",
+          "expr": "sum by (\"server.address\") (rate({\"http.client.request.duration_count\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\"}[$__rate_interval]))",
+          "legendFormat": "{{server.address}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "showPoints": "never"
           }
         },
         "overrides": []
@@ -124,6 +994,321 @@
       "options": {
         "legend": {
           "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 30,
+      "type": "timeseries",
+      "title": "Outgoing call latency (p95)",
+      "description": "95th percentile duration of Designer's outgoing HTTP calls by host. The buckets end at 10 s.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "altinn-studio-metrics"
+      },
+      "gridPos": {
+        "x": 8,
+        "y": 25,
+        "w": 8,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le, \"server.address\") (rate({\"http.client.request.duration_bucket\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\"}[$__rate_interval])))",
+          "legendFormat": "{{server.address}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 31,
+      "type": "timeseries",
+      "title": "Failed outgoing calls by host",
+      "description": "Outgoing HTTP calls per second that failed with a 5xx or without a response, by host and error.type (the status code, or the exception type, such as a timeout or a refused connection). 4xx responses are left out, as in Recent failed outgoing calls: Designer handles most of them. Select a series to search the failed calls' traces.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "altinn-studio-metrics"
+      },
+      "gridPos": {
+        "x": 16,
+        "y": 25,
+        "w": 8,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "A",
+          "expr": "sum by (\"server.address\", \"error.type\") (rate({\"http.client.request.duration_count\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\", \"error.type\"!=\"\", \"http.response.status_code\"!~\"4..\"}[$__rate_interval]))",
+          "legendFormat": "{{server.address}} {{error.type}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            }
+          },
+          "links": [
+            {
+              "title": "Failed calls to this host",
+              "url": "/explore?schemaVersion=1&orgId=1&panes=%7B%22a%22%3A%7B%22datasource%22%3A%22altinn-studio-traces%22%2C%22queries%22%3A%5B%7B%22refId%22%3A%22A%22%2C%22datasource%22%3A%7B%22type%22%3A%22tempo%22%2C%22uid%22%3A%22altinn-studio-traces%22%7D%2C%22queryType%22%3A%22traceql%22%2C%22tableType%22%3A%22traces%22%2C%22limit%22%3A20%2C%22query%22%3A%22%7Bresource.service.name%3D%5C%22studio-designer%5C%22%20%26%26%20resource.deployment.environment.name%3D~%5C%22${env:regex}%5C%22%20%26%26%20kind%3Dclient%20%26%26%20status%3Derror%20%26%26%20span.server.address%3D%5C%22${__field.labels[\"server.address\"]}%5C%22%7D%22%7D%5D%2C%22range%22%3A%7B%22from%22%3A%22${__from}%22%2C%22to%22%3A%22${__to}%22%7D%7D%7D"
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 32,
+      "type": "row",
+      "title": "SignalR",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 33,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 33,
+      "type": "timeseries",
+      "title": "Active SignalR connections",
+      "description": "Open SignalR connections to Designer's hubs (preview, sync, entity and alert updates, assistant) by transport, summed over its pods. Connections falling back from web_sockets to long_polling or server_sent_events suggest WebSockets fail on the way in.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "altinn-studio-metrics"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 34,
+        "w": 12,
+        "h": 7
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "A",
+          "expr": "sum by (\"signalr.transport\") ({\"signalr.server.active_connections\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\"})",
+          "legendFormat": "{{signalr.transport}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            }
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 34,
+      "type": "timeseries",
+      "title": "SignalR connections closed",
+      "description": "SignalR connections closed per second by how they ended (signalr.connection.status): normal_closure, timeout (the client stopped responding) or app_shutdown (a Designer pod stopped). A connection's duration is the length of a session, so it says nothing about latency and is not shown.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "altinn-studio-metrics"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 34,
+        "w": 12,
+        "h": 7
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "A",
+          "expr": "sum by (\"signalr.connection.status\") (rate({\"signalr.server.connection.duration_count\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\"}[$__rate_interval]))",
+          "legendFormat": "{{signalr.connection.status}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "timeout"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 1,
+      "type": "row",
+      "title": "Failed requests (traces)",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 41,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Failed requests (traces)",
+      "description": "Failed Designer requests per second, counted from server spans with status error (a 5xx or an unhandled exception). Tail sampling keeps every failed trace, so the count is complete; each dot is an example trace to open.",
+      "datasource": {
+        "type": "tempo",
+        "uid": "altinn-studio-traces"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 42,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "tempo",
+            "uid": "altinn-studio-traces"
+          },
+          "refId": "A",
+          "queryType": "traceql",
+          "metricsQueryType": "range",
+          "query": "{resource.service.name=\"studio-designer\" && kind=server && status=error && resource.deployment.environment.name=~\"$env\"} | rate()"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "min": 0,
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 60
+          },
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "red"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "showLegend": false,
           "displayMode": "list",
           "placement": "bottom"
         },
@@ -144,7 +1329,7 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 1,
+        "y": 42,
         "w": 12,
         "h": 8
       },
@@ -317,7 +1502,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 9,
+        "y": 50,
         "w": 24,
         "h": 10
       },
@@ -674,11 +1859,11 @@
     {
       "id": 5,
       "type": "row",
-      "title": "Slow requests (over 1 s)",
+      "title": "Slow requests over 1 s (traces)",
       "collapsed": false,
       "gridPos": {
         "x": 0,
-        "y": 19,
+        "y": 60,
         "w": 24,
         "h": 1
       },
@@ -695,7 +1880,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 20,
+        "y": 61,
         "w": 12,
         "h": 8
       },
@@ -900,7 +2085,7 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 20,
+        "y": 61,
         "w": 12,
         "h": 8
       },
@@ -1102,7 +2287,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 28,
+        "y": 69,
         "w": 24,
         "h": 10
       },
@@ -1459,11 +2644,11 @@
     {
       "id": 9,
       "type": "row",
-      "title": "Background jobs and outgoing calls",
+      "title": "Background jobs and outgoing calls (traces)",
       "collapsed": false,
       "gridPos": {
         "x": 0,
-        "y": 38,
+        "y": 79,
         "w": 24,
         "h": 1
       },
@@ -1480,7 +2665,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 39,
+        "y": 80,
         "w": 24,
         "h": 8
       },
@@ -1787,7 +2972,7 @@
     {
       "id": 11,
       "type": "table",
-      "title": "Failed outgoing calls",
+      "title": "Recent failed outgoing calls",
       "description": "Outgoing HTTP calls from Designer (to Gitea, Azure DevOps, the runtime environments and others) that failed with a 5xx or without a response (Status empty, error.type the exception type). 4xx responses are left out: the HTTP client marks them as errors, but Designer handles most of them, such as a 404 for a file missing in Gitea; one it doesn't handle fails the request, which Recent failed requests shows. URL is redacted where it carries secrets. Select a trace ID to see which request or job made the call.",
       "datasource": {
         "type": "victoriametrics-logs-datasource",
@@ -1795,7 +2980,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 47,
+        "y": 88,
         "w": 24,
         "h": 8
       },
