@@ -7,6 +7,7 @@ generatorOptions:
 resources:
   - pdf3.yaml
   - observability-overview.yaml
+  - designer.yaml
 configMapGenerator:
   - name: dashboard-studio-pdf3
     files:
@@ -14,3 +15,6 @@ configMapGenerator:
   - name: dashboard-studio-observability-overview
     files:
       - observability-overview.json
+  - name: dashboard-studio-designer
+    files:
+      - designer.json
