@@ -1,7 +1,7 @@
 {
   "uid": "altinn-studio-designer",
   "title": "Altinn Studio — Designer",
-  "description": "Altinn Studio Designer (service studio-designer) in the Studio environments. Traffic, errors and latency of its requests, its outgoing calls by host and its SignalR connections come from its HTTP and SignalR metrics (altinn-studio-metrics), with links from the panels to matching traces. Below them, for triage, lists of individual failed and slow requests, failed background jobs and failed outgoing calls, each linked to its trace, with breakdowns, from Designer's spans through altinn-studio-traces-logsql (LogsQL). Tail sampling keeps every trace with an error or over 1 s, so those lists are complete, but only 10 % of the other traces, so counts and latency of all requests come from the metrics. Datasource UIDs are pinned, matching the other Altinn Studio dashboards.",
+  "description": "Altinn Studio Designer (service studio-designer) in the Studio environments. Traffic, errors and latency of its requests, its outgoing calls by host and its SignalR connections come from its HTTP and SignalR metrics (altinn-studio-metrics), with links from the panels to matching traces. Below them, for triage, lists of individual failed and slow requests, failed background jobs and failed outgoing calls, each linked to its trace, with breakdowns, from Designer's spans through altinn-studio-traces-logsql (LogsQL). Tail sampling keeps every trace with an error or over 1 s, so those lists are complete, but only 10 % of the other traces, so counts and latency of all requests come from the metrics. Datasource UIDs are pinned, matching the other Altinn Studio dashboards. Rates use increase_pure() over $__rate_interval divided by its length rather than rate(): VictoriaMetrics' rate() takes a new series' first sample as its baseline, so a first error on a route, status or error type would never show.",
   "tags": [
     "altinn-studio",
     "designer"
@@ -100,7 +100,7 @@
             "uid": "altinn-studio-metrics"
           },
           "refId": "A",
-          "expr": "sum(rate({\"http.server.request.duration_count\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\"}[$__rate_interval]))",
+          "expr": "sum(increase_pure({\"http.server.request.duration_count\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\"}[$__rate_interval]) / ($__rate_interval_ms / 1000))",
           "legendFormat": "__auto"
         }
       ],
@@ -154,7 +154,7 @@
             "uid": "altinn-studio-metrics"
           },
           "refId": "A",
-          "expr": "(sum(rate({\"http.server.request.duration_count\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\", \"http.response.status_code\"=~\"5..\"}[$__rate_interval])) or vector(0)) / sum(rate({\"http.server.request.duration_count\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\"}[$__rate_interval]))",
+          "expr": "(sum(increase_pure({\"http.server.request.duration_count\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\", \"http.response.status_code\"=~\"5..\"}[$__rate_interval]) / ($__rate_interval_ms / 1000)) or vector(0)) / sum(increase_pure({\"http.server.request.duration_count\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\"}[$__rate_interval]) / ($__rate_interval_ms / 1000))",
           "legendFormat": "__auto"
         }
       ],
@@ -217,7 +217,7 @@
             "uid": "altinn-studio-metrics"
           },
           "refId": "A",
-          "expr": "histogram_quantile(0.95, sum by (le) (rate({\"http.server.request.duration_bucket\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\"}[$__rate_interval])))",
+          "expr": "histogram_quantile(0.95, sum by (le) (increase_pure({\"http.server.request.duration_bucket\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\"}[$__rate_interval])))",
           "legendFormat": "__auto"
         }
       ],
@@ -347,7 +347,7 @@
             "uid": "altinn-studio-metrics"
           },
           "refId": "A",
-          "expr": "sum by (class) (label_replace(sum by (\"http.response.status_code\") (rate({\"http.server.request.duration_count\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\"}[$__rate_interval])), \"class\", \"$1\", \"http.response.status_code\", \"([1-5])[0-9][0-9]\"))",
+          "expr": "sum by (class) (label_replace(sum by (\"http.response.status_code\") (increase_pure({\"http.server.request.duration_count\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\"}[$__rate_interval]) / ($__rate_interval_ms / 1000)), \"class\", \"$1\", \"http.response.status_code\", \"([1-5])[0-9][0-9]\"))",
           "legendFormat": "{{class}}xx"
         }
       ],
@@ -479,7 +479,7 @@
             "uid": "altinn-studio-metrics"
           },
           "refId": "A",
-          "expr": "sum by (\"http.response.status_code\") (rate({\"http.server.request.duration_count\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\", \"http.response.status_code\"=~\"[45]..\"}[$__rate_interval]))",
+          "expr": "sum by (\"http.response.status_code\") (increase_pure({\"http.server.request.duration_count\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\", \"http.response.status_code\"=~\"[45]..\"}[$__rate_interval]) / ($__rate_interval_ms / 1000))",
           "legendFormat": "{{http.response.status_code}}"
         }
       ],
@@ -806,7 +806,7 @@
             "uid": "altinn-studio-metrics"
           },
           "refId": "A",
-          "expr": "histogram_quantile(0.5, sum by (le) (rate({\"http.server.request.duration_bucket\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\"}[$__rate_interval])))",
+          "expr": "histogram_quantile(0.5, sum by (le) (increase_pure({\"http.server.request.duration_bucket\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\"}[$__rate_interval])))",
           "legendFormat": "p50"
         },
         {
@@ -815,7 +815,7 @@
             "uid": "altinn-studio-metrics"
           },
           "refId": "B",
-          "expr": "histogram_quantile(0.95, sum by (le) (rate({\"http.server.request.duration_bucket\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\"}[$__rate_interval])))",
+          "expr": "histogram_quantile(0.95, sum by (le) (increase_pure({\"http.server.request.duration_bucket\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\"}[$__rate_interval])))",
           "legendFormat": "p95"
         },
         {
@@ -824,7 +824,7 @@
             "uid": "altinn-studio-metrics"
           },
           "refId": "C",
-          "expr": "histogram_quantile(0.99, sum by (le) (rate({\"http.server.request.duration_bucket\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\"}[$__rate_interval])))",
+          "expr": "histogram_quantile(0.99, sum by (le) (increase_pure({\"http.server.request.duration_bucket\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\"}[$__rate_interval])))",
           "legendFormat": "p99"
         }
       ],
@@ -880,7 +880,7 @@
             "uid": "altinn-studio-metrics"
           },
           "refId": "A",
-          "expr": "label_replace(sum by (\"http.route\") (increase({\"http.server.request.duration_count\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\"}[$__range])), \"http.route\", \"(none)\", \"http.route\", \"\") > 0",
+          "expr": "label_replace(sum by (\"http.route\") (increase_pure({\"http.server.request.duration_count\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\"}[$__range])), \"http.route\", \"(none)\", \"http.route\", \"\") > 0",
           "legendFormat": "",
           "instant": true,
           "range": false,
@@ -892,7 +892,7 @@
             "uid": "altinn-studio-metrics"
           },
           "refId": "B",
-          "expr": "label_replace(sum by (\"http.route\") (increase({\"http.server.request.duration_count\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\", \"http.response.status_code\"=~\"5..\"}[$__range])), \"http.route\", \"(none)\", \"http.route\", \"\") > 0",
+          "expr": "label_replace(sum by (\"http.route\") (increase_pure({\"http.server.request.duration_count\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\", \"http.response.status_code\"=~\"5..\"}[$__range])), \"http.route\", \"(none)\", \"http.route\", \"\") > 0",
           "legendFormat": "",
           "instant": true,
           "range": false,
@@ -904,7 +904,7 @@
             "uid": "altinn-studio-metrics"
           },
           "refId": "C",
-          "expr": "label_replace((sum by (\"http.route\") (increase({\"http.server.request.duration_count\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\", \"http.response.status_code\"=~\"5..\"}[$__range])) > 0) / sum by (\"http.route\") (increase({\"http.server.request.duration_count\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\"}[$__range])), \"http.route\", \"(none)\", \"http.route\", \"\")",
+          "expr": "label_replace((sum by (\"http.route\") (increase_pure({\"http.server.request.duration_count\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\", \"http.response.status_code\"=~\"5..\"}[$__range])) > 0) / sum by (\"http.route\") (increase_pure({\"http.server.request.duration_count\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\"}[$__range])), \"http.route\", \"(none)\", \"http.route\", \"\")",
           "legendFormat": "",
           "instant": true,
           "range": false,
@@ -916,7 +916,7 @@
             "uid": "altinn-studio-metrics"
           },
           "refId": "D",
-          "expr": "label_replace(histogram_quantile(0.5, sum by (le, \"http.route\") (increase({\"http.server.request.duration_bucket\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\"}[$__range]))), \"http.route\", \"(none)\", \"http.route\", \"\")",
+          "expr": "label_replace(histogram_quantile(0.5, sum by (le, \"http.route\") (increase_pure({\"http.server.request.duration_bucket\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\"}[$__range]))), \"http.route\", \"(none)\", \"http.route\", \"\")",
           "legendFormat": "",
           "instant": true,
           "range": false,
@@ -928,7 +928,7 @@
             "uid": "altinn-studio-metrics"
           },
           "refId": "E",
-          "expr": "label_replace(histogram_quantile(0.95, sum by (le, \"http.route\") (increase({\"http.server.request.duration_bucket\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\"}[$__range]))), \"http.route\", \"(none)\", \"http.route\", \"\")",
+          "expr": "label_replace(histogram_quantile(0.95, sum by (le, \"http.route\") (increase_pure({\"http.server.request.duration_bucket\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\"}[$__range]))), \"http.route\", \"(none)\", \"http.route\", \"\")",
           "legendFormat": "",
           "instant": true,
           "range": false,
@@ -1118,7 +1118,7 @@
             "uid": "altinn-studio-metrics"
           },
           "refId": "A",
-          "expr": "sum by (\"server.address\") (rate({\"http.client.request.duration_count\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\"}[$__rate_interval]))",
+          "expr": "sum by (\"server.address\") (increase_pure({\"http.client.request.duration_count\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\"}[$__rate_interval]) / ($__rate_interval_ms / 1000))",
           "legendFormat": "{{server.address}}"
         }
       ],
@@ -1168,7 +1168,7 @@
             "uid": "altinn-studio-metrics"
           },
           "refId": "A",
-          "expr": "histogram_quantile(0.95, sum by (le, \"server.address\") (rate({\"http.client.request.duration_bucket\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\"}[$__rate_interval])))",
+          "expr": "histogram_quantile(0.95, sum by (le, \"server.address\") (increase_pure({\"http.client.request.duration_bucket\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\"}[$__rate_interval])))",
           "legendFormat": "{{server.address}}"
         }
       ],
@@ -1218,7 +1218,7 @@
             "uid": "altinn-studio-metrics"
           },
           "refId": "A",
-          "expr": "sum by (\"server.address\", \"error.type\") (rate({\"http.client.request.duration_count\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\", \"error.type\"!=\"\", \"http.response.status_code\"!~\"4..\"}[$__rate_interval]))",
+          "expr": "sum by (\"server.address\", \"error.type\") (increase_pure({\"http.client.request.duration_count\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\", \"error.type\"!=\"\", \"http.response.status_code\"!~\"4..\"}[$__rate_interval]) / ($__rate_interval_ms / 1000))",
           "legendFormat": "{{server.address}} {{error.type}}"
         }
       ],
@@ -1338,7 +1338,7 @@
             "uid": "altinn-studio-metrics"
           },
           "refId": "A",
-          "expr": "sum by (\"signalr.connection.status\") (rate({\"signalr.server.connection.duration_count\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\"}[$__rate_interval]))",
+          "expr": "sum by (\"signalr.connection.status\") (increase_pure({\"signalr.server.connection.duration_count\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\"}[$__rate_interval]) / ($__rate_interval_ms / 1000))",
           "legendFormat": "{{signalr.connection.status}}"
         }
       ],
