@@ -1,0 +1,93 @@
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaAlertRuleGroup
+metadata:
+  name: studio-observability
+  namespace: grafana
+spec:
+  name: Observability
+  folderRef: external-grafana-studio-observability
+  instanceSelector:
+    matchLabels:
+      dashboards: external-grafana
+  interval: 1m
+  rules:
+    - uid: studio-obs-agent-queue-drops-prod
+      title: Observability agent queue dropping data
+      condition: C
+      # A drop is already data loss from this copy, so do not add a pending period.
+      for: 0s
+      noDataState: NoData
+      execErrState: Error
+      labels:
+        AlertType: Observability
+        Env: Prod
+        Product: Studio
+        Severity: Critical
+      annotations:
+        summary: 'Observability {{ $labels.job }} queue dropping data for storage copy {{ $labels.copy }}'
+        description: >-
+          The agent discarded buffered data for copy {{ $labels.copy }} in the last 5 minutes
+          because its persistent queue filled. The other copy may still contain this data.
+          Check destination availability, storage disk space and agent queue space.
+        resolution: >-
+          No new queue drops were detected in the last 5 minutes.
+          Previously discarded data has not been recovered.
+        __dashboardUid__: altinn-studio-observability
+        __panelId__: "10"
+      notificationSettings:
+        receiver: Studio Slack Critical
+      data:
+        - refId: A
+          relativeTimeRange:
+            from: 300
+            to: 0
+          datasourceUid: altinn-studio-metrics
+          model:
+            datasource:
+              type: prometheus
+              uid: altinn-studio-metrics
+            editorMode: code
+            # Match panel 10 with a fixed window. Apply increase before summing replicas
+            # so their counter resets are handled independently. URL 1 is a, URL 2 is b.
+            # Do not replace missing data with zero: it must notify as a monitoring failure.
+            expr: >-
+              sum by (job, copy) (
+                label_replace(
+                  label_replace(
+                    increase(vm_persistentqueue_blocks_dropped_total{job=~"vmagent|vlagent|vtagent"}[5m]),
+                    "copy", "a", "path", ".*/1_[^/]*"
+                  ),
+                  "copy", "b", "path", ".*/2_[^/]*"
+                )
+              )
+            instant: true
+            range: false
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: A
+        - refId: C
+          relativeTimeRange:
+            from: 300
+            to: 0
+          datasourceUid: __expr__
+          model:
+            conditions:
+              - evaluator:
+                  params: [0]
+                  type: gt
+                operator:
+                  type: and
+                query:
+                  params: [C]
+                reducer:
+                  params: []
+                  type: last
+                type: query
+            datasource:
+              type: __expr__
+              uid: __expr__
+            expression: A
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: C
+            type: threshold

@@ -1,0 +1,35 @@
+# The platform Slack bot posts to #team-altinnstudio-alerts-critical.
+# The operator injects its webhook from the shared Secret; the URL never belongs in Git.
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaContactPoint
+metadata:
+  name: studio-slack-critical
+  namespace: grafana
+spec:
+  name: Studio Slack Critical
+  instanceSelector:
+    matchLabels:
+      dashboards: external-grafana
+  resyncPeriod: 10m0s
+  receivers:
+    - type: slack
+      disableResolveMessage: false
+      settings:
+        title: 'Studio critical alert — {{ .Status }}{{ with .CommonLabels.Env }} — {{ . }}{{ end }}'
+        text: |
+          {{ range .Alerts }}{{ .Labels.alertname }} — {{ .Status }}
+          {{ if or (eq .Labels.alertname "DatasourceNoData") (eq .Labels.alertname "DatasourceError") }}Monitoring failure for {{ .Labels.rulename }} (datasource {{ .Labels.datasource_uid }}).
+          {{ else }}{{ .Annotations.summary }}
+          {{ if eq .Status "resolved" }}{{ with .Annotations.grafana_state_reason }}Grafana resolved this alert with reason {{ . }}. Recovery is not confirmed.
+          {{ else }}{{ with .Annotations.resolution }}{{ . }}{{ else }}The alert condition cleared.{{ end }}
+          {{ end }}
+          {{ else }}{{ .Annotations.description }}
+          {{ end }}{{ end }}{{ with .PanelURL }}<{{ . }}|Open Observability panel>{{ end }}
+          {{ with .GeneratorURL }}<{{ . }}|Open alert rule>{{ end }}
+          {{ end }}
+      valuesFrom:
+        - targetPath: url
+          valueFrom:
+            secretKeyRef:
+              name: grafana-slack-webhooks
+              key: altinnstudio-alerts-critical
