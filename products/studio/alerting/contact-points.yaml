@@ -16,6 +16,7 @@ spec:
       disableResolveMessage: false
       settings:
         title: 'Studio critical alert — {{ .Status }}{{ with .CommonLabels.Env }} — {{ . }}{{ end }}'
+        # Predefined tests have no rule UID and supply dummy link targets.
         text: |
           {{ range .Alerts }}{{ .Labels.alertname }} — {{ .Status }}
           {{ if or (eq .Labels.alertname "DatasourceNoData") (eq .Labels.alertname "DatasourceError") }}Monitoring failure for {{ .Labels.rulename }} (datasource {{ .Labels.datasource_uid }}).
@@ -24,8 +25,9 @@ spec:
           {{ else }}{{ with .Annotations.resolution }}{{ . }}{{ else }}The alert condition cleared.{{ end }}
           {{ end }}
           {{ else }}{{ .Annotations.description }}
-          {{ end }}{{ end }}{{ with .PanelURL }}<{{ . }}|Open Observability panel>{{ end }}
+          {{ end }}{{ end }}{{ if .RuleUID }}{{ with .PanelURL }}<{{ . }}|Open Observability panel>{{ end }}
           {{ with .GeneratorURL }}<{{ . }}|Open alert rule>{{ end }}
+          {{ end }}
           {{ end }}
       valuesFrom:
         - targetPath: url
