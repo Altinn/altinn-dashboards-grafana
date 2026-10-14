@@ -6,13 +6,16 @@ exclusions:
       cannot bind to another datasource; see CLAUDE.md. The dashboard also mixes
       the two in one view, which a single template variable cannot express. The
       observability dashboard reads only the Victoria stack's own metrics, which
-      only altinn-studio-metrics holds.
+      only altinn-studio-metrics holds. The Designer dashboard reads Designer's spans
+      through altinn-studio-traces-logsql and links them to altinn-studio-traces.
     entries:
       - dashboard: "Altinn Studio — PDF3"
       - dashboard: "Altinn Studio — Observability"
+      - dashboard: "Altinn Studio — Designer"
   template-datasource-rule:
     reason: >-
       No datasource template variable by design; see panel-datasource-rule.
     entries:
       - dashboard: "Altinn Studio — PDF3"
       - dashboard: "Altinn Studio — Observability"
+      - dashboard: "Altinn Studio — Designer"
