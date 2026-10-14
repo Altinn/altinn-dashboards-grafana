@@ -446,14 +446,7 @@
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "reqps",
-          "custom": {
-            "stacking": {
-              "mode": "normal",
-              "group": "A"
-            },
-            "fillOpacity": 30
-          }
+          "unit": "reqps"
         },
         "overrides": [
           {
@@ -523,6 +516,10 @@
           "displayMode": "list",
           "placement": "bottom",
           "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
         }
       }
     },
@@ -719,12 +716,6 @@
       "fieldConfig": {
         "defaults": {
           "unit": "ops",
-          "custom": {
-            "stacking": {
-              "mode": "normal"
-            },
-            "fillOpacity": 30
-          },
           "links": [
             {
               "title": "Worker traces with this status",
@@ -804,7 +795,12 @@
           }
         ]
       },
-      "options": {}
+      "options": {
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
     },
     {
       "id": 11,
