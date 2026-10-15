@@ -5,7 +5,7 @@ metadata:
   namespace: grafana
 spec:
   name: Observability
-  folderRef: external-grafana-studio-observability
+  folderRef: external-grafana-studio
   instanceSelector:
     matchLabels:
       dashboards: external-grafana
