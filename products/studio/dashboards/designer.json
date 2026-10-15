@@ -8,7 +8,7 @@
   ],
   "editable": false,
   "schemaVersion": 42,
-  "refresh": "",
+  "refresh": "5m",
   "time": {
     "from": "now-6h",
     "to": "now"
@@ -23,17 +23,15 @@
         "description": "Studio environment Designer runs in (deployment.environment.name).",
         "type": "query",
         "datasource": {
-          "type": "victoriametrics-logs-datasource",
-          "uid": "altinn-studio-traces-logsql"
+          "type": "prometheus",
+          "uid": "altinn-studio-metrics"
         },
         "query": {
-          "refId": "VictoriaLogsVariableQueryEditor-VariableQuery",
-          "type": "fieldValue",
-          "field": "resource_attr:deployment.environment.name",
-          "query": "{resource_attr:service.name=\"studio-designer\"}",
-          "limit": 20
+          "qryType": 1,
+          "query": "label_values({\"service.name\"=\"studio-designer\"}, \"deployment.environment.name\")",
+          "refId": "env"
         },
-        "definition": "{resource_attr:service.name=\"studio-designer\"} | field_values resource_attr:deployment.environment.name",
+        "definition": "label_values({\"service.name\"=\"studio-designer\"}, \"deployment.environment.name\")",
         "refresh": 2,
         "includeAll": true,
         "multi": true,
@@ -1386,2034 +1384,2059 @@
       "id": 1,
       "type": "row",
       "title": "Failed requests (traces)",
-      "collapsed": false,
+      "collapsed": true,
       "gridPos": {
         "x": 0,
         "y": 41,
         "w": 24,
         "h": 1
       },
-      "panels": []
-    },
-    {
-      "id": 2,
-      "type": "timeseries",
-      "title": "Failed requests (traces)",
-      "description": "Failed Designer requests per second, counted from server spans with status error (a 5xx or an unhandled exception). Tail sampling keeps every failed trace, so the count is complete; each dot is an example trace to open.",
-      "datasource": {
-        "type": "tempo",
-        "uid": "altinn-studio-traces"
-      },
-      "gridPos": {
-        "x": 0,
-        "y": 42,
-        "w": 12,
-        "h": 8
-      },
-      "targets": [
+      "panels": [
         {
+          "id": 2,
+          "type": "timeseries",
+          "title": "Failed requests (traces)",
+          "description": "Failed Designer requests per second, counted from server spans with status error (a 5xx or an unhandled exception). Tail sampling keeps every failed trace, so the count is complete; each dot is an example trace to open.",
           "datasource": {
             "type": "tempo",
             "uid": "altinn-studio-traces"
           },
-          "refId": "A",
-          "queryType": "traceql",
-          "metricsQueryType": "range",
-          "query": "{resource.service.name=\"studio-designer\" && kind=server && status=error && resource.deployment.environment.name=~\"$env\"} | rate()"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "reqps",
-          "min": 0,
-          "custom": {
-            "drawStyle": "bars",
-            "fillOpacity": 60
+          "gridPos": {
+            "x": 0,
+            "y": 42,
+            "w": 12,
+            "h": 8
           },
-          "color": {
-            "mode": "fixed",
-            "fixedColor": "red"
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "showLegend": false,
-          "displayMode": "list",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      }
-    },
-    {
-      "id": 3,
-      "type": "table",
-      "title": "Failures by request and error type",
-      "description": "Failed Designer requests over the time range, by request (method and route) and error.type: the exception type for an unhandled exception, or the status code for a 5xx response without one. Complete, as tail sampling keeps every trace with an error.",
-      "datasource": {
-        "type": "victoriametrics-logs-datasource",
-        "uid": "altinn-studio-traces-logsql"
-      },
-      "gridPos": {
-        "x": 12,
-        "y": 42,
-        "w": 12,
-        "h": 8
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "victoriametrics-logs-datasource",
-            "uid": "altinn-studio-traces-logsql"
-          },
-          "refId": "A",
-          "queryType": "stats",
-          "expr": "{resource_attr:service.name=\"studio-designer\"} \"resource_attr:deployment.environment.name\":$env kind:2 status_code:2 | stats by (name, \"span_attr:error.type\") count() failures, count_uniq(\"span_attr:enduser.id\") users"
-        }
-      ],
-      "transformations": [
-        {
-          "id": "labelsToFields",
-          "options": {
-            "mode": "columns",
-            "valueLabel": "__name__"
-          }
-        },
-        {
-          "id": "merge",
-          "options": {}
-        },
-        {
-          "id": "organize",
-          "options": {
-            "excludeByName": {
-              "Time": true
-            },
-            "indexByName": {
-              "name": 0,
-              "span_attr:error.type": 1,
-              "failures": 2,
-              "users": 3
-            },
-            "renameByName": {},
-            "includeByName": {}
-          }
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "none",
-          "decimals": 0,
-          "custom": {
-            "align": "auto",
-            "cellOptions": {
-              "type": "auto"
-            },
-            "inspect": true
-          },
-          "noValue": ""
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "failures"
-            },
-            "properties": [
-              {
-                "id": "custom.width",
-                "value": 130
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "users"
-            },
-            "properties": [
-              {
-                "id": "custom.width",
-                "value": 130
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "span_attr:error.type"
-            },
-            "properties": [
-              {
-                "id": "custom.width",
-                "value": 230
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "name"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Request"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "span_attr:error.type"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Error type"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "failures"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Failures"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "users"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Users"
-              }
-            ]
-          }
-        ]
-      },
-      "options": {
-        "showHeader": true,
-        "cellHeight": "sm",
-        "footer": {
-          "show": false,
-          "reducer": [
-            "sum"
+          "targets": [
+            {
+              "datasource": {
+                "type": "tempo",
+                "uid": "altinn-studio-traces"
+              },
+              "refId": "A",
+              "queryType": "traceql",
+              "metricsQueryType": "range",
+              "query": "{resource.service.name=\"studio-designer\" && kind=server && status=error && resource.deployment.environment.name=~\"$env\"} | rate()"
+            }
           ],
-          "countRows": false
-        },
-        "sortBy": [
-          {
-            "displayName": "Failures",
-            "desc": true
+          "fieldConfig": {
+            "defaults": {
+              "unit": "reqps",
+              "min": 0,
+              "custom": {
+                "drawStyle": "bars",
+                "fillOpacity": 60
+              },
+              "color": {
+                "mode": "fixed",
+                "fixedColor": "red"
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "showLegend": false,
+              "displayMode": "list",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
           }
-        ]
-      }
-    },
-    {
-      "id": 4,
-      "type": "table",
-      "title": "Recent failed requests",
-      "description": "The latest 200 failed Designer requests: server spans with status error, which ASP.NET Core sets on a 5xx response or an unhandled exception. 4xx responses are not errors. Error type is error.type; Exception message is the first exception recorded on the span. Service owner, app and user are Designer's own attributes on the request span, set where the route or the login has them. Select a trace ID to open the trace.",
-      "datasource": {
-        "type": "victoriametrics-logs-datasource",
-        "uid": "altinn-studio-traces-logsql"
-      },
-      "gridPos": {
-        "x": 0,
-        "y": 50,
-        "w": 24,
-        "h": 10
-      },
-      "targets": [
+        },
         {
+          "id": 3,
+          "type": "table",
+          "title": "Failures by request and error type",
+          "description": "Failed Designer requests over the time range, by request (method and route) and error.type: the exception type for an unhandled exception, or the status code for a 5xx response without one. Complete, as tail sampling keeps every trace with an error.",
           "datasource": {
             "type": "victoriametrics-logs-datasource",
             "uid": "altinn-studio-traces-logsql"
           },
-          "refId": "A",
-          "queryType": "instant",
-          "expr": "{resource_attr:service.name=\"studio-designer\"} \"resource_attr:deployment.environment.name\":$env kind:2 status_code:2 | sort by (_time desc) limit 200 | fields _time, name, \"span_attr:http.response.status_code\", \"span_attr:error.type\", \"event:event_attr:exception.message:0\", \"span_attr:altinn.service_owner\", \"span_attr:altinn.app\", \"span_attr:enduser.id\", duration, trace_id | rename trace_id as trace",
-          "maxLines": 200
-        }
-      ],
-      "transformations": [
-        {
-          "id": "extractFields",
-          "options": {
-            "source": "labels",
-            "format": "json",
-            "replace": false,
-            "keepTime": false
-          }
-        },
-        {
-          "id": "convertFieldType",
-          "options": {
-            "conversions": [
-              {
-                "targetField": "duration",
-                "destinationType": "number"
-              }
-            ],
-            "fields": {}
-          }
-        },
-        {
-          "id": "organize",
-          "options": {
-            "excludeByName": {
-              "Line": true,
-              "id": true,
-              "labels": true,
-              "streams": true,
-              "streamId": true,
-              "detected_level": true,
-              "trace_id": true
-            },
-            "indexByName": {
-              "Time": 0,
-              "name": 1,
-              "span_attr:http.response.status_code": 2,
-              "span_attr:error.type": 3,
-              "event:event_attr:exception.message:0": 4,
-              "span_attr:altinn.service_owner": 5,
-              "span_attr:altinn.app": 6,
-              "span_attr:enduser.id": 7,
-              "duration": 8,
-              "trace": 9
-            },
-            "renameByName": {},
-            "includeByName": {}
-          }
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "custom": {
-            "align": "auto",
-            "cellOptions": {
-              "type": "auto"
-            },
-            "inspect": true,
-            "filterable": true
+          "gridPos": {
+            "x": 12,
+            "y": 42,
+            "w": 12,
+            "h": 8
           },
-          "displayName": "",
-          "noValue": ""
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "duration"
-            },
-            "properties": [
-              {
-                "id": "unit",
-                "value": "ns"
+          "targets": [
+            {
+              "datasource": {
+                "type": "victoriametrics-logs-datasource",
+                "uid": "altinn-studio-traces-logsql"
               },
-              {
-                "id": "decimals",
-                "value": 1
-              },
-              {
-                "id": "custom.width",
-                "value": 100
+              "refId": "A",
+              "queryType": "stats",
+              "expr": "{resource_attr:service.name=\"studio-designer\"} \"resource_attr:deployment.environment.name\":$env kind:2 status_code:2 | stats by (name, \"span_attr:error.type\") count() failures, count_uniq(\"span_attr:enduser.id\") users"
+            }
+          ],
+          "transformations": [
+            {
+              "id": "labelsToFields",
+              "options": {
+                "mode": "columns",
+                "valueLabel": "__name__"
               }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "trace"
             },
-            "properties": [
+            {
+              "id": "merge",
+              "options": {}
+            },
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": {
+                  "Time": true
+                },
+                "indexByName": {
+                  "name": 0,
+                  "span_attr:error.type": 1,
+                  "failures": 2,
+                  "users": 3
+                },
+                "renameByName": {},
+                "includeByName": {}
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "none",
+              "decimals": 0,
+              "custom": {
+                "align": "auto",
+                "cellOptions": {
+                  "type": "auto"
+                },
+                "inspect": true
+              },
+              "noValue": ""
+            },
+            "overrides": [
               {
-                "id": "links",
-                "value": [
+                "matcher": {
+                  "id": "byName",
+                  "options": "failures"
+                },
+                "properties": [
                   {
-                    "title": "View trace",
-                    "url": "",
-                    "internal": {
-                      "datasourceUid": "altinn-studio-traces",
-                      "datasourceName": "altinn-studio-traces",
-                      "query": {
-                        "queryType": "traceql",
-                        "query": "${__value.raw}"
-                      }
-                    }
+                    "id": "custom.width",
+                    "value": 130
                   }
                 ]
               },
               {
-                "id": "custom.width",
-                "value": 110
+                "matcher": {
+                  "id": "byName",
+                  "options": "users"
+                },
+                "properties": [
+                  {
+                    "id": "custom.width",
+                    "value": 130
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "span_attr:error.type"
+                },
+                "properties": [
+                  {
+                    "id": "custom.width",
+                    "value": 230
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "name"
+                },
+                "properties": [
+                  {
+                    "id": "displayName",
+                    "value": "Request"
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "span_attr:error.type"
+                },
+                "properties": [
+                  {
+                    "id": "displayName",
+                    "value": "Error type"
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "failures"
+                },
+                "properties": [
+                  {
+                    "id": "displayName",
+                    "value": "Failures"
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "users"
+                },
+                "properties": [
+                  {
+                    "id": "displayName",
+                    "value": "Users"
+                  }
+                ]
               }
             ]
           },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Time"
+          "options": {
+            "showHeader": true,
+            "cellHeight": "sm",
+            "footer": {
+              "show": false,
+              "reducer": [
+                "sum"
+              ],
+              "countRows": false
             },
-            "properties": [
+            "sortBy": [
               {
-                "id": "custom.width",
-                "value": 155
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "name"
-            },
-            "properties": [
-              {
-                "id": "custom.width",
-                "value": 330
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "span_attr:http.response.status_code"
-            },
-            "properties": [
-              {
-                "id": "custom.width",
-                "value": 60
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "span_attr:error.type"
-            },
-            "properties": [
-              {
-                "id": "custom.width",
-                "value": 230
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "span_attr:altinn.service_owner"
-            },
-            "properties": [
-              {
-                "id": "custom.width",
-                "value": 120
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "span_attr:altinn.app"
-            },
-            "properties": [
-              {
-                "id": "custom.width",
-                "value": 150
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "span_attr:enduser.id"
-            },
-            "properties": [
-              {
-                "id": "custom.width",
-                "value": 120
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Time"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Time"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "name"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Request"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "span_attr:http.response.status_code"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Status"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "span_attr:error.type"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Error type"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "event:event_attr:exception.message:0"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Exception message"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "span_attr:altinn.service_owner"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Service owner"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "span_attr:altinn.app"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "App"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "span_attr:enduser.id"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "User"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "duration"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Duration"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "trace"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Trace"
+                "displayName": "Failures",
+                "desc": true
               }
             ]
           }
-        ]
-      },
-      "options": {
-        "showHeader": true,
-        "cellHeight": "sm",
-        "footer": {
-          "show": false,
-          "reducer": [
-            "count"
-          ],
-          "countRows": false
         },
-        "sortBy": [
-          {
-            "displayName": "Time",
-            "desc": true
+        {
+          "id": 4,
+          "type": "table",
+          "title": "Recent failed requests",
+          "description": "The latest 200 failed Designer requests: server spans with status error, which ASP.NET Core sets on a 5xx response or an unhandled exception. 4xx responses are not errors. Error type is error.type; Exception message is the first exception recorded on the span. Service owner, app and user are Designer's own attributes on the request span, set where the route or the login has them. Select a trace ID to open the trace.",
+          "datasource": {
+            "type": "victoriametrics-logs-datasource",
+            "uid": "altinn-studio-traces-logsql"
+          },
+          "gridPos": {
+            "x": 0,
+            "y": 50,
+            "w": 24,
+            "h": 10
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "victoriametrics-logs-datasource",
+                "uid": "altinn-studio-traces-logsql"
+              },
+              "refId": "A",
+              "queryType": "instant",
+              "expr": "{resource_attr:service.name=\"studio-designer\"} \"resource_attr:deployment.environment.name\":$env kind:2 status_code:2 | sort by (_time desc) limit 200 | fields _time, name, \"span_attr:http.response.status_code\", \"span_attr:error.type\", \"event:event_attr:exception.message:0\", \"span_attr:altinn.service_owner\", \"span_attr:altinn.app\", \"span_attr:enduser.id\", duration, trace_id | rename trace_id as trace",
+              "maxLines": 200
+            }
+          ],
+          "transformations": [
+            {
+              "id": "extractFields",
+              "options": {
+                "source": "labels",
+                "format": "json",
+                "replace": false,
+                "keepTime": false
+              }
+            },
+            {
+              "id": "convertFieldType",
+              "options": {
+                "conversions": [
+                  {
+                    "targetField": "duration",
+                    "destinationType": "number"
+                  }
+                ],
+                "fields": {}
+              }
+            },
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": {
+                  "Line": true,
+                  "id": true,
+                  "labels": true,
+                  "streams": true,
+                  "streamId": true,
+                  "detected_level": true,
+                  "trace_id": true
+                },
+                "indexByName": {
+                  "Time": 0,
+                  "name": 1,
+                  "span_attr:http.response.status_code": 2,
+                  "span_attr:error.type": 3,
+                  "event:event_attr:exception.message:0": 4,
+                  "span_attr:altinn.service_owner": 5,
+                  "span_attr:altinn.app": 6,
+                  "span_attr:enduser.id": 7,
+                  "duration": 8,
+                  "trace": 9
+                },
+                "renameByName": {},
+                "includeByName": {}
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "align": "auto",
+                "cellOptions": {
+                  "type": "auto"
+                },
+                "inspect": true,
+                "filterable": true
+              },
+              "displayName": "",
+              "noValue": ""
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "duration"
+                },
+                "properties": [
+                  {
+                    "id": "unit",
+                    "value": "ns"
+                  },
+                  {
+                    "id": "decimals",
+                    "value": 1
+                  },
+                  {
+                    "id": "custom.width",
+                    "value": 100
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "trace"
+                },
+                "properties": [
+                  {
+                    "id": "links",
+                    "value": [
+                      {
+                        "title": "View trace",
+                        "url": "",
+                        "internal": {
+                          "datasourceUid": "altinn-studio-traces",
+                          "datasourceName": "altinn-studio-traces",
+                          "query": {
+                            "queryType": "traceql",
+                            "query": "${__value.raw}"
+                          }
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "id": "custom.width",
+                    "value": 110
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Time"
+                },
+                "properties": [
+                  {
+                    "id": "custom.width",
+                    "value": 155
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "name"
+                },
+                "properties": [
+                  {
+                    "id": "custom.width",
+                    "value": 330
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "span_attr:http.response.status_code"
+                },
+                "properties": [
+                  {
+                    "id": "custom.width",
+                    "value": 60
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "span_attr:error.type"
+                },
+                "properties": [
+                  {
+                    "id": "custom.width",
+                    "value": 230
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "span_attr:altinn.service_owner"
+                },
+                "properties": [
+                  {
+                    "id": "custom.width",
+                    "value": 120
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "span_attr:altinn.app"
+                },
+                "properties": [
+                  {
+                    "id": "custom.width",
+                    "value": 150
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "span_attr:enduser.id"
+                },
+                "properties": [
+                  {
+                    "id": "custom.width",
+                    "value": 120
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Time"
+                },
+                "properties": [
+                  {
+                    "id": "displayName",
+                    "value": "Time"
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "name"
+                },
+                "properties": [
+                  {
+                    "id": "displayName",
+                    "value": "Request"
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "span_attr:http.response.status_code"
+                },
+                "properties": [
+                  {
+                    "id": "displayName",
+                    "value": "Status"
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "span_attr:error.type"
+                },
+                "properties": [
+                  {
+                    "id": "displayName",
+                    "value": "Error type"
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "event:event_attr:exception.message:0"
+                },
+                "properties": [
+                  {
+                    "id": "displayName",
+                    "value": "Exception message"
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "span_attr:altinn.service_owner"
+                },
+                "properties": [
+                  {
+                    "id": "displayName",
+                    "value": "Service owner"
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "span_attr:altinn.app"
+                },
+                "properties": [
+                  {
+                    "id": "displayName",
+                    "value": "App"
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "span_attr:enduser.id"
+                },
+                "properties": [
+                  {
+                    "id": "displayName",
+                    "value": "User"
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "duration"
+                },
+                "properties": [
+                  {
+                    "id": "displayName",
+                    "value": "Duration"
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "trace"
+                },
+                "properties": [
+                  {
+                    "id": "displayName",
+                    "value": "Trace"
+                  }
+                ]
+              }
+            ]
+          },
+          "options": {
+            "showHeader": true,
+            "cellHeight": "sm",
+            "footer": {
+              "show": false,
+              "reducer": [
+                "count"
+              ],
+              "countRows": false
+            },
+            "sortBy": [
+              {
+                "displayName": "Time",
+                "desc": true
+              }
+            ]
           }
-        ]
-      }
+        }
+      ]
     },
     {
       "id": 5,
       "type": "row",
       "title": "Slow requests over 1 s (traces)",
-      "collapsed": false,
+      "collapsed": true,
       "gridPos": {
         "x": 0,
-        "y": 60,
+        "y": 42,
         "w": 24,
         "h": 1
       },
-      "panels": []
-    },
-    {
-      "id": 6,
-      "type": "table",
-      "title": "Slow requests by request",
-      "description": "Designer requests that took more than 1 s, by request (method and route): how many, and the median and slowest. Tail sampling keeps every trace over 1 s, so these are complete; latency of all requests is in the HTTP server metrics.",
-      "datasource": {
-        "type": "victoriametrics-logs-datasource",
-        "uid": "altinn-studio-traces-logsql"
-      },
-      "gridPos": {
-        "x": 0,
-        "y": 61,
-        "w": 12,
-        "h": 8
-      },
-      "targets": [
+      "panels": [
         {
+          "id": 6,
+          "type": "table",
+          "title": "Slow requests by request",
+          "description": "Designer requests that took more than 1 s, by request (method and route): how many, and the median and slowest. Tail sampling keeps every trace over 1 s, so these are complete; latency of all requests is in the HTTP server metrics.",
           "datasource": {
             "type": "victoriametrics-logs-datasource",
             "uid": "altinn-studio-traces-logsql"
           },
-          "refId": "A",
-          "queryType": "stats",
-          "expr": "{resource_attr:service.name=\"studio-designer\"} \"resource_attr:deployment.environment.name\":$env kind:2 duration:>1s | stats by (name) count() slow, quantile(0.5, duration) median, max(duration) slowest"
-        }
-      ],
-      "transformations": [
-        {
-          "id": "labelsToFields",
-          "options": {
-            "mode": "columns",
-            "valueLabel": "__name__"
-          }
-        },
-        {
-          "id": "merge",
-          "options": {}
-        },
-        {
-          "id": "organize",
-          "options": {
-            "excludeByName": {
-              "Time": true
-            },
-            "indexByName": {
-              "name": 0,
-              "slow": 1,
-              "median": 2,
-              "slowest": 3
-            },
-            "renameByName": {},
-            "includeByName": {}
-          }
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "none",
-          "decimals": 0,
-          "custom": {
-            "align": "auto",
-            "cellOptions": {
-              "type": "auto"
-            },
-            "inspect": true
+          "gridPos": {
+            "x": 0,
+            "y": 43,
+            "w": 12,
+            "h": 8
           },
-          "noValue": ""
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "median"
-            },
-            "properties": [
-              {
-                "id": "unit",
-                "value": "ns"
+          "targets": [
+            {
+              "datasource": {
+                "type": "victoriametrics-logs-datasource",
+                "uid": "altinn-studio-traces-logsql"
               },
-              {
-                "id": "decimals",
-                "value": 1
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "slowest"
-            },
-            "properties": [
-              {
-                "id": "unit",
-                "value": "ns"
-              },
-              {
-                "id": "decimals",
-                "value": 1
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "slow"
-            },
-            "properties": [
-              {
-                "id": "custom.width",
-                "value": 130
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "median"
-            },
-            "properties": [
-              {
-                "id": "custom.width",
-                "value": 130
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "slowest"
-            },
-            "properties": [
-              {
-                "id": "custom.width",
-                "value": 130
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "name"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Request"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "slow"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Slow requests"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "median"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Median"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "slowest"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Slowest"
-              }
-            ]
-          }
-        ]
-      },
-      "options": {
-        "showHeader": true,
-        "cellHeight": "sm",
-        "footer": {
-          "show": false,
-          "reducer": [
-            "sum"
+              "refId": "A",
+              "queryType": "stats",
+              "expr": "{resource_attr:service.name=\"studio-designer\"} \"resource_attr:deployment.environment.name\":$env kind:2 duration:>1s | stats by (name) count() slow, quantile(0.5, duration) median, max(duration) slowest"
+            }
           ],
-          "countRows": false
-        },
-        "sortBy": [
-          {
-            "displayName": "Slow requests",
-            "desc": true
-          }
-        ]
-      }
-    },
-    {
-      "id": 7,
-      "type": "table",
-      "title": "Slow requests by service owner and app",
-      "description": "Designer requests that took more than 1 s, by service owner and app (empty for requests outside an app, such as the dashboard). Complete, as tail sampling keeps every trace over 1 s.",
-      "datasource": {
-        "type": "victoriametrics-logs-datasource",
-        "uid": "altinn-studio-traces-logsql"
-      },
-      "gridPos": {
-        "x": 12,
-        "y": 61,
-        "w": 12,
-        "h": 8
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "victoriametrics-logs-datasource",
-            "uid": "altinn-studio-traces-logsql"
-          },
-          "refId": "A",
-          "queryType": "stats",
-          "expr": "{resource_attr:service.name=\"studio-designer\"} \"resource_attr:deployment.environment.name\":$env kind:2 duration:>1s | stats by (\"span_attr:altinn.service_owner\", \"span_attr:altinn.app\") count() slow, count_uniq(\"span_attr:enduser.id\") users, max(duration) slowest"
-        }
-      ],
-      "transformations": [
-        {
-          "id": "labelsToFields",
-          "options": {
-            "mode": "columns",
-            "valueLabel": "__name__"
-          }
-        },
-        {
-          "id": "merge",
-          "options": {}
-        },
-        {
-          "id": "organize",
-          "options": {
-            "excludeByName": {
-              "Time": true
-            },
-            "indexByName": {
-              "span_attr:altinn.service_owner": 0,
-              "span_attr:altinn.app": 1,
-              "slow": 2,
-              "users": 3,
-              "slowest": 4
-            },
-            "renameByName": {},
-            "includeByName": {}
-          }
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "none",
-          "decimals": 0,
-          "custom": {
-            "align": "auto",
-            "cellOptions": {
-              "type": "auto"
-            },
-            "inspect": true
-          },
-          "noValue": ""
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "slowest"
-            },
-            "properties": [
-              {
-                "id": "unit",
-                "value": "ns"
-              },
-              {
-                "id": "decimals",
-                "value": 1
+          "transformations": [
+            {
+              "id": "labelsToFields",
+              "options": {
+                "mode": "columns",
+                "valueLabel": "__name__"
               }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "slow"
             },
-            "properties": [
-              {
-                "id": "custom.width",
-                "value": 130
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "users"
+            {
+              "id": "merge",
+              "options": {}
             },
-            "properties": [
-              {
-                "id": "custom.width",
-                "value": 130
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": {
+                  "Time": true
+                },
+                "indexByName": {
+                  "name": 0,
+                  "slow": 1,
+                  "median": 2,
+                  "slowest": 3
+                },
+                "renameByName": {},
+                "includeByName": {}
               }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "slowest"
-            },
-            "properties": [
-              {
-                "id": "custom.width",
-                "value": 130
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "span_attr:altinn.service_owner"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Service owner"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "span_attr:altinn.app"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "App"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "slow"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Slow requests"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "users"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Users"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "slowest"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Slowest"
-              }
-            ]
-          }
-        ]
-      },
-      "options": {
-        "showHeader": true,
-        "cellHeight": "sm",
-        "footer": {
-          "show": false,
-          "reducer": [
-            "sum"
+            }
           ],
-          "countRows": false
-        },
-        "sortBy": [
-          {
-            "displayName": "Slow requests",
-            "desc": true
-          }
-        ]
-      }
-    },
-    {
-      "id": 8,
-      "type": "table",
-      "title": "Slowest requests",
-      "description": "The 200 slowest Designer requests over 1 s in the time range, slowest first, including those that succeeded. Select a trace ID to open the trace and see where the time went (git operations, Gitea and other outgoing calls, the database).",
-      "datasource": {
-        "type": "victoriametrics-logs-datasource",
-        "uid": "altinn-studio-traces-logsql"
-      },
-      "gridPos": {
-        "x": 0,
-        "y": 69,
-        "w": 24,
-        "h": 10
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "victoriametrics-logs-datasource",
-            "uid": "altinn-studio-traces-logsql"
-          },
-          "refId": "A",
-          "queryType": "instant",
-          "expr": "{resource_attr:service.name=\"studio-designer\"} \"resource_attr:deployment.environment.name\":$env kind:2 duration:>1s | sort by (duration desc) limit 200 | fields _time, name, \"span_attr:http.response.status_code\", \"span_attr:error.type\", \"event:event_attr:exception.message:0\", \"span_attr:altinn.service_owner\", \"span_attr:altinn.app\", \"span_attr:enduser.id\", duration, trace_id | rename trace_id as trace",
-          "maxLines": 200
-        }
-      ],
-      "transformations": [
-        {
-          "id": "extractFields",
-          "options": {
-            "source": "labels",
-            "format": "json",
-            "replace": false,
-            "keepTime": false
-          }
-        },
-        {
-          "id": "convertFieldType",
-          "options": {
-            "conversions": [
-              {
-                "targetField": "duration",
-                "destinationType": "number"
-              }
-            ],
-            "fields": {}
-          }
-        },
-        {
-          "id": "organize",
-          "options": {
-            "excludeByName": {
-              "Line": true,
-              "id": true,
-              "labels": true,
-              "streams": true,
-              "streamId": true,
-              "detected_level": true,
-              "trace_id": true
-            },
-            "indexByName": {
-              "Time": 0,
-              "name": 1,
-              "span_attr:http.response.status_code": 2,
-              "span_attr:error.type": 3,
-              "event:event_attr:exception.message:0": 4,
-              "span_attr:altinn.service_owner": 5,
-              "span_attr:altinn.app": 6,
-              "span_attr:enduser.id": 7,
-              "duration": 8,
-              "trace": 9
-            },
-            "renameByName": {},
-            "includeByName": {}
-          }
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "custom": {
-            "align": "auto",
-            "cellOptions": {
-              "type": "auto"
-            },
-            "inspect": true,
-            "filterable": true
-          },
-          "displayName": "",
-          "noValue": ""
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "duration"
-            },
-            "properties": [
-              {
-                "id": "unit",
-                "value": "ns"
+          "fieldConfig": {
+            "defaults": {
+              "unit": "none",
+              "decimals": 0,
+              "custom": {
+                "align": "auto",
+                "cellOptions": {
+                  "type": "auto"
+                },
+                "inspect": true
               },
-              {
-                "id": "decimals",
-                "value": 1
-              },
-              {
-                "id": "custom.width",
-                "value": 100
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "trace"
+              "noValue": ""
             },
-            "properties": [
+            "overrides": [
               {
-                "id": "links",
-                "value": [
+                "matcher": {
+                  "id": "byName",
+                  "options": "median"
+                },
+                "properties": [
                   {
-                    "title": "View trace",
-                    "url": "",
-                    "internal": {
-                      "datasourceUid": "altinn-studio-traces",
-                      "datasourceName": "altinn-studio-traces",
-                      "query": {
-                        "queryType": "traceql",
-                        "query": "${__value.raw}"
-                      }
-                    }
+                    "id": "unit",
+                    "value": "ns"
+                  },
+                  {
+                    "id": "decimals",
+                    "value": 1
                   }
                 ]
               },
               {
-                "id": "custom.width",
-                "value": 110
+                "matcher": {
+                  "id": "byName",
+                  "options": "slowest"
+                },
+                "properties": [
+                  {
+                    "id": "unit",
+                    "value": "ns"
+                  },
+                  {
+                    "id": "decimals",
+                    "value": 1
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "slow"
+                },
+                "properties": [
+                  {
+                    "id": "custom.width",
+                    "value": 130
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "median"
+                },
+                "properties": [
+                  {
+                    "id": "custom.width",
+                    "value": 130
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "slowest"
+                },
+                "properties": [
+                  {
+                    "id": "custom.width",
+                    "value": 130
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "name"
+                },
+                "properties": [
+                  {
+                    "id": "displayName",
+                    "value": "Request"
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "slow"
+                },
+                "properties": [
+                  {
+                    "id": "displayName",
+                    "value": "Slow requests"
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "median"
+                },
+                "properties": [
+                  {
+                    "id": "displayName",
+                    "value": "Median"
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "slowest"
+                },
+                "properties": [
+                  {
+                    "id": "displayName",
+                    "value": "Slowest"
+                  }
+                ]
               }
             ]
           },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Time"
+          "options": {
+            "showHeader": true,
+            "cellHeight": "sm",
+            "footer": {
+              "show": false,
+              "reducer": [
+                "sum"
+              ],
+              "countRows": false
             },
-            "properties": [
+            "sortBy": [
               {
-                "id": "custom.width",
-                "value": 155
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "name"
-            },
-            "properties": [
-              {
-                "id": "custom.width",
-                "value": 330
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "span_attr:http.response.status_code"
-            },
-            "properties": [
-              {
-                "id": "custom.width",
-                "value": 60
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "span_attr:error.type"
-            },
-            "properties": [
-              {
-                "id": "custom.width",
-                "value": 230
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "span_attr:altinn.service_owner"
-            },
-            "properties": [
-              {
-                "id": "custom.width",
-                "value": 120
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "span_attr:altinn.app"
-            },
-            "properties": [
-              {
-                "id": "custom.width",
-                "value": 150
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "span_attr:enduser.id"
-            },
-            "properties": [
-              {
-                "id": "custom.width",
-                "value": 120
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Time"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Time"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "name"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Request"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "span_attr:http.response.status_code"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Status"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "span_attr:error.type"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Error type"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "event:event_attr:exception.message:0"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Exception message"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "span_attr:altinn.service_owner"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Service owner"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "span_attr:altinn.app"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "App"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "span_attr:enduser.id"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "User"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "duration"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Duration"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "trace"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Trace"
+                "displayName": "Slow requests",
+                "desc": true
               }
             ]
           }
-        ]
-      },
-      "options": {
-        "showHeader": true,
-        "cellHeight": "sm",
-        "footer": {
-          "show": false,
-          "reducer": [
-            "count"
-          ],
-          "countRows": false
         },
-        "sortBy": [
-          {
-            "displayName": "Duration",
-            "desc": true
+        {
+          "id": 7,
+          "type": "table",
+          "title": "Slow requests by service owner and app",
+          "description": "Designer requests that took more than 1 s, by service owner and app (empty for requests outside an app, such as the dashboard). Complete, as tail sampling keeps every trace over 1 s.",
+          "datasource": {
+            "type": "victoriametrics-logs-datasource",
+            "uid": "altinn-studio-traces-logsql"
+          },
+          "gridPos": {
+            "x": 12,
+            "y": 43,
+            "w": 12,
+            "h": 8
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "victoriametrics-logs-datasource",
+                "uid": "altinn-studio-traces-logsql"
+              },
+              "refId": "A",
+              "queryType": "stats",
+              "expr": "{resource_attr:service.name=\"studio-designer\"} \"resource_attr:deployment.environment.name\":$env kind:2 duration:>1s | stats by (\"span_attr:altinn.service_owner\", \"span_attr:altinn.app\") count() slow, count_uniq(\"span_attr:enduser.id\") users, max(duration) slowest"
+            }
+          ],
+          "transformations": [
+            {
+              "id": "labelsToFields",
+              "options": {
+                "mode": "columns",
+                "valueLabel": "__name__"
+              }
+            },
+            {
+              "id": "merge",
+              "options": {}
+            },
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": {
+                  "Time": true
+                },
+                "indexByName": {
+                  "span_attr:altinn.service_owner": 0,
+                  "span_attr:altinn.app": 1,
+                  "slow": 2,
+                  "users": 3,
+                  "slowest": 4
+                },
+                "renameByName": {},
+                "includeByName": {}
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "none",
+              "decimals": 0,
+              "custom": {
+                "align": "auto",
+                "cellOptions": {
+                  "type": "auto"
+                },
+                "inspect": true
+              },
+              "noValue": ""
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "slowest"
+                },
+                "properties": [
+                  {
+                    "id": "unit",
+                    "value": "ns"
+                  },
+                  {
+                    "id": "decimals",
+                    "value": 1
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "slow"
+                },
+                "properties": [
+                  {
+                    "id": "custom.width",
+                    "value": 130
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "users"
+                },
+                "properties": [
+                  {
+                    "id": "custom.width",
+                    "value": 130
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "slowest"
+                },
+                "properties": [
+                  {
+                    "id": "custom.width",
+                    "value": 130
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "span_attr:altinn.service_owner"
+                },
+                "properties": [
+                  {
+                    "id": "displayName",
+                    "value": "Service owner"
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "span_attr:altinn.app"
+                },
+                "properties": [
+                  {
+                    "id": "displayName",
+                    "value": "App"
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "slow"
+                },
+                "properties": [
+                  {
+                    "id": "displayName",
+                    "value": "Slow requests"
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "users"
+                },
+                "properties": [
+                  {
+                    "id": "displayName",
+                    "value": "Users"
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "slowest"
+                },
+                "properties": [
+                  {
+                    "id": "displayName",
+                    "value": "Slowest"
+                  }
+                ]
+              }
+            ]
+          },
+          "options": {
+            "showHeader": true,
+            "cellHeight": "sm",
+            "footer": {
+              "show": false,
+              "reducer": [
+                "sum"
+              ],
+              "countRows": false
+            },
+            "sortBy": [
+              {
+                "displayName": "Slow requests",
+                "desc": true
+              }
+            ]
           }
-        ]
-      }
+        },
+        {
+          "id": 8,
+          "type": "table",
+          "title": "Slowest requests",
+          "description": "The 200 slowest Designer requests over 1 s in the time range, slowest first, including those that succeeded. Select a trace ID to open the trace and see where the time went (git operations, Gitea and other outgoing calls, the database).",
+          "datasource": {
+            "type": "victoriametrics-logs-datasource",
+            "uid": "altinn-studio-traces-logsql"
+          },
+          "gridPos": {
+            "x": 0,
+            "y": 51,
+            "w": 24,
+            "h": 10
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "victoriametrics-logs-datasource",
+                "uid": "altinn-studio-traces-logsql"
+              },
+              "refId": "A",
+              "queryType": "instant",
+              "expr": "{resource_attr:service.name=\"studio-designer\"} \"resource_attr:deployment.environment.name\":$env kind:2 duration:>1s | sort by (duration desc) limit 200 | fields _time, name, \"span_attr:http.response.status_code\", \"span_attr:error.type\", \"event:event_attr:exception.message:0\", \"span_attr:altinn.service_owner\", \"span_attr:altinn.app\", \"span_attr:enduser.id\", duration, trace_id | rename trace_id as trace",
+              "maxLines": 200
+            }
+          ],
+          "transformations": [
+            {
+              "id": "extractFields",
+              "options": {
+                "source": "labels",
+                "format": "json",
+                "replace": false,
+                "keepTime": false
+              }
+            },
+            {
+              "id": "convertFieldType",
+              "options": {
+                "conversions": [
+                  {
+                    "targetField": "duration",
+                    "destinationType": "number"
+                  }
+                ],
+                "fields": {}
+              }
+            },
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": {
+                  "Line": true,
+                  "id": true,
+                  "labels": true,
+                  "streams": true,
+                  "streamId": true,
+                  "detected_level": true,
+                  "trace_id": true
+                },
+                "indexByName": {
+                  "Time": 0,
+                  "name": 1,
+                  "span_attr:http.response.status_code": 2,
+                  "span_attr:error.type": 3,
+                  "event:event_attr:exception.message:0": 4,
+                  "span_attr:altinn.service_owner": 5,
+                  "span_attr:altinn.app": 6,
+                  "span_attr:enduser.id": 7,
+                  "duration": 8,
+                  "trace": 9
+                },
+                "renameByName": {},
+                "includeByName": {}
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "align": "auto",
+                "cellOptions": {
+                  "type": "auto"
+                },
+                "inspect": true,
+                "filterable": true
+              },
+              "displayName": "",
+              "noValue": ""
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "duration"
+                },
+                "properties": [
+                  {
+                    "id": "unit",
+                    "value": "ns"
+                  },
+                  {
+                    "id": "decimals",
+                    "value": 1
+                  },
+                  {
+                    "id": "custom.width",
+                    "value": 100
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "trace"
+                },
+                "properties": [
+                  {
+                    "id": "links",
+                    "value": [
+                      {
+                        "title": "View trace",
+                        "url": "",
+                        "internal": {
+                          "datasourceUid": "altinn-studio-traces",
+                          "datasourceName": "altinn-studio-traces",
+                          "query": {
+                            "queryType": "traceql",
+                            "query": "${__value.raw}"
+                          }
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "id": "custom.width",
+                    "value": 110
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Time"
+                },
+                "properties": [
+                  {
+                    "id": "custom.width",
+                    "value": 155
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "name"
+                },
+                "properties": [
+                  {
+                    "id": "custom.width",
+                    "value": 330
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "span_attr:http.response.status_code"
+                },
+                "properties": [
+                  {
+                    "id": "custom.width",
+                    "value": 60
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "span_attr:error.type"
+                },
+                "properties": [
+                  {
+                    "id": "custom.width",
+                    "value": 230
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "span_attr:altinn.service_owner"
+                },
+                "properties": [
+                  {
+                    "id": "custom.width",
+                    "value": 120
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "span_attr:altinn.app"
+                },
+                "properties": [
+                  {
+                    "id": "custom.width",
+                    "value": 150
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "span_attr:enduser.id"
+                },
+                "properties": [
+                  {
+                    "id": "custom.width",
+                    "value": 120
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Time"
+                },
+                "properties": [
+                  {
+                    "id": "displayName",
+                    "value": "Time"
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "name"
+                },
+                "properties": [
+                  {
+                    "id": "displayName",
+                    "value": "Request"
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "span_attr:http.response.status_code"
+                },
+                "properties": [
+                  {
+                    "id": "displayName",
+                    "value": "Status"
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "span_attr:error.type"
+                },
+                "properties": [
+                  {
+                    "id": "displayName",
+                    "value": "Error type"
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "event:event_attr:exception.message:0"
+                },
+                "properties": [
+                  {
+                    "id": "displayName",
+                    "value": "Exception message"
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "span_attr:altinn.service_owner"
+                },
+                "properties": [
+                  {
+                    "id": "displayName",
+                    "value": "Service owner"
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "span_attr:altinn.app"
+                },
+                "properties": [
+                  {
+                    "id": "displayName",
+                    "value": "App"
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "span_attr:enduser.id"
+                },
+                "properties": [
+                  {
+                    "id": "displayName",
+                    "value": "User"
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "duration"
+                },
+                "properties": [
+                  {
+                    "id": "displayName",
+                    "value": "Duration"
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "trace"
+                },
+                "properties": [
+                  {
+                    "id": "displayName",
+                    "value": "Trace"
+                  }
+                ]
+              }
+            ]
+          },
+          "options": {
+            "showHeader": true,
+            "cellHeight": "sm",
+            "footer": {
+              "show": false,
+              "reducer": [
+                "count"
+              ],
+              "countRows": false
+            },
+            "sortBy": [
+              {
+                "displayName": "Duration",
+                "desc": true
+              }
+            ]
+          }
+        }
+      ]
     },
     {
       "id": 9,
       "type": "row",
       "title": "Background jobs and outgoing calls (traces)",
-      "collapsed": false,
+      "collapsed": true,
       "gridPos": {
         "x": 0,
-        "y": 79,
+        "y": 43,
         "w": 24,
         "h": 1
       },
-      "panels": []
-    },
-    {
-      "id": 10,
-      "type": "table",
-      "title": "Failed background jobs",
-      "description": "Quartz job runs that failed with an exception: the job's root span, named execute <job type>, with status error. Message is the exception message the Quartz instrumentation puts in the span status, and Exception its type. Tail sampling keeps every trace with an error.",
-      "datasource": {
-        "type": "victoriametrics-logs-datasource",
-        "uid": "altinn-studio-traces-logsql"
-      },
-      "gridPos": {
-        "x": 0,
-        "y": 80,
-        "w": 24,
-        "h": 8
-      },
-      "targets": [
+      "panels": [
         {
+          "id": 10,
+          "type": "table",
+          "title": "Failed background jobs",
+          "description": "Quartz job runs that failed with an exception: the job's root span, named execute <job type>, with status error. Message is the exception message the Quartz instrumentation puts in the span status, and Exception its type. Tail sampling keeps every trace with an error.",
           "datasource": {
             "type": "victoriametrics-logs-datasource",
             "uid": "altinn-studio-traces-logsql"
           },
-          "refId": "A",
-          "queryType": "instant",
-          "expr": "{resource_attr:service.name=\"studio-designer\"} \"resource_attr:deployment.environment.name\":$env name:=\"execute \"* status_code:2 | sort by (_time desc) limit 200 | fields _time, name, \"event:event_attr:exception.type:0\", status_message, \"span_attr:altinn.service_owner\", \"span_attr:altinn.app\", duration, trace_id | rename trace_id as trace",
-          "maxLines": 200
-        }
-      ],
-      "transformations": [
-        {
-          "id": "extractFields",
-          "options": {
-            "source": "labels",
-            "format": "json",
-            "replace": false,
-            "keepTime": false
-          }
-        },
-        {
-          "id": "convertFieldType",
-          "options": {
-            "conversions": [
-              {
-                "targetField": "duration",
-                "destinationType": "number"
-              }
-            ],
-            "fields": {}
-          }
-        },
-        {
-          "id": "organize",
-          "options": {
-            "excludeByName": {
-              "Line": true,
-              "id": true,
-              "labels": true,
-              "streams": true,
-              "streamId": true,
-              "detected_level": true,
-              "trace_id": true
-            },
-            "indexByName": {
-              "Time": 0,
-              "name": 1,
-              "event:event_attr:exception.type:0": 2,
-              "status_message": 3,
-              "span_attr:altinn.service_owner": 4,
-              "span_attr:altinn.app": 5,
-              "duration": 6,
-              "trace": 7
-            },
-            "renameByName": {},
-            "includeByName": {}
-          }
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "custom": {
-            "align": "auto",
-            "cellOptions": {
-              "type": "auto"
-            },
-            "inspect": true,
-            "filterable": true
+          "gridPos": {
+            "x": 0,
+            "y": 44,
+            "w": 24,
+            "h": 8
           },
-          "displayName": "",
-          "noValue": ""
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "duration"
-            },
-            "properties": [
-              {
-                "id": "unit",
-                "value": "ns"
+          "targets": [
+            {
+              "datasource": {
+                "type": "victoriametrics-logs-datasource",
+                "uid": "altinn-studio-traces-logsql"
               },
-              {
-                "id": "decimals",
-                "value": 1
-              },
-              {
-                "id": "custom.width",
-                "value": 100
+              "refId": "A",
+              "queryType": "instant",
+              "expr": "{resource_attr:service.name=\"studio-designer\"} \"resource_attr:deployment.environment.name\":$env name:=\"execute \"* status_code:2 | sort by (_time desc) limit 200 | fields _time, name, \"event:event_attr:exception.type:0\", status_message, \"span_attr:altinn.service_owner\", \"span_attr:altinn.app\", duration, trace_id | rename trace_id as trace",
+              "maxLines": 200
+            }
+          ],
+          "transformations": [
+            {
+              "id": "extractFields",
+              "options": {
+                "source": "labels",
+                "format": "json",
+                "replace": false,
+                "keepTime": false
               }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "trace"
             },
-            "properties": [
-              {
-                "id": "links",
-                "value": [
+            {
+              "id": "convertFieldType",
+              "options": {
+                "conversions": [
                   {
-                    "title": "View trace",
-                    "url": "",
-                    "internal": {
-                      "datasourceUid": "altinn-studio-traces",
-                      "datasourceName": "altinn-studio-traces",
-                      "query": {
-                        "queryType": "traceql",
-                        "query": "${__value.raw}"
-                      }
-                    }
+                    "targetField": "duration",
+                    "destinationType": "number"
+                  }
+                ],
+                "fields": {}
+              }
+            },
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": {
+                  "Line": true,
+                  "id": true,
+                  "labels": true,
+                  "streams": true,
+                  "streamId": true,
+                  "detected_level": true,
+                  "trace_id": true
+                },
+                "indexByName": {
+                  "Time": 0,
+                  "name": 1,
+                  "event:event_attr:exception.type:0": 2,
+                  "status_message": 3,
+                  "span_attr:altinn.service_owner": 4,
+                  "span_attr:altinn.app": 5,
+                  "duration": 6,
+                  "trace": 7
+                },
+                "renameByName": {},
+                "includeByName": {}
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "align": "auto",
+                "cellOptions": {
+                  "type": "auto"
+                },
+                "inspect": true,
+                "filterable": true
+              },
+              "displayName": "",
+              "noValue": ""
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "duration"
+                },
+                "properties": [
+                  {
+                    "id": "unit",
+                    "value": "ns"
+                  },
+                  {
+                    "id": "decimals",
+                    "value": 1
+                  },
+                  {
+                    "id": "custom.width",
+                    "value": 100
                   }
                 ]
               },
               {
-                "id": "custom.width",
-                "value": 110
+                "matcher": {
+                  "id": "byName",
+                  "options": "trace"
+                },
+                "properties": [
+                  {
+                    "id": "links",
+                    "value": [
+                      {
+                        "title": "View trace",
+                        "url": "",
+                        "internal": {
+                          "datasourceUid": "altinn-studio-traces",
+                          "datasourceName": "altinn-studio-traces",
+                          "query": {
+                            "queryType": "traceql",
+                            "query": "${__value.raw}"
+                          }
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "id": "custom.width",
+                    "value": 110
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Time"
+                },
+                "properties": [
+                  {
+                    "id": "custom.width",
+                    "value": 155
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "name"
+                },
+                "properties": [
+                  {
+                    "id": "custom.width",
+                    "value": 300
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "event:event_attr:exception.type:0"
+                },
+                "properties": [
+                  {
+                    "id": "custom.width",
+                    "value": 260
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "span_attr:altinn.service_owner"
+                },
+                "properties": [
+                  {
+                    "id": "custom.width",
+                    "value": 120
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "span_attr:altinn.app"
+                },
+                "properties": [
+                  {
+                    "id": "custom.width",
+                    "value": 150
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Time"
+                },
+                "properties": [
+                  {
+                    "id": "displayName",
+                    "value": "Time"
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "name"
+                },
+                "properties": [
+                  {
+                    "id": "displayName",
+                    "value": "Job"
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "event:event_attr:exception.type:0"
+                },
+                "properties": [
+                  {
+                    "id": "displayName",
+                    "value": "Exception"
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "status_message"
+                },
+                "properties": [
+                  {
+                    "id": "displayName",
+                    "value": "Message"
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "span_attr:altinn.service_owner"
+                },
+                "properties": [
+                  {
+                    "id": "displayName",
+                    "value": "Service owner"
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "span_attr:altinn.app"
+                },
+                "properties": [
+                  {
+                    "id": "displayName",
+                    "value": "App"
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "duration"
+                },
+                "properties": [
+                  {
+                    "id": "displayName",
+                    "value": "Duration"
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "trace"
+                },
+                "properties": [
+                  {
+                    "id": "displayName",
+                    "value": "Trace"
+                  }
+                ]
               }
             ]
           },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Time"
+          "options": {
+            "showHeader": true,
+            "cellHeight": "sm",
+            "footer": {
+              "show": false,
+              "reducer": [
+                "count"
+              ],
+              "countRows": false
             },
-            "properties": [
+            "sortBy": [
               {
-                "id": "custom.width",
-                "value": 155
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "name"
-            },
-            "properties": [
-              {
-                "id": "custom.width",
-                "value": 300
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "event:event_attr:exception.type:0"
-            },
-            "properties": [
-              {
-                "id": "custom.width",
-                "value": 260
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "span_attr:altinn.service_owner"
-            },
-            "properties": [
-              {
-                "id": "custom.width",
-                "value": 120
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "span_attr:altinn.app"
-            },
-            "properties": [
-              {
-                "id": "custom.width",
-                "value": 150
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Time"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Time"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "name"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Job"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "event:event_attr:exception.type:0"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Exception"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "status_message"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Message"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "span_attr:altinn.service_owner"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Service owner"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "span_attr:altinn.app"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "App"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "duration"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Duration"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "trace"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Trace"
+                "displayName": "Time",
+                "desc": true
               }
             ]
           }
-        ]
-      },
-      "options": {
-        "showHeader": true,
-        "cellHeight": "sm",
-        "footer": {
-          "show": false,
-          "reducer": [
-            "count"
-          ],
-          "countRows": false
         },
-        "sortBy": [
-          {
-            "displayName": "Time",
-            "desc": true
-          }
-        ]
-      }
-    },
-    {
-      "id": 11,
-      "type": "table",
-      "title": "Recent failed outgoing calls",
-      "description": "Outgoing HTTP calls from Designer (to Gitea, Azure DevOps, the runtime environments and others) that failed with a 5xx or without a response (Status empty, error.type the exception type). 4xx responses are left out: the HTTP client marks them as errors, but Designer handles most of them, such as a 404 for a file missing in Gitea; one it doesn't handle fails the request, which Recent failed requests shows. URL is redacted where it carries secrets. Select a trace ID to see which request or job made the call.",
-      "datasource": {
-        "type": "victoriametrics-logs-datasource",
-        "uid": "altinn-studio-traces-logsql"
-      },
-      "gridPos": {
-        "x": 0,
-        "y": 88,
-        "w": 24,
-        "h": 8
-      },
-      "targets": [
         {
+          "id": 11,
+          "type": "table",
+          "title": "Recent failed outgoing calls",
+          "description": "Outgoing HTTP calls from Designer (to Gitea, Azure DevOps, the runtime environments and others) that failed with a 5xx or without a response (Status empty, error.type the exception type). 4xx responses are left out: the HTTP client marks them as errors, but Designer handles most of them, such as a 404 for a file missing in Gitea; one it doesn't handle fails the request, which Recent failed requests shows. URL is redacted where it carries secrets. Select a trace ID to see which request or job made the call.",
           "datasource": {
             "type": "victoriametrics-logs-datasource",
             "uid": "altinn-studio-traces-logsql"
           },
-          "refId": "A",
-          "queryType": "instant",
-          "expr": "{resource_attr:service.name=\"studio-designer\"} \"resource_attr:deployment.environment.name\":$env kind:3 status_code:2 !\"span_attr:http.response.status_code\":4* | sort by (_time desc) limit 200 | fields _time, \"span_attr:http.request.method\", \"span_attr:server.address\", \"span_attr:url.full\", \"span_attr:http.response.status_code\", \"span_attr:error.type\", duration, trace_id | rename trace_id as trace",
-          "maxLines": 200
-        }
-      ],
-      "transformations": [
-        {
-          "id": "extractFields",
-          "options": {
-            "source": "labels",
-            "format": "json",
-            "replace": false,
-            "keepTime": false
-          }
-        },
-        {
-          "id": "convertFieldType",
-          "options": {
-            "conversions": [
-              {
-                "targetField": "duration",
-                "destinationType": "number"
-              }
-            ],
-            "fields": {}
-          }
-        },
-        {
-          "id": "organize",
-          "options": {
-            "excludeByName": {
-              "Line": true,
-              "id": true,
-              "labels": true,
-              "streams": true,
-              "streamId": true,
-              "detected_level": true,
-              "trace_id": true
-            },
-            "indexByName": {
-              "Time": 0,
-              "span_attr:http.request.method": 1,
-              "span_attr:server.address": 2,
-              "span_attr:url.full": 3,
-              "span_attr:http.response.status_code": 4,
-              "span_attr:error.type": 5,
-              "duration": 6,
-              "trace": 7
-            },
-            "renameByName": {},
-            "includeByName": {}
-          }
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "custom": {
-            "align": "auto",
-            "cellOptions": {
-              "type": "auto"
-            },
-            "inspect": true,
-            "filterable": true
+          "gridPos": {
+            "x": 0,
+            "y": 52,
+            "w": 24,
+            "h": 8
           },
-          "displayName": "",
-          "noValue": ""
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "duration"
-            },
-            "properties": [
-              {
-                "id": "unit",
-                "value": "ns"
+          "targets": [
+            {
+              "datasource": {
+                "type": "victoriametrics-logs-datasource",
+                "uid": "altinn-studio-traces-logsql"
               },
-              {
-                "id": "decimals",
-                "value": 1
-              },
-              {
-                "id": "custom.width",
-                "value": 100
+              "refId": "A",
+              "queryType": "instant",
+              "expr": "{resource_attr:service.name=\"studio-designer\"} \"resource_attr:deployment.environment.name\":$env kind:3 status_code:2 !\"span_attr:http.response.status_code\":4* | sort by (_time desc) limit 200 | fields _time, \"span_attr:http.request.method\", \"span_attr:server.address\", \"span_attr:url.full\", \"span_attr:http.response.status_code\", \"span_attr:error.type\", duration, trace_id | rename trace_id as trace",
+              "maxLines": 200
+            }
+          ],
+          "transformations": [
+            {
+              "id": "extractFields",
+              "options": {
+                "source": "labels",
+                "format": "json",
+                "replace": false,
+                "keepTime": false
               }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "trace"
             },
-            "properties": [
-              {
-                "id": "links",
-                "value": [
+            {
+              "id": "convertFieldType",
+              "options": {
+                "conversions": [
                   {
-                    "title": "View trace",
-                    "url": "",
-                    "internal": {
-                      "datasourceUid": "altinn-studio-traces",
-                      "datasourceName": "altinn-studio-traces",
-                      "query": {
-                        "queryType": "traceql",
-                        "query": "${__value.raw}"
-                      }
-                    }
+                    "targetField": "duration",
+                    "destinationType": "number"
+                  }
+                ],
+                "fields": {}
+              }
+            },
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": {
+                  "Line": true,
+                  "id": true,
+                  "labels": true,
+                  "streams": true,
+                  "streamId": true,
+                  "detected_level": true,
+                  "trace_id": true
+                },
+                "indexByName": {
+                  "Time": 0,
+                  "span_attr:http.request.method": 1,
+                  "span_attr:server.address": 2,
+                  "span_attr:url.full": 3,
+                  "span_attr:http.response.status_code": 4,
+                  "span_attr:error.type": 5,
+                  "duration": 6,
+                  "trace": 7
+                },
+                "renameByName": {},
+                "includeByName": {}
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "align": "auto",
+                "cellOptions": {
+                  "type": "auto"
+                },
+                "inspect": true,
+                "filterable": true
+              },
+              "displayName": "",
+              "noValue": ""
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "duration"
+                },
+                "properties": [
+                  {
+                    "id": "unit",
+                    "value": "ns"
+                  },
+                  {
+                    "id": "decimals",
+                    "value": 1
+                  },
+                  {
+                    "id": "custom.width",
+                    "value": 100
                   }
                 ]
               },
               {
-                "id": "custom.width",
-                "value": 110
+                "matcher": {
+                  "id": "byName",
+                  "options": "trace"
+                },
+                "properties": [
+                  {
+                    "id": "links",
+                    "value": [
+                      {
+                        "title": "View trace",
+                        "url": "",
+                        "internal": {
+                          "datasourceUid": "altinn-studio-traces",
+                          "datasourceName": "altinn-studio-traces",
+                          "query": {
+                            "queryType": "traceql",
+                            "query": "${__value.raw}"
+                          }
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "id": "custom.width",
+                    "value": 110
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Time"
+                },
+                "properties": [
+                  {
+                    "id": "custom.width",
+                    "value": 155
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "span_attr:http.request.method"
+                },
+                "properties": [
+                  {
+                    "id": "custom.width",
+                    "value": 70
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "span_attr:server.address"
+                },
+                "properties": [
+                  {
+                    "id": "custom.width",
+                    "value": 220
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "span_attr:http.response.status_code"
+                },
+                "properties": [
+                  {
+                    "id": "custom.width",
+                    "value": 60
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "span_attr:error.type"
+                },
+                "properties": [
+                  {
+                    "id": "custom.width",
+                    "value": 230
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Time"
+                },
+                "properties": [
+                  {
+                    "id": "displayName",
+                    "value": "Time"
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "span_attr:http.response.status_code"
+                },
+                "properties": [
+                  {
+                    "id": "displayName",
+                    "value": "Status"
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "span_attr:error.type"
+                },
+                "properties": [
+                  {
+                    "id": "displayName",
+                    "value": "Error type"
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "duration"
+                },
+                "properties": [
+                  {
+                    "id": "displayName",
+                    "value": "Duration"
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "trace"
+                },
+                "properties": [
+                  {
+                    "id": "displayName",
+                    "value": "Trace"
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "span_attr:http.request.method"
+                },
+                "properties": [
+                  {
+                    "id": "displayName",
+                    "value": "Method"
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "span_attr:server.address"
+                },
+                "properties": [
+                  {
+                    "id": "displayName",
+                    "value": "Host"
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "span_attr:url.full"
+                },
+                "properties": [
+                  {
+                    "id": "displayName",
+                    "value": "URL"
+                  }
+                ]
               }
             ]
           },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Time"
+          "options": {
+            "showHeader": true,
+            "cellHeight": "sm",
+            "footer": {
+              "show": false,
+              "reducer": [
+                "count"
+              ],
+              "countRows": false
             },
-            "properties": [
+            "sortBy": [
               {
-                "id": "custom.width",
-                "value": 155
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "span_attr:http.request.method"
-            },
-            "properties": [
-              {
-                "id": "custom.width",
-                "value": 70
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "span_attr:server.address"
-            },
-            "properties": [
-              {
-                "id": "custom.width",
-                "value": 220
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "span_attr:http.response.status_code"
-            },
-            "properties": [
-              {
-                "id": "custom.width",
-                "value": 60
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "span_attr:error.type"
-            },
-            "properties": [
-              {
-                "id": "custom.width",
-                "value": 230
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Time"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Time"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "span_attr:http.response.status_code"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Status"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "span_attr:error.type"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Error type"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "duration"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Duration"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "trace"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Trace"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "span_attr:http.request.method"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Method"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "span_attr:server.address"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Host"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "span_attr:url.full"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "URL"
+                "displayName": "Time",
+                "desc": true
               }
             ]
           }
-        ]
-      },
-      "options": {
-        "showHeader": true,
-        "cellHeight": "sm",
-        "footer": {
-          "show": false,
-          "reducer": [
-            "count"
-          ],
-          "countRows": false
-        },
-        "sortBy": [
-          {
-            "displayName": "Time",
-            "desc": true
-          }
-        ]
-      }
+        }
+      ]
+    }
+  ],
+  "timepicker": {
+    "refresh_intervals": [
+      "1m",
+      "5m",
+      "15m",
+      "1h"
+    ]
+  },
+  "links": [
+    {
+      "asDropdown": true,
+      "icon": "external link",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [
+        "altinn-studio"
+      ],
+      "targetBlank": false,
+      "title": "Studio dashboards",
+      "type": "dashboards"
     }
   ]
 }
