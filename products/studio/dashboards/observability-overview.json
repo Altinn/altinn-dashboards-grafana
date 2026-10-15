@@ -1,6 +1,6 @@
 {
   "uid": "altinn-studio-observability",
-  "title": "Altinn Studio — Observability",
+  "title": "Altinn Studio \u2014 Observability",
   "description": "Health of the Victoria observability stack in Studio prod (namespace observability): the metrics, logs and traces storage pairs (copies a and b), observability-proxy in front of them, the agents replicating to them, and the VictoriaMetrics operator. From the stack's own metrics, scraped every 30 s by vmagent-self into the stack itself. This dashboard has no environment variable: these self-monitoring metrics describe only the Studio prod observability stack and have no deployment.environment.name dimension.",
   "tags": [
     "altinn-studio",
@@ -189,7 +189,7 @@
         "w": 12,
         "h": 8
       },
-      "description": "up per scrape target, every 30 s. The storage targets are the two copies (…-a, …-b) of each signal; the agents are scraped per replica. The proxy replicas are scraped by pod address (observability-proxy <pod IP>:9090), so a replaced pod is a new row.",
+      "description": "up per scrape target, every 30 s. The storage targets are the two copies (\u2026-a, \u2026-b) of each signal; the agents are scraped per replica. The proxy replicas are scraped by pod address (observability-proxy <pod IP>:9090), so a replaced pod is a new row.",
       "targets": [
         {
           "datasource": {
@@ -330,6 +330,7 @@
         },
         "overrides": []
       },
+      "interval": "1m",
       "options": {
         "legend": {
           "displayMode": "table",
@@ -711,6 +712,7 @@
         },
         "overrides": []
       },
+      "interval": "1m",
       "options": {
         "legend": {
           "displayMode": "table",
@@ -786,6 +788,7 @@
         },
         "overrides": []
       },
+      "interval": "1m",
       "options": {
         "legend": {
           "displayMode": "table",
@@ -825,7 +828,7 @@
           },
           "refId": "A",
           "expr": "sum by (altinn_observability_proxy_destination, altinn_observability_proxy_direction, altinn_observability_proxy_signal, error_type) (increase(altinn_observability_proxy_forwarding_errors_total{job=\"observability-proxy\"}[$__interval]))",
-          "legendFormat": "{{altinn_observability_proxy_direction}} {{altinn_observability_proxy_signal}} → {{altinn_observability_proxy_destination}} {{error_type}}",
+          "legendFormat": "{{altinn_observability_proxy_direction}} {{altinn_observability_proxy_signal}} \u2192 {{altinn_observability_proxy_destination}} {{error_type}}",
           "range": true,
           "editorMode": "code"
         }
@@ -861,6 +864,7 @@
         },
         "overrides": []
       },
+      "interval": "1m",
       "options": {
         "legend": {
           "displayMode": "table",
@@ -900,7 +904,7 @@
           },
           "refId": "A",
           "expr": "max by (service_instance_id, altinn_observability_proxy_signal) (altinn_observability_proxy_read_destination_active{job=\"observability-proxy\", altinn_observability_proxy_destination=\"a\"}) + 2 * max by (service_instance_id, altinn_observability_proxy_signal) (altinn_observability_proxy_read_destination_active{job=\"observability-proxy\", altinn_observability_proxy_destination=\"b\"})",
-          "legendFormat": "{{altinn_observability_proxy_signal}} · {{service_instance_id}}",
+          "legendFormat": "{{altinn_observability_proxy_signal}} \u00b7 {{service_instance_id}}",
           "range": true,
           "editorMode": "code"
         }
@@ -1090,7 +1094,7 @@
           },
           "refId": "A",
           "expr": "sum by (service_instance_id, altinn_observability_proxy_signal, altinn_observability_proxy_destination) (increase(altinn_observability_proxy_read_failovers_total{job=\"observability-proxy\"}[$__interval]))",
-          "legendFormat": "{{altinn_observability_proxy_signal}} → {{altinn_observability_proxy_destination}} · {{service_instance_id}}",
+          "legendFormat": "{{altinn_observability_proxy_signal}} \u2192 {{altinn_observability_proxy_destination}} \u00b7 {{service_instance_id}}",
           "range": true,
           "editorMode": "code"
         }
@@ -1126,6 +1130,7 @@
         },
         "overrides": []
       },
+      "interval": "1m",
       "options": {
         "legend": {
           "displayMode": "list",
@@ -1562,7 +1567,7 @@
           },
           "refId": "A",
           "expr": "max by (job, copy) (label_replace(label_replace(max by (job, url) (vmagent_remotewrite_pending_data_bytes{job=\"vmagent\"}), \"copy\", \"a\", \"url\", \"1:.*\"), \"copy\", \"b\", \"url\", \"2:.*\") or label_replace(label_replace(max by (job, url) (vlagent_remotewrite_pending_data_bytes{job=\"vlagent\"}), \"copy\", \"a\", \"url\", \"1:.*\"), \"copy\", \"b\", \"url\", \"2:.*\") or label_replace(label_replace(max by (job, url) (vtagent_remotewrite_pending_data_bytes{job=\"vtagent\"}), \"copy\", \"a\", \"url\", \"1:.*\"), \"copy\", \"b\", \"url\", \"2:.*\"))",
-          "legendFormat": "{{job}} → copy {{copy}}",
+          "legendFormat": "{{job}} \u2192 copy {{copy}}",
           "range": true,
           "editorMode": "code"
         }
@@ -1640,7 +1645,7 @@
           },
           "refId": "A",
           "expr": "label_replace(label_replace(sum by (job, path) (increase(vm_persistentqueue_blocks_dropped_total{job=~\"vmagent|vlagent|vtagent\"}[$__interval])), \"copy\", \"a\", \"path\", \".*/1_[^/]*\"), \"copy\", \"b\", \"path\", \".*/2_[^/]*\")",
-          "legendFormat": "{{job}} → copy {{copy}} queue overflow",
+          "legendFormat": "{{job}} \u2192 copy {{copy}} queue overflow",
           "range": true,
           "editorMode": "code"
         },
@@ -1651,7 +1656,7 @@
           },
           "refId": "B",
           "expr": "label_replace(label_replace(sum by (job, url) (increase({__name__=~\"(vmagent|vlagent|vtagent)_remotewrite_packets_dropped_total\", job=~\"vmagent|vlagent|vtagent\"}[$__interval])), \"copy\", \"a\", \"url\", \"1:.*\"), \"copy\", \"b\", \"url\", \"2:.*\")",
-          "legendFormat": "{{job}} → copy {{copy}} rejected",
+          "legendFormat": "{{job}} \u2192 copy {{copy}} rejected",
           "range": true,
           "editorMode": "code"
         }
@@ -1686,6 +1691,7 @@
         },
         "overrides": []
       },
+      "interval": "1m",
       "options": {
         "legend": {
           "displayMode": "table",
@@ -2012,7 +2018,7 @@
           },
           "refId": "A",
           "expr": "min by (job, copy) (label_replace(label_replace(min by (job, path) (vm_persistentqueue_free_disk_space_bytes{job=~\"vmagent|vlagent|vtagent\"}), \"copy\", \"a\", \"path\", \".*/1_[^/]*\"), \"copy\", \"b\", \"path\", \".*/2_[^/]*\"))",
-          "legendFormat": "{{job}} → copy {{copy}}",
+          "legendFormat": "{{job}} \u2192 copy {{copy}}",
           "range": true,
           "editorMode": "code"
         }
@@ -2518,6 +2524,7 @@
         },
         "overrides": []
       },
+      "interval": "30s",
       "options": {
         "legend": {
           "displayMode": "list",
@@ -2537,7 +2544,7 @@
     {
       "type": "timeseries",
       "title": "Queries waited or timed out",
-      "description": "Queries that found every slot taken and had to wait (…_concurrent_select_limit_reached_total) and those that gave up waiting (…_limit_timeout_total). Waits are queueing; timeouts are errors the reader saw.",
+      "description": "Queries that found every slot taken and had to wait (\u2026_concurrent_select_limit_reached_total) and those that gave up waiting (\u2026_limit_timeout_total). Waits are queueing; timeouts are errors the reader saw.",
       "id": 23,
       "datasource": {
         "type": "prometheus",
@@ -2603,6 +2610,7 @@
         },
         "overrides": []
       },
+      "interval": "1m",
       "options": {
         "legend": {
           "displayMode": "list",
