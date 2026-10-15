@@ -252,8 +252,14 @@ Designer's `filters` ad-hoc variable intentionally targets `altinn-studio-traces
 only: it filters the trace tables, whose span fields are not available on the metrics panels.
 Its description explains this scope. It does not filter TraceQL or metrics panels.
 
-No panel sets `interval`: `products/studio/datasources/metrics.yaml` supplies
-`timeInterval: 15s`, so `$__rate_interval` provides at least four export intervals.
+Designer and pdf3 use OTLP-pushed metrics exported every 15s. Their panels do not set
+`interval`: `products/studio/datasources/metrics.yaml` supplies `timeInterval: 15s`,
+so `$__rate_interval` provides at least four export intervals. **Explicit exemption:**
+`observability-overview.json` reads self-monitoring metrics scraped every **30s**
+(`infra/observability/studio/victoria/self-monitoring.yaml` in altinn-studio). Keep its
+original `interval: 1m` overrides and `30s` on Concurrent queries: these panels use
+`[$__interval]` and `offset $__interval` directly, so the datasource minimum of 15s
+would otherwise produce empty windows, gaps and spiky zeros on short ranges.
 `scripts/validate-dashboards.py` enforces the time, refresh, refresh presets, common tag,
 environment rules, absence of the cluster variable/references, and panel interval rules
 only in this directory. These internal rules do not change the public dashboard exceptions below.

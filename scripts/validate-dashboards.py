@@ -33,6 +33,8 @@ PUBLIC_RESYNC = "1m"
 STUDIO = os.path.join(PRODUCTS, "studio", "dashboards")
 # Only the Studio prod stack is scraped; its self-monitoring metrics have no env label.
 STUDIO_ENV_EXEMPTIONS = {"observability-overview.json"}
+# Self-monitoring is scraped every 30s and uses $__interval directly in rollups.
+STUDIO_INTERVAL_EXEMPTIONS = {"observability-overview.json"}
 
 
 def check_studio_dashboard(dashboard, filename, errors):
@@ -72,7 +74,8 @@ def check_studio_dashboard(dashboard, filename, errors):
                     f"panel {panel.get('id')} must not override interval; use datasource timeInterval.")
             check_panels(panel.get("panels", []))
 
-    check_panels(dashboard.get("panels", []))
+    if filename not in STUDIO_INTERVAL_EXEMPTIONS:
+        check_panels(dashboard.get("panels", []))
 
 
 def load_all(path):
