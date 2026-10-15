@@ -232,6 +232,32 @@ traces
 - **Edit an existing rule**: keep the `uid`. Changing it orphans the old rule and creates a
   duplicate in Grafana.
 
+## Studio dashboards
+
+`products/studio/dashboards/*.json` use stable UIDs, `time.from: now-6h`,
+`refresh: 5m`, and `timepicker.refresh_intervals: [1m, 5m, 15m, 1h]`.
+Every dashboard carries `altinn-studio` plus a dashboard-specific tag and has a
+`dashboards` link dropdown selected by the `altinn-studio` tag, preserving time and variables.
+Rows querying traces (TraceQL or LogsQL) start collapsed, with their panels nested in the row.
+
+Environment-filtered dashboards query `deployment.environment.name` through the pinned
+`altinn-studio-metrics` datasource for the `env` variable, enable multi-select and All,
+and save `prod` as the default. **Explicit exemption:** `observability-overview.json`
+shows only the Studio prod stack's scraped self-monitoring metrics, which have no
+`deployment.environment.name` dimension; it has no `env` variable. Do not introduce a
+`cluster` variable or references to it. Existing groupings by cluster remain until the
+service-owner conventions are implemented separately.
+
+Designer's `filters` ad-hoc variable intentionally targets `altinn-studio-traces-logsql`
+only: it filters the trace tables, whose span fields are not available on the metrics panels.
+Its description explains this scope. It does not filter TraceQL or metrics panels.
+
+No panel sets `interval`: `products/studio/datasources/metrics.yaml` supplies
+`timeInterval: 15s`, so `$__rate_interval` provides at least four export intervals.
+`scripts/validate-dashboards.py` enforces the time, refresh, refresh presets, common tag,
+environment rules, absence of the cluster variable/references, and panel interval rules
+only in this directory. These internal rules do not change the public dashboard exceptions below.
+
 ## Public dashboards
 
 Shared publicly (no login) from `grafana-public`; [`public/README.md`](public/README.md) has
