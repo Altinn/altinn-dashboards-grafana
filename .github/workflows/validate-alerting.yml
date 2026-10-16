@@ -4,6 +4,8 @@ name: validate-alerting
 
 on:
   pull_request:
+    # labeled/unlabeled re-run the immutable-fields job when `immutable-change-ack` changes.
+    types: [opened, synchronize, reopened, labeled, unlabeled]
     paths:
       - "products/**"
       - "platform/**"
@@ -90,6 +92,45 @@ jobs:
             echo "::endgroup::"
           done
           exit $rc
+
+  immutable-fields:
+    name: no immutable CR field changed
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Install kustomize
+        run: |
+          set -euo pipefail
+          curl -fsSL -o kustomize.tar.gz \
+            "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv${KUSTOMIZE_VERSION}/kustomize_v${KUSTOMIZE_VERSION}_linux_amd64.tar.gz"
+          tar -xzf kustomize.tar.gz
+          sudo install -m 0755 kustomize /usr/local/bin/kustomize
+          kustomize version
+
+      - name: Compare the root aggregate with the base branch
+        # The base branch stands in for what is live, since merging to main is the release.
+        env:
+          ACK: ${{ contains(github.event.pull_request.labels.*.name, 'immutable-change-ack') }}
+        run: |
+          set -euo pipefail
+          python3 -m pip install --quiet pyyaml
+          git worktree add --quiet "$RUNNER_TEMP/base" "origin/${{ github.base_ref }}"
+          kustomize build "$RUNNER_TEMP/base" > "$RUNNER_TEMP/base.yaml"
+          kustomize build . > "$RUNNER_TEMP/head.yaml"
+          rc=0
+          python3 scripts/check-immutable-fields.py "$RUNNER_TEMP/base.yaml" "$RUNNER_TEMP/head.yaml" || rc=$?
+          if [ "$rc" -eq 0 ]; then
+            exit 0
+          elif [ "$rc" -eq 1 ] && [ "$ACK" = "true" ]; then
+            echo "::warning::Immutable fields change; acknowledged with the immutable-change-ack label. Delete the live objects after merging."
+          else
+            echo "::error::check-immutable-fields.py failed; see the log."
+            exit 1
+          fi
 
   dashboards:
     name: dashboard-linter (changed JSON)
