@@ -298,6 +298,15 @@ Also run `python3 scripts/validate-dashboards.py` if you touched any dashboard w
 `python3 scripts/build-public-dashboards.py --check` if you touched a dashboard that has a
 public copy.
 
+When you edit existing CRs, compare the build with `main` to catch immutable field changes
+(see Gotchas):
+
+```bash
+git worktree add /tmp/base main && kustomize build /tmp/base > /tmp/base.yaml
+kustomize build . > /tmp/head.yaml && git worktree remove /tmp/base
+python3 scripts/check-immutable-fields.py /tmp/base.yaml /tmp/head.yaml
+```
+
 ## Gotchas
 
 - **`severityLevel` is numeric.** Use `severityLevel >= 3`, not `== "3"` — a string compare can
@@ -405,3 +414,14 @@ public copy.
   name, one at a time.
 - **One OCI artifact, no partial apply.** A broken CR can block the whole artifact — keep
   `kustomize build .` green.
+- **Some CR fields are immutable, and changing one blocks every deploy.** The operator CRDs
+  reject an update to `folderRef`/`folderUID`, `instanceSelector`, `uid`, contact-point
+  `spec.name`, `editable`, a public `accessToken`, or switching `allowCrossNamespaceImport`
+  off. kubeconform only sees the new object and passes, but Flux's dry-run fails, and
+  nothing in the artifact applies until the live object is deleted. PR #58 moved
+  `studio-observability` to another folder and blocked deploys from 2026-10-15 14:33 until
+  2026-10-16 09:38. The `no immutable CR field changed` CI job
+  (`scripts/check-immutable-fields.py`) compares the PR's `kustomize build .` with the base
+  branch's, using the transition rules in `schemas/`. If the change is intended, add the
+  `immutable-change-ack` label. After merging, delete each listed object on admin-prod-aks and
+  reconcile `grafana-central-grafana-content`; Flux recreates it. Keep the rule UIDs.
