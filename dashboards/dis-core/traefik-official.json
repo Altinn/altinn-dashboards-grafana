@@ -46,7 +46,7 @@
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "Requests handled in the selected time range, across all services.",
+      "description": "Requests handled in the selected time range by the selected services.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -102,7 +102,7 @@
           },
           "disableTextWrap": false,
           "editorMode": "code",
-          "expr": "sum(increase(traefik_service_requests_total[$__range]))",
+          "expr": "sum(increase(traefik_service_requests_total{service=~\"$service\"}[$__range]))",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
           "instant": true,
@@ -120,7 +120,7 @@
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "Current request rate across all services",
+      "description": "Current request rate of the selected services.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -179,7 +179,7 @@
           },
           "disableTextWrap": false,
           "editorMode": "code",
-          "expr": "sum(rate(traefik_service_requests_total[$__rate_interval]))",
+          "expr": "sum(rate(traefik_service_requests_total{service=~\"$service\"}[$__rate_interval]))",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
           "instant": true,
@@ -197,7 +197,7 @@
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "Average response time (95th percentile)",
+      "description": "95th percentile response time of the selected services.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -256,7 +256,7 @@
           },
           "disableTextWrap": false,
           "editorMode": "code",
-          "expr": "histogram_quantile(0.95, sum(rate(traefik_service_request_duration_seconds_bucket[$__rate_interval])) by (le))",
+          "expr": "histogram_quantile(0.95, sum(rate(traefik_service_request_duration_seconds_bucket{service=~\"$service\"}[$__rate_interval])) by (le))",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
           "instant": true,
@@ -352,7 +352,7 @@
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "Share of responses per HTTP status code. Colours follow the status class: 2xx green, 3xx blue, 4xx orange, 5xx red; 499 (client closed the connection) and 0 (no response) grey.",
+      "description": "Share of responses per HTTP status code for the selected services in the selected time range. Colours follow the status class: 2xx green, 3xx blue, 4xx orange, 5xx red; 499 (client closed the connection) and 0 (no response) grey.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -366,7 +366,8 @@
             }
           },
           "mappings": [],
-          "unit": "short"
+          "unit": "short",
+          "decimals": 0
         },
         "overrides": [
           {
@@ -689,7 +690,7 @@
           },
           "disableTextWrap": false,
           "editorMode": "code",
-          "expr": "sum(rate(traefik_service_requests_total[$__rate_interval])) by (code)",
+          "expr": "sum(increase(traefik_service_requests_total{service=~\"$service\"}[$__range])) by (code)",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
           "instant": true,
@@ -708,7 +709,7 @@
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "Request rate over time by HTTP method",
+      "description": "Request rate over time by HTTP method for the selected services.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -791,7 +792,7 @@
           },
           "disableTextWrap": false,
           "editorMode": "code",
-          "expr": "sum(rate(traefik_service_requests_total[$__rate_interval])) by (method)",
+          "expr": "sum(rate(traefik_service_requests_total{service=~\"$service\"}[$__rate_interval])) by (method)",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
           "instant": false,
