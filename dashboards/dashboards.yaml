@@ -255,3 +255,17 @@ spec:
   configMapRef:
     name: dashboard-dis-core-product-versions
     key: product-versions.json
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: external-grafana-altinn-platform-aks-fleet-status
+  namespace: grafana
+spec:
+  folderRef: external-grafana-altinn-platform
+  instanceSelector:
+    matchLabels:
+      dashboards: "external-grafana"
+  configMapRef:
+    name: dashboard-altinn-platform-aks-fleet-status
+    key: aks-fleet-status.json

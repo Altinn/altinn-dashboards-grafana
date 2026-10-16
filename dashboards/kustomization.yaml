@@ -61,3 +61,6 @@ configMapGenerator:
   - name: dashboard-dis-core-traefik-official
     files:
       - dis-core/traefik-official.json
+  - name: dashboard-altinn-platform-aks-fleet-status
+    files:
+      - altinn-platform/aks-fleet-status.json
