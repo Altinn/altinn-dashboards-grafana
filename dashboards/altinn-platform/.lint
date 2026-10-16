@@ -1,0 +1,13 @@
+exclusions:
+  panel-datasource-rule:
+    reason: >-
+      Datasource UIDs are pinned on purpose. AKS Fleet Status reads Azure
+      Resource Graph through azure-monitor-oob; a ${datasource} variable would
+      save "default" instead of a real UID. See CLAUDE.md.
+    entries:
+      - dashboard: "AKS Fleet Status"
+  template-datasource-rule:
+    reason: >-
+      No datasource template variable by design; see panel-datasource-rule.
+    entries:
+      - dashboard: "AKS Fleet Status"

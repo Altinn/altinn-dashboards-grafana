@@ -1,0 +1,914 @@
+{
+  "uid": "aks-fleet-status",
+  "title": "AKS Fleet Status",
+  "description": "Status of all AKS clusters and node pools that the Grafana managed identity can read. Source: Azure Resource Graph (resources table, managedclusters + agentPoolProfiles). ARG data can be a few minutes old.",
+  "editable": false,
+  "panels": [
+    {
+      "datasource": {
+        "type": "grafana-azure-monitor-datasource",
+        "uid": "azure-monitor-oob"
+      },
+      "description": "AKS clusters that match the filters.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "text",
+            "mode": "fixed"
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "options": {
+        "colorMode": "none",
+        "graphMode": "none",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value"
+      },
+      "targets": [
+        {
+          "azureResourceGraph": {
+            "query": "resources\n| where type =~ 'microsoft.containerservice/managedclusters'\n| where '${cluster}' == '' or name contains '${cluster}'\n| summarize Clusters=count()",
+            "resultFormat": "table"
+          },
+          "queryType": "Azure Resource Graph",
+          "refId": "A",
+          "subscriptions": [
+            "$sub"
+          ]
+        }
+      ],
+      "title": "Clusters",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "grafana-azure-monitor-datasource",
+        "uid": "azure-monitor-oob"
+      },
+      "description": "provisioningState is not Succeeded, or powerState is not Running.",
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 5,
+        "x": 4,
+        "y": 0
+      },
+      "id": 2,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value"
+      },
+      "targets": [
+        {
+          "azureResourceGraph": {
+            "query": "resources\n| where type =~ 'microsoft.containerservice/managedclusters'\n| where '${cluster}' == '' or name contains '${cluster}'\n| where tostring(properties.provisioningState) != 'Succeeded' or tostring(properties.powerState.code) != 'Running'\n| summarize NotOK=count()",
+            "resultFormat": "table"
+          },
+          "queryType": "Azure Resource Graph",
+          "refId": "A",
+          "subscriptions": [
+            "$sub"
+          ]
+        }
+      ],
+      "title": "Clusters not OK",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "grafana-azure-monitor-datasource",
+        "uid": "azure-monitor-oob"
+      },
+      "description": "Node pool provisioningState is not Succeeded, or powerState is not Running.",
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 5,
+        "x": 9,
+        "y": 0
+      },
+      "id": 3,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value"
+      },
+      "targets": [
+        {
+          "azureResourceGraph": {
+            "query": "resources\n| where type =~ 'microsoft.containerservice/managedclusters'\n| where '${cluster}' == '' or name contains '${cluster}'\n| mv-expand pool = properties.agentPoolProfiles\n| where tostring(pool.provisioningState) != 'Succeeded' or tostring(pool.powerState.code) != 'Running'\n| summarize NotOK=count()",
+            "resultFormat": "table"
+          },
+          "queryType": "Azure Resource Graph",
+          "refId": "A",
+          "subscriptions": [
+            "$sub"
+          ]
+        }
+      ],
+      "title": "Node pools not OK",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "grafana-azure-monitor-datasource",
+        "uid": "azure-monitor-oob"
+      },
+      "description": "Node pools where the Kubernetes version is not the same as the cluster control plane version. Often a sign of a stopped upgrade.",
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 5,
+        "x": 14,
+        "y": 0
+      },
+      "id": 4,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value"
+      },
+      "targets": [
+        {
+          "azureResourceGraph": {
+            "query": "resources\n| where type =~ 'microsoft.containerservice/managedclusters'\n| where '${cluster}' == '' or name contains '${cluster}'\n| extend cp = tostring(properties.currentKubernetesVersion)\n| mv-expand pool = properties.agentPoolProfiles\n| where tostring(pool.currentOrchestratorVersion) != cp\n| summarize Drift=count()",
+            "resultFormat": "table"
+          },
+          "queryType": "Azure Resource Graph",
+          "refId": "A",
+          "subscriptions": [
+            "$sub"
+          ]
+        }
+      ],
+      "title": "Pools behind control plane",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "grafana-azure-monitor-datasource",
+        "uid": "azure-monitor-oob"
+      },
+      "description": "Sum of the node counts reported for each node pool. For autoscaled pools this is the current count, not the maximum.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "text",
+            "mode": "fixed"
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 5,
+        "x": 19,
+        "y": 0
+      },
+      "id": 5,
+      "options": {
+        "colorMode": "none",
+        "graphMode": "none",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value"
+      },
+      "targets": [
+        {
+          "azureResourceGraph": {
+            "query": "resources\n| where type =~ 'microsoft.containerservice/managedclusters'\n| where '${cluster}' == '' or name contains '${cluster}'\n| mv-expand pool = properties.agentPoolProfiles\n| summarize Nodes=sum(toint(pool['count']))",
+            "resultFormat": "table"
+          },
+          "queryType": "Azure Resource Graph",
+          "refId": "A",
+          "subscriptions": [
+            "$sub"
+          ]
+        }
+      ],
+      "title": "Nodes (sum of pool counts)",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "grafana-azure-monitor-datasource",
+        "uid": "azure-monitor-oob"
+      },
+      "description": "One row per cluster, with clusters that are not Succeeded/Running or have a node pool that is not OK first. Click a cluster name to open it in the Azure portal.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "id"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Cluster"
+            },
+            "properties": [
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "targetBlank": true,
+                    "title": "Open in Azure portal",
+                    "url": "https://portal.azure.com/#@/resource${__data.fields.id}/overview"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "State"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "mode": "basic",
+                  "type": "color-background"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "options": {
+                      "Canceled": {
+                        "color": "orange",
+                        "index": 2
+                      },
+                      "Failed": {
+                        "color": "red",
+                        "index": 1
+                      },
+                      "Succeeded": {
+                        "color": "green",
+                        "index": 0
+                      }
+                    },
+                    "type": "value"
+                  },
+                  {
+                    "options": {
+                      "pattern": "^(Upgrading|Updating|Creating|Scaling|Starting|Stopping|Deleting|Migrating)$",
+                      "result": {
+                        "color": "blue",
+                        "index": 3
+                      }
+                    },
+                    "type": "regex"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Power"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "options": {
+                      "Running": {
+                        "color": "green",
+                        "index": 0
+                      },
+                      "Stopped": {
+                        "color": "orange",
+                        "index": 1
+                      }
+                    },
+                    "type": "value"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "PoolsNotOK"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Pools not OK"
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "text",
+                      "value": null
+                    },
+                    {
+                      "color": "red",
+                      "value": 1
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "thresholds"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "PoolsBehind"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Pools behind CP"
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "text",
+                      "value": null
+                    },
+                    {
+                      "color": "orange",
+                      "value": 1
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "thresholds"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 14,
+        "w": 24,
+        "x": 0,
+        "y": 4
+      },
+      "id": 6,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        },
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "azureResourceGraph": {
+            "query": "resources\n| where type =~ 'microsoft.containerservice/managedclusters'\n| where '${cluster}' == '' or name contains '${cluster}'\n| join kind=leftouter (resourcecontainers | where type =~ 'microsoft.resources/subscriptions' | project subscriptionId, Subscription=name) on subscriptionId\n| extend State=tostring(properties.provisioningState), Power=tostring(properties.powerState.code), Version=tostring(properties.currentKubernetesVersion), UpgradeChannel=tostring(properties.autoUpgradeProfile.upgradeChannel), NodeOSChannel=tostring(properties.autoUpgradeProfile.nodeOSUpgradeChannel), Tier=tostring(sku.tier)\n| mv-expand p = properties.agentPoolProfiles\n| summarize PoolsNotOK=countif(tostring(p.provisioningState) != 'Succeeded' or tostring(p.powerState.code) != 'Running'), PoolsBehind=countif(tostring(p.currentOrchestratorVersion) != Version), Pools=count(), Nodes=sum(toint(p['count'])) by id, Cluster=name, Subscription, ResourceGroup=resourceGroup, Location=location, State, Power, Version, UpgradeChannel, NodeOSChannel, Tier\n| extend ok = iff(State == 'Succeeded' and Power == 'Running' and PoolsNotOK == 0, 1, 0)\n| order by ok asc, PoolsBehind desc, Cluster asc\n| project Cluster, Subscription, ResourceGroup, Location, State, Power, Version, PoolsNotOK, PoolsBehind, Pools, Nodes, UpgradeChannel, NodeOSChannel, Tier, id",
+            "resultFormat": "table"
+          },
+          "queryType": "Azure Resource Graph",
+          "refId": "A",
+          "subscriptions": [
+            "$sub"
+          ]
+        }
+      ],
+      "title": "Clusters (problems first)",
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "grafana-azure-monitor-datasource",
+        "uid": "azure-monitor-oob"
+      },
+      "description": "One row per node pool, with pools that are not Succeeded/Running first, then pools behind the control plane version. Click a cluster name to open its node pools in the Azure portal.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "id"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Cluster"
+            },
+            "properties": [
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "targetBlank": true,
+                    "title": "Open node pools in Azure portal",
+                    "url": "https://portal.azure.com/#@/resource${__data.fields.id}/nodePools"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "State"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "mode": "basic",
+                  "type": "color-background"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "options": {
+                      "Canceled": {
+                        "color": "orange",
+                        "index": 2
+                      },
+                      "Failed": {
+                        "color": "red",
+                        "index": 1
+                      },
+                      "Succeeded": {
+                        "color": "green",
+                        "index": 0
+                      }
+                    },
+                    "type": "value"
+                  },
+                  {
+                    "options": {
+                      "pattern": "^(Upgrading|Updating|Creating|Scaling|Starting|Stopping|Deleting|Migrating)$",
+                      "result": {
+                        "color": "blue",
+                        "index": 3
+                      }
+                    },
+                    "type": "regex"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Power"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "options": {
+                      "Running": {
+                        "color": "green",
+                        "index": 0
+                      },
+                      "Stopped": {
+                        "color": "orange",
+                        "index": 1
+                      }
+                    },
+                    "type": "value"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Behind"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Behind CP"
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "options": {
+                      "yes": {
+                        "color": "orange",
+                        "index": 0
+                      }
+                    },
+                    "type": "value"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "ControlPlane"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Control plane"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "NodeImage"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Node image"
+              },
+              {
+                "id": "custom.minWidth",
+                "value": 300
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 16,
+        "w": 24,
+        "x": 0,
+        "y": 18
+      },
+      "id": 7,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        },
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "azureResourceGraph": {
+            "query": "resources\n| where type =~ 'microsoft.containerservice/managedclusters'\n| where '${cluster}' == '' or name contains '${cluster}'\n| join kind=leftouter (resourcecontainers | where type =~ 'microsoft.resources/subscriptions' | project subscriptionId, Subscription=name) on subscriptionId\n| extend cp = tostring(properties.currentKubernetesVersion)\n| mv-expand pool = properties.agentPoolProfiles\n| extend State=tostring(pool.provisioningState), Power=tostring(pool.powerState.code), Version=tostring(pool.currentOrchestratorVersion)\n| extend Behind = iff(Version != cp, 'yes', '')\n| extend ok = iff(State == 'Succeeded' and Power == 'Running', 1, 0)\n| order by ok asc, Behind desc, name asc, tostring(pool.name) asc\n| project Cluster=name, Subscription, Pool=tostring(pool.name), Mode=tostring(pool.mode), State, Power, Version, ControlPlane=cp, Behind, NodeImage=tostring(pool.nodeImageVersion), Count=toint(pool['count']), Min=toint(pool.minCount), Max=toint(pool.maxCount), Autoscale=tobool(pool.enableAutoScaling), VmSize=tostring(pool.vmSize), OS=tostring(pool.osSKU), MaxSurge=tostring(pool.upgradeSettings.maxSurge), MaxUnavailable=tostring(pool.upgradeSettings.maxUnavailable), UndrainableNodes=tostring(pool.upgradeSettings.undrainableNodeBehavior), Zones=strcat_array(pool.availabilityZones, ','), id",
+            "resultFormat": "table"
+          },
+          "queryType": "Azure Resource Graph",
+          "refId": "A",
+          "subscriptions": [
+            "$sub"
+          ]
+        }
+      ],
+      "title": "Node pools (problems first)",
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "grafana-azure-monitor-datasource",
+        "uid": "azure-monitor-oob"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "#3274D9",
+            "mode": "fixed"
+          },
+          "custom": {
+            "axisPlacement": "auto",
+            "axisSoftMin": 0,
+            "fillOpacity": 90,
+            "lineWidth": 0
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 34
+      },
+      "id": 8,
+      "options": {
+        "barWidth": 0.6,
+        "groupWidth": 0.7,
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "orientation": "horizontal",
+        "showValue": "always",
+        "tooltip": {
+          "mode": "single"
+        },
+        "xField": "Version"
+      },
+      "targets": [
+        {
+          "azureResourceGraph": {
+            "query": "resources\n| where type =~ 'microsoft.containerservice/managedclusters'\n| where '${cluster}' == '' or name contains '${cluster}'\n| summarize Clusters=count() by Version=tostring(properties.currentKubernetesVersion)\n| extend v = parse_version(Version)\n| order by v asc\n| project Version, Clusters",
+            "resultFormat": "table"
+          },
+          "queryType": "Azure Resource Graph",
+          "refId": "A",
+          "subscriptions": [
+            "$sub"
+          ]
+        }
+      ],
+      "title": "Clusters by Kubernetes version",
+      "type": "barchart"
+    },
+    {
+      "datasource": {
+        "type": "grafana-azure-monitor-datasource",
+        "uid": "azure-monitor-oob"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "#3274D9",
+            "mode": "fixed"
+          },
+          "custom": {
+            "axisPlacement": "auto",
+            "axisSoftMin": 0,
+            "fillOpacity": 90,
+            "lineWidth": 0
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 34
+      },
+      "id": 9,
+      "options": {
+        "barWidth": 0.6,
+        "groupWidth": 0.7,
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "orientation": "horizontal",
+        "showValue": "always",
+        "tooltip": {
+          "mode": "single"
+        },
+        "xField": "NodeImage"
+      },
+      "targets": [
+        {
+          "azureResourceGraph": {
+            "query": "resources\n| where type =~ 'microsoft.containerservice/managedclusters'\n| where '${cluster}' == '' or name contains '${cluster}'\n| mv-expand pool = properties.agentPoolProfiles\n| summarize Pools=count() by NodeImage=tostring(pool.nodeImageVersion)\n| order by NodeImage asc",
+            "resultFormat": "table"
+          },
+          "queryType": "Azure Resource Graph",
+          "refId": "A",
+          "subscriptions": [
+            "$sub"
+          ]
+        }
+      ],
+      "title": "Node pools by node image",
+      "type": "barchart"
+    }
+  ],
+  "refresh": "5m",
+  "schemaVersion": 41,
+  "tags": [
+    "AKS",
+    "Azure Resource Graph",
+    "fleet"
+  ],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "datasource": {
+          "type": "grafana-azure-monitor-datasource",
+          "uid": "azure-monitor-oob"
+        },
+        "includeAll": true,
+        "label": "Subscription",
+        "multi": true,
+        "name": "sub",
+        "query": {
+          "queryType": "Azure Subscriptions",
+          "refId": "A"
+        },
+        "refresh": 2,
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "current": {
+          "text": "",
+          "value": ""
+        },
+        "label": "Cluster name contains",
+        "name": "cluster",
+        "query": "",
+        "type": "textbox"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "timezone": "browser"
+}
