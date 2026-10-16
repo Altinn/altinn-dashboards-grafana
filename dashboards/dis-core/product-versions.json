@@ -15,7 +15,7 @@
       }
     ]
   },
-  "description": "Rollout progress of the products in the dis-core clusters: the version every product container runs in AT22, AT23, TT02 and PROD, and whether each product's Flux Kustomizations are ready. Reads kube-state-metrics from each dis-core-<env>-products-amw workspace. Values are as of the end of the selected time range.",
+  "description": "Rollout progress of the products in the dis-core clusters: the version every product container runs in AT22, AT23, YT01, TT02 and PROD, and whether each product's Flux Kustomizations are ready. Reads kube-state-metrics from each dis-core-<env>-products-amw workspace. Values are as of the end of the selected time range.",
   "editable": false,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
@@ -193,6 +193,19 @@
         {
           "datasource": {
             "type": "prometheus",
+            "uid": "dis-core-yt01-products-amw"
+          },
+          "editorMode": "code",
+          "expr": "max by (app, YT01) (\nlabel_replace(\n  (\n    label_replace(label_replace(label_replace(\n      label_join(\n        label_replace(kube_pod_container_info{namespace=~\"^product-.+$\", container!=\"linkerd-proxy\"}, \"product\", \"$1\", \"namespace\", \"^product-(.+)$\"),\n        \"app\", \" / \", \"product\", \"container\"),\n      \"YT01\", \"$1\", \"image_spec\", \"(.*)\"),\n      \"YT01\", \"sha256:$1\", \"image_spec\", \"^[^@]*@sha256:([0-9a-f]{12}).*$\"),\n      \"YT01\", \"$1\", \"image_spec\", \"^[^@]*:([^:@/]+)(@sha256:[0-9a-f]+)?$\")\n    * on (namespace, pod) group_left() (kube_pod_status_phase{phase=\"Running\"} == 1)\n  )\n  * on (namespace) group_left() max by (namespace) (label_replace(gotk_resource_info{exported_namespace=~\"^product-.+$\", customresource_kind=\"kustomization\", ready=~\"^(false)$\"}, \"namespace\", \"$1\", \"exported_namespace\", \"(.*)\")),\n  \"YT01\", \"$1|notready\", \"YT01\", \"(.*)\")\nor\nlabel_replace(\n  ((\n    label_replace(label_replace(label_replace(\n      label_join(\n        label_replace(kube_pod_container_info{namespace=~\"^product-.+$\", container!=\"linkerd-proxy\"}, \"product\", \"$1\", \"namespace\", \"^product-(.+)$\"),\n        \"app\", \" / \", \"product\", \"container\"),\n      \"YT01\", \"$1\", \"image_spec\", \"(.*)\"),\n      \"YT01\", \"sha256:$1\", \"image_spec\", \"^[^@]*@sha256:([0-9a-f]{12}).*$\"),\n      \"YT01\", \"$1\", \"image_spec\", \"^[^@]*:([^:@/]+)(@sha256:[0-9a-f]+)?$\")\n    * on (namespace, pod) group_left() (kube_pod_status_phase{phase=\"Running\"} == 1)\n  )\n  unless on (namespace) max by (namespace) (label_replace(gotk_resource_info{exported_namespace=~\"^product-.+$\", customresource_kind=\"kustomization\", ready=~\"^(false)$\"}, \"namespace\", \"$1\", \"exported_namespace\", \"(.*)\")))\n  * on (namespace) group_left() max by (namespace) (label_replace(gotk_resource_info{exported_namespace=~\"^product-.+$\", customresource_kind=\"kustomization\", ready=~\"^(unknown)$\"}, \"namespace\", \"$1\", \"exported_namespace\", \"(.*)\")),\n  \"YT01\", \"$1|reconciling\", \"YT01\", \"(.*)\")\nor\nlabel_replace(\n  ((\n    label_replace(label_replace(label_replace(\n      label_join(\n        label_replace(kube_pod_container_info{namespace=~\"^product-.+$\", container!=\"linkerd-proxy\"}, \"product\", \"$1\", \"namespace\", \"^product-(.+)$\"),\n        \"app\", \" / \", \"product\", \"container\"),\n      \"YT01\", \"$1\", \"image_spec\", \"(.*)\"),\n      \"YT01\", \"sha256:$1\", \"image_spec\", \"^[^@]*@sha256:([0-9a-f]{12}).*$\"),\n      \"YT01\", \"$1\", \"image_spec\", \"^[^@]*:([^:@/]+)(@sha256:[0-9a-f]+)?$\")\n    * on (namespace, pod) group_left() (kube_pod_status_phase{phase=\"Running\"} == 1)\n  )\n  unless on (namespace) max by (namespace) (label_replace(gotk_resource_info{exported_namespace=~\"^product-.+$\", customresource_kind=\"kustomization\", ready=~\"^(false|unknown)$\"}, \"namespace\", \"$1\", \"exported_namespace\", \"(.*)\")))\n  * on (namespace) group_left() max by (namespace) (label_replace(gotk_resource_info{exported_namespace=~\"^product-.+$\", customresource_kind=\"kustomization\", ready=~\"^(true)$\"}, \"namespace\", \"$1\", \"exported_namespace\", \"(.*)\")),\n  \"YT01\", \"$1|ready\", \"YT01\", \"(.*)\")\nor\nlabel_replace(\n  (\n    label_replace(label_replace(label_replace(\n      label_join(\n        label_replace(kube_pod_container_info{namespace=~\"^product-.+$\", container!=\"linkerd-proxy\"}, \"product\", \"$1\", \"namespace\", \"^product-(.+)$\"),\n        \"app\", \" / \", \"product\", \"container\"),\n      \"YT01\", \"$1\", \"image_spec\", \"(.*)\"),\n      \"YT01\", \"sha256:$1\", \"image_spec\", \"^[^@]*@sha256:([0-9a-f]{12}).*$\"),\n      \"YT01\", \"$1\", \"image_spec\", \"^[^@]*:([^:@/]+)(@sha256:[0-9a-f]+)?$\")\n    * on (namespace, pod) group_left() (kube_pod_status_phase{phase=\"Running\"} == 1)\n  )\n  unless on (namespace) max by (namespace) (label_replace(gotk_resource_info{exported_namespace=~\"^product-.+$\", customresource_kind=\"kustomization\", ready=~\"^(true|false|unknown)$\"}, \"namespace\", \"$1\", \"exported_namespace\", \"(.*)\")),\n  \"YT01\", \"$1|noflux\", \"YT01\", \"(.*)\")\n)",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "YT01"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
             "uid": "dis-core-tt02-products-amw"
           },
           "editorMode": "code",
@@ -230,7 +243,7 @@
           "id": "filterFieldsByName",
           "options": {
             "include": {
-              "pattern": "^(app|AT22|AT23|TT02|PROD)$"
+              "pattern": "^(app|AT22|AT23|YT01|TT02|PROD)$"
             }
           }
         },
@@ -242,8 +255,9 @@
               "app": 0,
               "AT22": 1,
               "AT23": 2,
-              "TT02": 3,
-              "PROD": 4
+              "YT01": 3,
+              "TT02": 4,
+              "PROD": 5
             },
             "renameByName": {
               "app": "Product / container"
@@ -381,6 +395,19 @@
         {
           "datasource": {
             "type": "prometheus",
+            "uid": "dis-core-yt01-products-amw"
+          },
+          "editorMode": "code",
+          "expr": "max by (kustomization, YT01) (\n  label_replace(\n    label_join(\n      label_replace(\n        label_replace(gotk_resource_info{exported_namespace=~\"^product-.+$\", customresource_kind=\"kustomization\"}, \"product\", \"$1\", \"exported_namespace\", \"^product-(.+)$\"),\n        \"name\", \"syncroot\", \"name\", \"^product-.+-syncroot$\"),\n      \"kustomization\", \" / \", \"product\", \"name\"),\n    \"YT01\", \"$1\", \"ready\", \"(.*)\")\n)",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "YT01"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
             "uid": "dis-core-tt02-products-amw"
           },
           "editorMode": "code",
@@ -418,7 +445,7 @@
           "id": "filterFieldsByName",
           "options": {
             "include": {
-              "pattern": "^(kustomization|AT22|AT23|TT02|PROD)$"
+              "pattern": "^(kustomization|AT22|AT23|YT01|TT02|PROD)$"
             }
           }
         },
@@ -430,8 +457,9 @@
               "kustomization": 0,
               "AT22": 1,
               "AT23": 2,
-              "TT02": 3,
-              "PROD": 4
+              "YT01": 3,
+              "TT02": 4,
+              "PROD": 5
             },
             "renameByName": {
               "kustomization": "Product / Kustomization"
