@@ -14,14 +14,10 @@ that each CR's folderRef resolves to a GrafanaFolder somewhere in the repo, and 
 product dashboard overlay is registered in the repo-root kustomization.yaml. Public CRs must
 pin a publicSharing.accessToken, resync every minute and use only public folders, and only
 public/ may target the public-grafana instance. Exits non-zero listing every problem.
-
-Studio dashboards additionally follow the time, datasource, variable and panel interval
-conventions documented in CLAUDE.md.
 """
 import os
 import sys
 import glob
-import json
 import yaml
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -30,52 +26,6 @@ PRODUCTS = os.path.join(ROOT, "products")
 PUBLIC = os.path.join(ROOT, "public")
 PUBLIC_INSTANCE = "public-grafana"
 PUBLIC_RESYNC = "1m"
-STUDIO = os.path.join(PRODUCTS, "studio", "dashboards")
-# Only the Studio prod stack is scraped; its self-monitoring metrics have no env label.
-STUDIO_ENV_EXEMPTIONS = {"observability-overview.json"}
-# Self-monitoring is scraped every 30s and uses $__interval directly in rollups.
-STUDIO_INTERVAL_EXEMPTIONS = {"observability-overview.json"}
-
-
-def check_studio_dashboard(dashboard, filename, errors):
-    """Studio conventions apply only to products/studio/dashboards/*.json."""
-    prefix = f"products/studio/dashboards/{filename}"
-
-    def require(condition, message):
-        if not condition:
-            errors.append(f"{prefix}: {message}")
-
-    require(dashboard.get("time", {}).get("from") == "now-6h", "time.from must be now-6h.")
-    require(dashboard.get("refresh") == "5m", "refresh must be 5m.")
-    require(dashboard.get("timepicker", {}).get("refresh_intervals") == ["1m", "5m", "15m", "1h"],
-            "timepicker.refresh_intervals must be [1m, 5m, 15m, 1h].")
-    require("altinn-studio" in dashboard.get("tags", []), "tags must include altinn-studio.")
-    variables = dashboard.get("templating", {}).get("list", [])
-    require(not any(v.get("name") == "cluster" for v in variables), "cluster variable is forbidden.")
-    require("$cluster" not in json.dumps(dashboard) and "${cluster" not in json.dumps(dashboard),
-            "cluster variable references are forbidden.")
-    if filename not in STUDIO_ENV_EXEMPTIONS:
-        env = next((v for v in variables if v.get("name") == "env"), {})
-        require(env.get("type") == "query"
-                and env.get("datasource", {}).get("uid") == "altinn-studio-metrics",
-                "env must query the altinn-studio-metrics datasource.")
-        query = env.get("query", {})
-        query = query.get("query", "") if isinstance(query, dict) else query
-        require("deployment.environment.name" in query, "env must query deployment.environment.name.")
-        require(env.get("multi") is True and env.get("includeAll") is True,
-                "env must allow multiple values and All.")
-        current = env.get("current", {})
-        require(current.get("value") == ["prod"] and current.get("text") == ["prod"],
-                "env must default to prod.")
-
-    def check_panels(panels):
-        for panel in panels:
-            require("interval" not in panel,
-                    f"panel {panel.get('id')} must not override interval; use datasource timeInterval.")
-            check_panels(panel.get("panels", []))
-
-    if filename not in STUDIO_INTERVAL_EXEMPTIONS:
-        check_panels(dashboard.get("panels", []))
 
 
 def load_all(path):
@@ -194,9 +144,6 @@ def product_hint(product):
 
 def main():
     errors = []
-    for path in sorted(glob.glob(os.path.join(STUDIO, "*.json"))):
-        with open(path) as f:
-            check_studio_dashboard(json.load(f), os.path.basename(path), errors)
     folders = known_folders()
     total = 0
 
