@@ -81,7 +81,7 @@
         "tagKeys": "deployment.environment.name,service.version"
       },
       {
-        "name": "Restarts / new instances",
+        "name": "Process starts",
         "datasource": {
           "type": "prometheus",
           "uid": "altinn-studio-metrics"
