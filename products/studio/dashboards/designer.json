@@ -1,7 +1,7 @@
 {
   "uid": "altinn-studio-designer",
   "title": "Altinn Studio — Designer",
-  "description": "Altinn Studio Designer (service studio-designer) in the Studio environments. Traffic, errors and latency of its requests, its outgoing calls by host and its SignalR connections come from its HTTP and SignalR metrics (altinn-studio-metrics), with links from the panels to matching traces. Below them, for triage, lists of individual failed and slow requests, failed background jobs and failed outgoing calls, each linked to its trace, with breakdowns, from Designer's spans through altinn-studio-traces-logsql (LogsQL). Tail sampling keeps every trace with an error or over 1 s, so those lists are complete, but only 10 % of the other traces, so counts and latency of all requests come from the metrics. Datasource UIDs are pinned, matching the other Altinn Studio dashboards. Rates use increase_pure() over $__rate_interval divided by its length rather than rate(): VictoriaMetrics' rate() takes a new series' first sample as its baseline, so a first error on a route, status or error type would never show. Instance markers come from altinn.workload.start_time: blue marks the earliest retained start per environment/version over 90 days, orange marks each process start in range. Rollbacks to a retained version have only new-instance markers. History is limited by metric retention and successfully exported samples. Instances reporting counts processes with a sample in the last minute at the range end; it does not measure readiness. These features need the service metric rollout before they show production data.",
+  "description": "Altinn Studio Designer (service studio-designer) in the Studio environments. Traffic, errors and latency of its requests, its outgoing calls by host and its SignalR connections come from its HTTP and SignalR metrics (altinn-studio-metrics), with links from the panels to matching traces. Below them, for triage, lists of individual failed and slow requests, failed background jobs and failed outgoing calls, each linked to its trace, with breakdowns, from Designer's spans through altinn-studio-traces-logsql (LogsQL). Tail sampling keeps every trace with an error or over 1 s, so those lists are complete, but only 10 % of the other traces, so counts and latency of all requests come from the metrics. Datasource UIDs are pinned, matching the other Altinn Studio dashboards. Rates use increase_pure() over $__rate_interval divided by its length rather than rate(): VictoriaMetrics' rate() takes a new series' first sample as its baseline, so a first error on a route, status or error type would never show. Instance markers come from altinn.workload.start_time: blue marks the earliest retained start per environment/version over 90 days, orange marks each process start in range (off by default, switch on Process starts). Rollbacks to a retained version have only new-instance markers. History is limited by metric retention and successfully exported samples. Instances reporting counts processes with a sample in the last minute at the range end; it does not measure readiness. These features need the service metric rollout before they show production data.",
   "tags": [
     "altinn-studio",
     "designer"
@@ -101,7 +101,7 @@
           "type": "prometheus",
           "uid": "altinn-studio-metrics"
         },
-        "enable": true,
+        "enable": false,
         "hide": false,
         "iconColor": "#FF9830",
         "filter": {
