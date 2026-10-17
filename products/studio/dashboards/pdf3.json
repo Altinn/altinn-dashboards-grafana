@@ -8,7 +8,7 @@
   ],
   "editable": false,
   "schemaVersion": 42,
-  "refresh": "1m",
+  "refresh": "5m",
   "time": {
     "from": "now-6h",
     "to": "now"
@@ -27,10 +27,10 @@
         },
         "query": {
           "qryType": 1,
-          "query": "label_values({\"http.server.request.duration_count\", \"service.name\"=\"pdf3-proxy\"}, \"deployment.environment.name\")",
+          "query": "label_values({\"service.name\"=\"pdf3-proxy\"}, \"deployment.environment.name\")",
           "refId": "env"
         },
-        "definition": "label_values({\"http.server.request.duration_count\", \"service.name\"=\"pdf3-proxy\"}, \"deployment.environment.name\")",
+        "definition": "label_values({\"service.name\"=\"pdf3-proxy\"}, \"deployment.environment.name\")",
         "refresh": 2,
         "includeAll": true,
         "multi": true,
@@ -38,40 +38,10 @@
         "current": {
           "selected": true,
           "text": [
-            "All"
+            "prod"
           ],
           "value": [
-            "$__all"
-          ]
-        },
-        "sort": 1
-      },
-      {
-        "name": "cluster",
-        "label": "Cluster",
-        "description": "Filters the Request URLs panels only. In the runtime clusters, a cluster is a service owner.",
-        "type": "query",
-        "datasource": {
-          "type": "prometheus",
-          "uid": "altinn-studio-metrics"
-        },
-        "query": {
-          "qryType": 1,
-          "query": "label_values({\"http.server.request.duration_count\", \"service.name\"=\"pdf3-proxy\", \"deployment.environment.name\"=~\"$env\"}, \"k8s.cluster.name\")",
-          "refId": "cluster"
-        },
-        "definition": "label_values({\"http.server.request.duration_count\", \"service.name\"=\"pdf3-proxy\", \"deployment.environment.name\"=~\"$env\"}, \"k8s.cluster.name\")",
-        "refresh": 2,
-        "includeAll": true,
-        "multi": true,
-        "allValue": ".*",
-        "current": {
-          "selected": true,
-          "text": [
-            "All"
-          ],
-          "value": [
-            "$__all"
+            "prod"
           ]
         },
         "sort": 1
@@ -422,7 +392,7 @@
       "id": 17,
       "type": "timeseries",
       "title": "Request URLs by kind",
-      "description": "PDF requests per second by what the requested URL points to. standard is the app's normal PDF page; app_other is another page on the app's own host and under /{org}/{app}/; other is anything else (another host, scheme or path, or an invalid URL). The proxy records the kind as altinn.pdf.url_kind from Altinn/altinn-studio#21115 onwards, and only where it knows the environment's app hostname (at22, at23, at24, yt01, tt02, prod). unknown is requests without the attribute: from proxy versions before it, and requests rejected before the URL is read (wrong method or content type, too large, invalid JSON). Filtered by the Cluster variable. Each runtime cluster belongs to one service owner, so a cluster (k8s.cluster.name) is a service owner there; after pdf3 moves to the shared DIS core cluster there is one cluster per environment, and this no longer holds.",
+      "description": "PDF requests per second by what the requested URL points to. standard is the app's normal PDF page; app_other is another page on the app's own host and under /{org}/{app}/; other is anything else (another host, scheme or path, or an invalid URL). The proxy records the kind as altinn.pdf.url_kind from Altinn/altinn-studio#21115 onwards, and only where it knows the environment's app hostname (at22, at23, at24, yt01, tt02, prod). unknown is requests without the attribute: from proxy versions before it, and requests rejected before the URL is read (wrong method or content type, too large, invalid JSON). Each runtime cluster belongs to one service owner, so a cluster (k8s.cluster.name) is a service owner there; after pdf3 moves to the shared DIS core cluster there is one cluster per environment, and this no longer holds.",
       "datasource": {
         "type": "prometheus",
         "uid": "altinn-studio-metrics"
@@ -435,7 +405,7 @@
       },
       "targets": [
         {
-          "expr": "label_replace(sum by (\"altinn.pdf.url_kind\") (increase_pure({\"http.server.request.duration_count\", \"service.name\"=\"pdf3-proxy\", \"http.route\"=\"/pdf\", \"deployment.environment.name\"=~\"$env\", \"k8s.cluster.name\"=~\"$cluster\"}[$__rate_interval]) / ($__rate_interval_ms / 1000)), \"altinn.pdf.url_kind\", \"unknown\", \"altinn.pdf.url_kind\", \"\")",
+          "expr": "label_replace(sum by (\"altinn.pdf.url_kind\") (increase_pure({\"http.server.request.duration_count\", \"service.name\"=\"pdf3-proxy\", \"http.route\"=\"/pdf\", \"deployment.environment.name\"=~\"$env\"}[$__rate_interval]) / ($__rate_interval_ms / 1000)), \"altinn.pdf.url_kind\", \"unknown\", \"altinn.pdf.url_kind\", \"\")",
           "legendFormat": "{{altinn.pdf.url_kind}}",
           "datasource": {
             "type": "prometheus",
@@ -527,7 +497,7 @@
       "id": 18,
       "type": "table",
       "title": "Clusters sending other URLs",
-      "description": "Per cluster, the PDF requests over the dashboard's time range whose URL is not the app's normal PDF page: app_other and other, their sum (non-standard), and their share of the requests that have a kind. Clusters that only requested standard pages are not listed. standard is the app's normal PDF page; app_other is another page on the app's own host and under /{org}/{app}/; other is anything else (another host, scheme or path, or an invalid URL). The proxy records the kind as altinn.pdf.url_kind from Altinn/altinn-studio#21115 onwards, and only where it knows the environment's app hostname (at22, at23, at24, yt01, tt02, prod). Requests without the attribute are left out, so pick a time range after #21115 reached the environment. Filtered by the Cluster variable. Each runtime cluster belongs to one service owner, so a cluster (k8s.cluster.name) is a service owner there; after pdf3 moves to the shared DIS core cluster there is one cluster per environment, and this no longer holds.",
+      "description": "Per cluster, the PDF requests over the dashboard's time range whose URL is not the app's normal PDF page: app_other and other, their sum (non-standard), and their share of the requests that have a kind. Clusters that only requested standard pages are not listed. standard is the app's normal PDF page; app_other is another page on the app's own host and under /{org}/{app}/; other is anything else (another host, scheme or path, or an invalid URL). The proxy records the kind as altinn.pdf.url_kind from Altinn/altinn-studio#21115 onwards, and only where it knows the environment's app hostname (at22, at23, at24, yt01, tt02, prod). Requests without the attribute are left out, so pick a time range after #21115 reached the environment. Each runtime cluster belongs to one service owner, so a cluster (k8s.cluster.name) is a service owner there; after pdf3 moves to the shared DIS core cluster there is one cluster per environment, and this no longer holds.",
       "datasource": {
         "type": "prometheus",
         "uid": "altinn-studio-metrics"
@@ -540,7 +510,7 @@
       },
       "targets": [
         {
-          "expr": "sum by (\"k8s.cluster.name\") (increase_pure({\"http.server.request.duration_count\", \"service.name\"=\"pdf3-proxy\", \"http.route\"=\"/pdf\", \"deployment.environment.name\"=~\"$env\", \"k8s.cluster.name\"=~\"$cluster\", \"altinn.pdf.url_kind\"=\"app_other\"}[$__range])) > 0",
+          "expr": "sum by (\"k8s.cluster.name\") (increase_pure({\"http.server.request.duration_count\", \"service.name\"=\"pdf3-proxy\", \"http.route\"=\"/pdf\", \"deployment.environment.name\"=~\"$env\", \"altinn.pdf.url_kind\"=\"app_other\"}[$__range])) > 0",
           "instant": true,
           "range": false,
           "format": "table",
@@ -551,7 +521,7 @@
           "refId": "A"
         },
         {
-          "expr": "sum by (\"k8s.cluster.name\") (increase_pure({\"http.server.request.duration_count\", \"service.name\"=\"pdf3-proxy\", \"http.route\"=\"/pdf\", \"deployment.environment.name\"=~\"$env\", \"k8s.cluster.name\"=~\"$cluster\", \"altinn.pdf.url_kind\"=\"other\"}[$__range])) > 0",
+          "expr": "sum by (\"k8s.cluster.name\") (increase_pure({\"http.server.request.duration_count\", \"service.name\"=\"pdf3-proxy\", \"http.route\"=\"/pdf\", \"deployment.environment.name\"=~\"$env\", \"altinn.pdf.url_kind\"=\"other\"}[$__range])) > 0",
           "instant": true,
           "range": false,
           "format": "table",
@@ -562,7 +532,7 @@
           "refId": "B"
         },
         {
-          "expr": "sum by (\"k8s.cluster.name\") (increase_pure({\"http.server.request.duration_count\", \"service.name\"=\"pdf3-proxy\", \"http.route\"=\"/pdf\", \"deployment.environment.name\"=~\"$env\", \"k8s.cluster.name\"=~\"$cluster\", \"altinn.pdf.url_kind\"=~\"app_other|other\"}[$__range])) > 0",
+          "expr": "sum by (\"k8s.cluster.name\") (increase_pure({\"http.server.request.duration_count\", \"service.name\"=\"pdf3-proxy\", \"http.route\"=\"/pdf\", \"deployment.environment.name\"=~\"$env\", \"altinn.pdf.url_kind\"=~\"app_other|other\"}[$__range])) > 0",
           "instant": true,
           "range": false,
           "format": "table",
@@ -573,7 +543,7 @@
           "refId": "C"
         },
         {
-          "expr": "(sum by (\"k8s.cluster.name\") (increase_pure({\"http.server.request.duration_count\", \"service.name\"=\"pdf3-proxy\", \"http.route\"=\"/pdf\", \"deployment.environment.name\"=~\"$env\", \"k8s.cluster.name\"=~\"$cluster\", \"altinn.pdf.url_kind\"=~\"app_other|other\"}[$__range])) > 0) / sum by (\"k8s.cluster.name\") (increase_pure({\"http.server.request.duration_count\", \"service.name\"=\"pdf3-proxy\", \"http.route\"=\"/pdf\", \"deployment.environment.name\"=~\"$env\", \"k8s.cluster.name\"=~\"$cluster\", \"altinn.pdf.url_kind\"!=\"\"}[$__range]))",
+          "expr": "(sum by (\"k8s.cluster.name\") (increase_pure({\"http.server.request.duration_count\", \"service.name\"=\"pdf3-proxy\", \"http.route\"=\"/pdf\", \"deployment.environment.name\"=~\"$env\", \"altinn.pdf.url_kind\"=~\"app_other|other\"}[$__range])) > 0) / sum by (\"k8s.cluster.name\") (increase_pure({\"http.server.request.duration_count\", \"service.name\"=\"pdf3-proxy\", \"http.route\"=\"/pdf\", \"deployment.environment.name\"=~\"$env\", \"altinn.pdf.url_kind\"!=\"\"}[$__range]))",
           "instant": true,
           "range": false,
           "format": "table",
@@ -842,138 +812,161 @@
       "id": 12,
       "type": "row",
       "title": "Failed and slow requests (traces)",
-      "collapsed": false,
+      "collapsed": true,
       "gridPos": {
         "x": 0,
         "y": 33,
         "w": 24,
         "h": 1
       },
-      "panels": []
-    },
-    {
-      "id": 14,
-      "type": "timeseries",
-      "title": "Failed requests (traces)",
-      "description": "PDF requests per second that failed at the proxy, counted from traces. Tail sampling keeps every failed trace, so the count is complete; each dot is an example trace to open.",
-      "datasource": {
-        "type": "tempo",
-        "uid": "altinn-studio-traces"
-      },
-      "gridPos": {
-        "x": 0,
-        "y": 34,
-        "w": 12,
-        "h": 8
-      },
-      "targets": [
+      "panels": [
         {
-          "queryType": "traceql",
-          "metricsQueryType": "range",
-          "query": "{resource.service.name=\"pdf3-proxy\" && span.http.route=\"/pdf\" && status=error && resource.deployment.environment.name=~\"$env\"} | rate()",
+          "id": 14,
+          "type": "timeseries",
+          "title": "Failed requests (traces)",
+          "description": "PDF requests per second that failed at the proxy, counted from traces. Tail sampling keeps every failed trace, so the count is complete; each dot is an example trace to open.",
           "datasource": {
             "type": "tempo",
             "uid": "altinn-studio-traces"
           },
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "reqps",
-          "min": 0,
-          "custom": {
-            "drawStyle": "bars",
-            "fillOpacity": 60
+          "gridPos": {
+            "x": 0,
+            "y": 34,
+            "w": 12,
+            "h": 8
+          },
+          "targets": [
+            {
+              "queryType": "traceql",
+              "metricsQueryType": "range",
+              "query": "{resource.service.name=\"pdf3-proxy\" && span.http.route=\"/pdf\" && status=error && resource.deployment.environment.name=~\"$env\"} | rate()",
+              "datasource": {
+                "type": "tempo",
+                "uid": "altinn-studio-traces"
+              },
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "reqps",
+              "min": 0,
+              "custom": {
+                "drawStyle": "bars",
+                "fillOpacity": 60
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "showLegend": false
+            }
           }
         },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "showLegend": false
-        }
-      }
-    },
-    {
-      "id": 15,
-      "type": "timeseries",
-      "title": "Slow requests over 10 s (traces)",
-      "description": "PDF requests per second that took more than 10 s at the proxy, counted from traces. A normal generation takes a few seconds; past 10 s the request waited long for the page (apps can wait up to 30 s) or for a free worker (the proxy retries busy workers for about 10 s). Tail sampling keeps every trace over 1 s, so the count is complete; each dot is an example trace to open.",
-      "datasource": {
-        "type": "tempo",
-        "uid": "altinn-studio-traces"
-      },
-      "gridPos": {
-        "x": 12,
-        "y": 34,
-        "w": 12,
-        "h": 8
-      },
-      "targets": [
         {
-          "queryType": "traceql",
-          "metricsQueryType": "range",
-          "query": "{resource.service.name=\"pdf3-proxy\" && span.http.route=\"/pdf\" && duration > 10s && resource.deployment.environment.name=~\"$env\"} | rate()",
+          "id": 15,
+          "type": "timeseries",
+          "title": "Slow requests over 10 s (traces)",
+          "description": "PDF requests per second that took more than 10 s at the proxy, counted from traces. A normal generation takes a few seconds; past 10 s the request waited long for the page (apps can wait up to 30 s) or for a free worker (the proxy retries busy workers for about 10 s). Tail sampling keeps every trace over 1 s, so the count is complete; each dot is an example trace to open.",
           "datasource": {
             "type": "tempo",
             "uid": "altinn-studio-traces"
           },
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "reqps",
-          "min": 0,
-          "custom": {
-            "drawStyle": "bars",
-            "fillOpacity": 60
+          "gridPos": {
+            "x": 12,
+            "y": 34,
+            "w": 12,
+            "h": 8
+          },
+          "targets": [
+            {
+              "queryType": "traceql",
+              "metricsQueryType": "range",
+              "query": "{resource.service.name=\"pdf3-proxy\" && span.http.route=\"/pdf\" && duration > 10s && resource.deployment.environment.name=~\"$env\"} | rate()",
+              "datasource": {
+                "type": "tempo",
+                "uid": "altinn-studio-traces"
+              },
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "reqps",
+              "min": 0,
+              "custom": {
+                "drawStyle": "bars",
+                "fillOpacity": 60
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "showLegend": false
+            }
           }
         },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "showLegend": false
-        }
-      }
-    },
-    {
-      "id": 13,
-      "type": "table",
-      "title": "Recent failed generations",
-      "description": "Worker requests that ended in an error: the POST /generate span, one per failed generation. Tail sampling keeps every failed trace, so this lists them all. The span carries the failure reason as error.type and the request's details (target URL, options, wait condition, cookies, queue state) as attributes; open the trace to see which step failed.",
-      "datasource": {
-        "type": "tempo",
-        "uid": "altinn-studio-traces"
-      },
-      "gridPos": {
-        "x": 0,
-        "y": 42,
-        "w": 24,
-        "h": 8
-      },
-      "targets": [
         {
-          "queryType": "traceql",
-          "query": "{resource.service.name=\"pdf3-worker\" && span.http.route=\"/generate\" && status=error && resource.deployment.environment.name=~\"$env\"}",
-          "limit": 20,
-          "tableType": "traces",
+          "id": 13,
+          "type": "table",
+          "title": "Recent failed generations",
+          "description": "Worker requests that ended in an error: the POST /generate span, one per failed generation. Tail sampling keeps every failed trace, so this lists them all. The span carries the failure reason as error.type and the request's details (target URL, options, wait condition, cookies, queue state) as attributes; open the trace to see which step failed.",
           "datasource": {
             "type": "tempo",
             "uid": "altinn-studio-traces"
           },
-          "refId": "A"
+          "gridPos": {
+            "x": 0,
+            "y": 42,
+            "w": 24,
+            "h": 8
+          },
+          "targets": [
+            {
+              "queryType": "traceql",
+              "query": "{resource.service.name=\"pdf3-worker\" && span.http.route=\"/generate\" && status=error && resource.deployment.environment.name=~\"$env\"}",
+              "limit": 20,
+              "tableType": "traces",
+              "datasource": {
+                "type": "tempo",
+                "uid": "altinn-studio-traces"
+              },
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "none"
+            },
+            "overrides": []
+          },
+          "options": {}
         }
+      ]
+    }
+  ],
+  "timepicker": {
+    "refresh_intervals": [
+      "1m",
+      "5m",
+      "15m",
+      "1h"
+    ]
+  },
+  "links": [
+    {
+      "asDropdown": true,
+      "icon": "external link",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [
+        "altinn-studio"
       ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "none"
-        },
-        "overrides": []
-      },
-      "options": {}
+      "targetBlank": false,
+      "title": "Studio dashboards",
+      "type": "dashboards"
     }
   ]
 }
