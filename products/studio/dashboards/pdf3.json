@@ -1,7 +1,7 @@
 {
   "uid": "altinn-studio-pdf3",
   "title": "Altinn Studio — PDF3",
-  "description": "PDF generation in pdf3 (proxy and workers) in the runtime environments, and the relay in each tenant cluster that forwards the apps' requests to it. Requests, latency, status codes and the outcome of each generation come from the services' HTTP server metrics, where the worker sets error.type on failed generations; failed and slow requests from traces, which tail sampling always keeps, with example traces and links from the metric panels to the matching traces. The Relay row shows what the apps see in each tenant cluster, where it fails and why, and the retries at the relay and the proxy. The Request URLs row shows what the requested URLs point to, per cluster, which in the runtime clusters is per service owner. Datasource UIDs are pinned, matching the other Altinn Studio dashboards. Rates use increase_pure() over $__rate_interval divided by its length rather than rate(): VictoriaMetrics' rate() takes a new series' first sample as its baseline, so a first error on a route, status or error type would never show. Instance markers on the graphs are for the proxy and workers, and come from altinn.workload.start_time: blue marks the earliest retained start per environment/version over 90 days, orange marks each process start in range (off by default, switch on Process starts). Rollbacks to a retained version have only new-instance markers. History is limited by metric retention and successfully exported samples. Instances reporting counts processes with a sample in the last minute at the range end; it does not measure readiness. These features need the service metric rollout before they show production data.",
+  "description": "PDF generation in pdf3 (proxy and workers) in the runtime environments, and the relay in each service owner's cluster that forwards the apps' requests to it. Requests, latency, status codes and the outcome of each generation come from the services' HTTP server metrics, where the worker sets error.type on failed generations; failed and slow requests from traces, which tail sampling always keeps, with example traces and links from the metric panels to the matching traces. The Relay row shows what the apps see in each tenant cluster, where it fails and why, and the retries at the relay and the proxy. The Request URLs row shows what the requested URLs point to, per cluster, which in the runtime clusters is per service owner. Datasource UIDs are pinned, matching the other Altinn Studio dashboards. Rates use increase_pure() over $__rate_interval divided by its length rather than rate(): VictoriaMetrics' rate() takes a new series' first sample as its baseline, so a first error on a route, status or error type would never show. Instance markers on the graphs are for the proxy and workers, and come from altinn.workload.start_time: blue marks the earliest retained start per environment/version over 90 days, orange marks each process start in range (off by default, switch on Process starts). Rollbacks to a retained version have only new-instance markers. History is limited by metric retention and successfully exported samples. Instances reporting counts processes with a sample in the last minute at the range end; it does not measure readiness. These features need the service metric rollout before they show production data.",
   "tags": [
     "altinn-studio",
     "pdf3"
@@ -494,7 +494,7 @@
     {
       "id": 20,
       "type": "row",
-      "title": "Relay (tenant clusters, POST /pdf)",
+      "title": "Relay (service owner clusters, POST /pdf)",
       "collapsed": false,
       "gridPos": {
         "x": 0,
@@ -508,7 +508,7 @@
       "id": 21,
       "type": "stat",
       "title": "Relay requests per second",
-      "description": "PDF requests the relays received per second, from the apps in the tenant clusters.",
+      "description": "PDF requests the relays received per second, from the apps in the service owners' clusters.",
       "datasource": {
         "type": "prometheus",
         "uid": "altinn-studio-metrics"
@@ -865,7 +865,7 @@
         "type": "prometheus",
         "uid": "altinn-studio-metrics"
       },
-      "description": "Per tenant cluster over the dashboard's time range: the relays' PDF requests, the failures (5xx and 429, not client_dropped) and their share. Each tenant cluster belongs to one service owner. Clusters without failures are not listed.",
+      "description": "Per service owner cluster over the dashboard's time range: the relays' PDF requests, the failures (5xx and 429, not client_dropped) and their share. Each cluster belongs to one service owner. Clusters without failures are not listed.",
       "gridPos": {
         "x": 0,
         "y": 38,
