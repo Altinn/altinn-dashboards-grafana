@@ -453,7 +453,7 @@
       "id": 30,
       "type": "table",
       "title": "Relays · service owner clusters",
-      "description": "The relay runs in every service owner's runtime cluster and forwards that owner's apps' requests to the environment's DIS Core, so it is counted per cluster, not as one fleet. Per environment: Clusters with a relay, Pods across them, Below min (clusters with fewer than the HPA's 2 pods), At max (clusters at its 6 pods, no headroom left) and Stopped (clusters whose relay reported earlier in the dashboard's time range but not in the last minute). The pods per cluster are in the Relay row. Counted from altinn.workload.start_time: a pod counts while its process has sent telemetry in the preceding minute (it exports every 15 s). That is not Kubernetes readiness: a replaced pod overlaps its successor for up to a minute, and an environment that sends no telemetry shows No data, not 0.",
+      "description": "The relay runs in every service owner's runtime cluster and forwards that owner's apps' requests to the environment's DIS Core, so it is counted per cluster, not as one fleet. Per environment: Clusters with a relay, Pods across them, Below min (clusters with fewer than the HPA's 2 pods), At max (clusters at its 6 pods, no headroom left) and Stopped (clusters whose relay reported earlier in the dashboard's time range but not in the last minute). Counted from altinn.workload.start_time: a pod counts while its process has sent telemetry in the preceding minute (it exports every 15 s). That is not Kubernetes readiness: a replaced pod overlaps its successor for up to a minute, and an environment that sends no telemetry shows No data, not 0.",
       "datasource": {
         "type": "prometheus",
         "uid": "altinn-studio-metrics"
@@ -1384,7 +1384,7 @@
       "gridPos": {
         "x": 0,
         "y": 43,
-        "w": 12,
+        "w": 24,
         "h": 8
       },
       "targets": [
@@ -1482,134 +1482,6 @@
           {
             "displayName": "Failed",
             "desc": true
-          }
-        ]
-      }
-    },
-    {
-      "id": 31,
-      "type": "table",
-      "title": "Relay pods per cluster",
-      "description": "Relay pods in each service owner cluster: Now, and the Peak over the dashboard's time range (sampled each minute). The HPA keeps 2 to 6. A cluster with a Peak but no Now stopped reporting during the range. Sorted with the fewest pods first. Counted from altinn.workload.start_time: a pod counts while its process has sent telemetry in the preceding minute (it exports every 15 s). That is not Kubernetes readiness: a replaced pod overlaps its successor for up to a minute, and an environment that sends no telemetry shows No data, not 0.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "altinn-studio-metrics"
-      },
-      "gridPos": {
-        "x": 12,
-        "y": 43,
-        "w": 12,
-        "h": 8
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "altinn-studio-metrics"
-          },
-          "refId": "A",
-          "expr": "count by (\"deployment.environment.name\", \"k8s.cluster.name\") (group by (\"deployment.environment.name\", \"k8s.cluster.name\", \"service.instance.id\") (present_over_time({\"altinn.workload.start_time\", \"service.name\"=\"pdf3-relay\", \"deployment.environment.name\"=~\"$env\"}[1m])))",
-          "instant": true,
-          "range": false,
-          "format": "table"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "altinn-studio-metrics"
-          },
-          "refId": "B",
-          "expr": "max_over_time((count by (\"deployment.environment.name\", \"k8s.cluster.name\") (group by (\"deployment.environment.name\", \"k8s.cluster.name\", \"service.instance.id\") (present_over_time({\"altinn.workload.start_time\", \"service.name\"=\"pdf3-relay\", \"deployment.environment.name\"=~\"$env\"}[1m]))))[$__range:1m])",
-          "instant": true,
-          "range": false,
-          "format": "table"
-        }
-      ],
-      "transformations": [
-        {
-          "id": "merge",
-          "options": {}
-        },
-        {
-          "id": "organize",
-          "options": {
-            "excludeByName": {
-              "Time": true
-            },
-            "indexByName": {
-              "deployment.environment.name": 0,
-              "k8s.cluster.name": 1,
-              "Value #A": 2,
-              "Value #B": 3
-            },
-            "renameByName": {
-              "deployment.environment.name": "Environment",
-              "k8s.cluster.name": "Cluster",
-              "Value #A": "Now",
-              "Value #B": "Peak"
-            }
-          }
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "none",
-          "decimals": 0,
-          "custom": {
-            "align": "auto",
-            "cellOptions": {
-              "type": "auto"
-            }
-          }
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Now"
-            },
-            "properties": [
-              {
-                "id": "custom.cellOptions",
-                "value": {
-                  "type": "color-text"
-                }
-              },
-              {
-                "id": "thresholds",
-                "value": {
-                  "mode": "absolute",
-                  "steps": [
-                    {
-                      "color": "orange",
-                      "value": null
-                    },
-                    {
-                      "color": "text",
-                      "value": 2
-                    },
-                    {
-                      "color": "orange",
-                      "value": 6
-                    }
-                  ]
-                }
-              },
-              {
-                "id": "noValue",
-                "value": "stopped"
-              }
-            ]
-          }
-        ]
-      },
-      "options": {
-        "showHeader": true,
-        "cellHeight": "sm",
-        "sortBy": [
-          {
-            "displayName": "Now",
-            "desc": false
           }
         ]
       }
