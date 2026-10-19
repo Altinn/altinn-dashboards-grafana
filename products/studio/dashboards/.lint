@@ -8,12 +8,15 @@ exclusions:
       observability dashboard reads only the Victoria stack's own metrics, which
       only altinn-studio-metrics holds. The Designer dashboard reads Designer's spans
       through altinn-studio-traces-logsql and links them to altinn-studio-traces.
+      The reports and alerts dashboard reads Designer's notification counters and
+      lists failures from its spans the same way.
       The workflow engine dashboard reads only the engine's metrics.
     entries:
       - dashboard: "Altinn Studio — PDF3"
       - dashboard: "Altinn Studio — Observability"
       - dashboard: "Altinn Studio — Designer"
       - dashboard: "Altinn Studio - Workflow Engine"
+      - dashboard: "Altinn Studio — Reports and alerts"
   template-datasource-rule:
     reason: >-
       No datasource template variable by design; see panel-datasource-rule.
@@ -22,3 +25,4 @@ exclusions:
       - dashboard: "Altinn Studio — Observability"
       - dashboard: "Altinn Studio — Designer"
       - dashboard: "Altinn Studio - Workflow Engine"
+      - dashboard: "Altinn Studio — Reports and alerts"
