@@ -1,0 +1,1638 @@
+{
+  "uid": "altinn-studio-reports-and-alerts",
+  "title": "Altinn Studio — Reports and alerts",
+  "description": "The periodic reports and the alerts Altinn Studio Designer (service studio-designer) sends to service owners' contact points (email, SMS and Slack), and the alerts it posts to the Studio team's Slack channel. Counts come from Designer's counters altinn.designer.periodic_report.reports and altinn.designer.notification.deliveries (altinn-studio-metrics), which are not sampled; a failure carries error.type. Sent means Altinn Notifications accepted the order, or the Slack webhook answered with success. Whether an email or SMS then reached the recipient is known only to Altinn Notifications. Service owner and Runtime environment filter the metric panels; the trace table at the bottom, from Designer's spans through altinn-studio-traces-logsql, has its own Filters. Notifications about failed deploys are counted with kind deployment and are not shown here. Totals use increase_pure() over the range, which also counts a counter's first increment.",
+  "tags": [
+    "altinn-studio",
+    "designer"
+  ],
+  "editable": false,
+  "schemaVersion": 42,
+  "refresh": "5m",
+  "time": {
+    "from": "now-7d",
+    "to": "now"
+  },
+  "timezone": "browser",
+  "graphTooltip": 1,
+  "templating": {
+    "list": [
+      {
+        "name": "env",
+        "label": "Studio environment",
+        "description": "Studio environment Designer runs in (deployment.environment.name).",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "altinn-studio-metrics"
+        },
+        "query": {
+          "qryType": 1,
+          "query": "label_values({\"service.name\"=\"studio-designer\"}, \"deployment.environment.name\")",
+          "refId": "env"
+        },
+        "definition": "label_values({\"service.name\"=\"studio-designer\"}, \"deployment.environment.name\")",
+        "refresh": 2,
+        "includeAll": true,
+        "multi": true,
+        "current": {
+          "selected": true,
+          "text": [
+            "prod"
+          ],
+          "value": [
+            "prod"
+          ]
+        },
+        "sort": 1
+      },
+      {
+        "name": "service_owner",
+        "label": "Service owner",
+        "description": "Service owner the report or alert is for (altinn.service_owner). Filters the metric panels.",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "altinn-studio-metrics"
+        },
+        "query": {
+          "qryType": 1,
+          "query": "label_values({__name__=~\"altinn\\\\.designer\\\\.(notification\\\\.deliveries|periodic_report\\\\.reports)\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\"}, \"altinn.service_owner\")",
+          "refId": "service_owner"
+        },
+        "definition": "label_values({__name__=~\"altinn\\\\.designer\\\\.(notification\\\\.deliveries|periodic_report\\\\.reports)\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\"}, \"altinn.service_owner\")",
+        "refresh": 2,
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": true,
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "sort": 1
+      },
+      {
+        "name": "target_env",
+        "label": "Runtime environment",
+        "description": "Runtime environment the report or alert is about (altinn.environment), such as tt02 or prod. Filters the metric panels.",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "altinn-studio-metrics"
+        },
+        "query": {
+          "qryType": 1,
+          "query": "label_values({__name__=~\"altinn\\\\.designer\\\\.(notification\\\\.deliveries|periodic_report\\\\.reports)\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\"}, \"altinn.environment\")",
+          "refId": "target_env"
+        },
+        "definition": "label_values({__name__=~\"altinn\\\\.designer\\\\.(notification\\\\.deliveries|periodic_report\\\\.reports)\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\"}, \"altinn.environment\")",
+        "refresh": 2,
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": true,
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "sort": 1
+      },
+      {
+        "name": "filters",
+        "label": "Filters",
+        "description": "Filters the trace table (LogsQL) on any span field, such as span_attr:altinn.service_owner or span_attr:altinn.designer.notification.kind. The metric panels are not filtered.",
+        "type": "adhoc",
+        "datasource": {
+          "type": "victoriametrics-logs-datasource",
+          "uid": "altinn-studio-traces-logsql"
+        },
+        "filters": []
+      }
+    ]
+  },
+  "annotations": {
+    "list": []
+  },
+  "links": [
+    {
+      "asDropdown": true,
+      "icon": "external link",
+      "includeVars": false,
+      "keepTime": true,
+      "tags": [
+        "altinn-studio"
+      ],
+      "targetBlank": false,
+      "title": "Studio dashboards",
+      "type": "dashboards"
+    }
+  ],
+  "panels": [
+    {
+      "id": 1,
+      "type": "row",
+      "title": "Periodic reports",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Reports sent",
+      "description": "Periodic reports sent in the time range: one per service owner, environment and frequency, counted when every subscribed contact method accepted it.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "altinn-studio-metrics"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 1,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "A",
+          "expr": "sum(increase_pure({\"altinn.designer.periodic_report.reports\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\", \"altinn.service_owner\"=~\"$service_owner\", \"altinn.environment\"=~\"$target_env\", \"error.type\"=\"\"}[$__range])) or vector(0)",
+          "legendFormat": "",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value"
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Reports failed",
+      "description": "Periodic reports that failed in the time range: the report could not be put together, or at least one subscribed contact method did not accept it. The others still got it. Reports by service owner and environment, and Recent failed reports and deliveries, show which.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "altinn-studio-metrics"
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 1,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "A",
+          "expr": "sum(increase_pure({\"altinn.designer.periodic_report.reports\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\", \"altinn.service_owner\"=~\"$service_owner\", \"altinn.environment\"=~\"$target_env\", \"error.type\"!=\"\"}[$__range])) or vector(0)",
+          "legendFormat": "",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value"
+      }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Report deliveries sent",
+      "description": "Deliveries of periodic reports, one per contact method, that Altinn Notifications or Slack accepted. For email and SMS, accepted is not delivered: Altinn Notifications sends them afterwards and knows whether they arrived.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "altinn-studio-metrics"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 1,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "A",
+          "expr": "sum(increase_pure({\"altinn.designer.notification.deliveries\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\", \"altinn.service_owner\"=~\"$service_owner\", \"altinn.environment\"=~\"$target_env\", \"altinn.designer.notification.kind\"=\"periodic_report\", \"error.type\"=\"\"}[$__range])) or vector(0)",
+          "legendFormat": "",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value"
+      }
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Report deliveries failed",
+      "description": "Deliveries of periodic reports, one per contact method, that Altinn Notifications or Slack did not accept.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "altinn-studio-metrics"
+      },
+      "gridPos": {
+        "x": 18,
+        "y": 1,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "A",
+          "expr": "sum(increase_pure({\"altinn.designer.notification.deliveries\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\", \"altinn.service_owner\"=~\"$service_owner\", \"altinn.environment\"=~\"$target_env\", \"altinn.designer.notification.kind\"=\"periodic_report\", \"error.type\"!=\"\"}[$__range])) or vector(0)",
+          "legendFormat": "",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value"
+      }
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Reports by frequency",
+      "description": "Periodic reports per frequency, sent and failed, per bar interval. Daily reports go out at 07:00, weekly ones on Mondays and monthly ones on the 1st, Norwegian time.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "altinn-studio-metrics"
+      },
+      "interval": "5m",
+      "gridPos": {
+        "x": 0,
+        "y": 5,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "A",
+          "expr": "sum by (\"altinn.designer.periodic_report.frequency\")(increase_pure({\"altinn.designer.periodic_report.reports\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\", \"altinn.service_owner\"=~\"$service_owner\", \"altinn.environment\"=~\"$target_env\", \"error.type\"=\"\"}[$__interval]))",
+          "legendFormat": "{{altinn.designer.periodic_report.frequency}}"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "B",
+          "expr": "sum by (\"altinn.designer.periodic_report.frequency\")(increase_pure({\"altinn.designer.periodic_report.reports\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\", \"altinn.service_owner\"=~\"$service_owner\", \"altinn.environment\"=~\"$target_env\", \"error.type\"!=\"\"}[$__interval]))",
+          "legendFormat": "{{altinn.designer.periodic_report.frequency}} failed"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "min": 0,
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 80,
+            "lineWidth": 1,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/failed/"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Report deliveries by contact method",
+      "description": "Deliveries of periodic reports per contact method, accepted and failed, per bar interval.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "altinn-studio-metrics"
+      },
+      "interval": "5m",
+      "gridPos": {
+        "x": 12,
+        "y": 5,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "A",
+          "expr": "sum by (\"altinn.designer.notification.contact_method.type\")(increase_pure({\"altinn.designer.notification.deliveries\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\", \"altinn.service_owner\"=~\"$service_owner\", \"altinn.environment\"=~\"$target_env\", \"altinn.designer.notification.kind\"=\"periodic_report\", \"error.type\"=\"\"}[$__interval]))",
+          "legendFormat": "{{altinn.designer.notification.contact_method.type}}"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "B",
+          "expr": "sum by (\"altinn.designer.notification.contact_method.type\")(increase_pure({\"altinn.designer.notification.deliveries\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\", \"altinn.service_owner\"=~\"$service_owner\", \"altinn.environment\"=~\"$target_env\", \"altinn.designer.notification.kind\"=\"periodic_report\", \"error.type\"!=\"\"}[$__interval]))",
+          "legendFormat": "{{altinn.designer.notification.contact_method.type}} failed"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "min": 0,
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 80,
+            "lineWidth": 1,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/failed/"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 8,
+      "type": "table",
+      "title": "Reports by service owner and environment",
+      "description": "Periodic reports and their deliveries over the time range, per service owner and runtime environment. Sorted by failed reports; select a column header to sort by another.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "altinn-studio-metrics"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 13,
+        "w": 24,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "A",
+          "expr": "sum by (\"altinn.service_owner\", \"altinn.environment\")(increase_pure({\"altinn.designer.periodic_report.reports\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\", \"altinn.service_owner\"=~\"$service_owner\", \"altinn.environment\"=~\"$target_env\", \"error.type\"=\"\"}[$__range])) > 0",
+          "legendFormat": "",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "B",
+          "expr": "sum by (\"altinn.service_owner\", \"altinn.environment\")(increase_pure({\"altinn.designer.periodic_report.reports\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\", \"altinn.service_owner\"=~\"$service_owner\", \"altinn.environment\"=~\"$target_env\", \"error.type\"!=\"\"}[$__range])) > 0",
+          "legendFormat": "",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "C",
+          "expr": "sum by (\"altinn.service_owner\", \"altinn.environment\")(increase_pure({\"altinn.designer.notification.deliveries\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\", \"altinn.service_owner\"=~\"$service_owner\", \"altinn.environment\"=~\"$target_env\", \"altinn.designer.notification.kind\"=\"periodic_report\", \"error.type\"=\"\"}[$__range])) > 0",
+          "legendFormat": "",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "D",
+          "expr": "sum by (\"altinn.service_owner\", \"altinn.environment\")(increase_pure({\"altinn.designer.notification.deliveries\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\", \"altinn.service_owner\"=~\"$service_owner\", \"altinn.environment\"=~\"$target_env\", \"altinn.designer.notification.kind\"=\"periodic_report\", \"error.type\"!=\"\"}[$__range])) > 0",
+          "legendFormat": "",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "indexByName": {
+              "altinn.service_owner": 0,
+              "altinn.environment": 1,
+              "Value #A": 2,
+              "Value #B": 3,
+              "Value #C": 4,
+              "Value #D": 5
+            },
+            "renameByName": {
+              "altinn.service_owner": "Service owner",
+              "altinn.environment": "Environment",
+              "Value #A": "Reports sent",
+              "Value #B": "Reports failed",
+              "Value #C": "Deliveries sent",
+              "Value #D": "Deliveries failed"
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "noValue": "",
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": true,
+            "filterable": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Reports failed"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Deliveries failed"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "countRows": false
+        },
+        "sortBy": [
+          {
+            "displayName": "Reports failed",
+            "desc": true
+          }
+        ]
+      }
+    },
+    {
+      "id": 9,
+      "type": "row",
+      "title": "Alerts",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 21,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 10,
+      "type": "stat",
+      "title": "Alerts notified",
+      "description": "Firing alerts Designer notified about in the time range. Each one is posted once to the Studio team's Slack channel, so this counts those posts, failed or not.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "altinn-studio-metrics"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 22,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "A",
+          "expr": "sum(increase_pure({\"altinn.designer.notification.deliveries\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\", \"altinn.service_owner\"=~\"$service_owner\", \"altinn.environment\"=~\"$target_env\", \"altinn.designer.notification.kind\"=\"alert\", \"altinn.designer.notification.audience\"=\"internal\"}[$__range])) or vector(0)",
+          "legendFormat": "",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value"
+      }
+    },
+    {
+      "id": 11,
+      "type": "stat",
+      "title": "Alert deliveries sent",
+      "description": "Deliveries of alerts to service owners, one per contact method, that Altinn Notifications or Slack accepted. For email and SMS, accepted is not delivered.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "altinn-studio-metrics"
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 22,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "A",
+          "expr": "sum(increase_pure({\"altinn.designer.notification.deliveries\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\", \"altinn.service_owner\"=~\"$service_owner\", \"altinn.environment\"=~\"$target_env\", \"altinn.designer.notification.kind\"=\"alert\", \"altinn.designer.notification.audience\"=\"service_owner\", \"error.type\"=\"\"}[$__range])) or vector(0)",
+          "legendFormat": "",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value"
+      }
+    },
+    {
+      "id": 12,
+      "type": "stat",
+      "title": "Alert deliveries failed",
+      "description": "Deliveries of alerts to service owners, one per contact method, that Altinn Notifications or Slack did not accept.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "altinn-studio-metrics"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 22,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "A",
+          "expr": "sum(increase_pure({\"altinn.designer.notification.deliveries\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\", \"altinn.service_owner\"=~\"$service_owner\", \"altinn.environment\"=~\"$target_env\", \"altinn.designer.notification.kind\"=\"alert\", \"altinn.designer.notification.audience\"=\"service_owner\", \"error.type\"!=\"\"}[$__range])) or vector(0)",
+          "legendFormat": "",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value"
+      }
+    },
+    {
+      "id": 13,
+      "type": "stat",
+      "title": "Internal Slack posts failed",
+      "description": "Alerts that could not be posted to the Studio team's Slack channel.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "altinn-studio-metrics"
+      },
+      "gridPos": {
+        "x": 18,
+        "y": 22,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "A",
+          "expr": "sum(increase_pure({\"altinn.designer.notification.deliveries\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\", \"altinn.service_owner\"=~\"$service_owner\", \"altinn.environment\"=~\"$target_env\", \"altinn.designer.notification.kind\"=\"alert\", \"altinn.designer.notification.audience\"=\"internal\", \"error.type\"!=\"\"}[$__range])) or vector(0)",
+          "legendFormat": "",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value"
+      }
+    },
+    {
+      "id": 14,
+      "type": "timeseries",
+      "title": "Alerts by service owner",
+      "description": "Firing alerts Designer notified about, per service owner, per bar interval.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "altinn-studio-metrics"
+      },
+      "interval": "5m",
+      "gridPos": {
+        "x": 0,
+        "y": 26,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "A",
+          "expr": "sum by (\"altinn.service_owner\")(increase_pure({\"altinn.designer.notification.deliveries\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\", \"altinn.service_owner\"=~\"$service_owner\", \"altinn.environment\"=~\"$target_env\", \"altinn.designer.notification.kind\"=\"alert\", \"altinn.designer.notification.audience\"=\"internal\"}[$__interval]))",
+          "legendFormat": "{{altinn.service_owner}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "min": 0,
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 80,
+            "lineWidth": 1,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/failed/"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 15,
+      "type": "timeseries",
+      "title": "Alert deliveries by contact method",
+      "description": "Deliveries of alerts per contact method, accepted and failed, per bar interval. internal is the post to the Studio team's Slack channel.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "altinn-studio-metrics"
+      },
+      "interval": "5m",
+      "gridPos": {
+        "x": 12,
+        "y": 26,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "A",
+          "expr": "sum by (\"altinn.designer.notification.contact_method.type\")(increase_pure({\"altinn.designer.notification.deliveries\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\", \"altinn.service_owner\"=~\"$service_owner\", \"altinn.environment\"=~\"$target_env\", \"altinn.designer.notification.kind\"=\"alert\", \"altinn.designer.notification.audience\"=\"service_owner\", \"error.type\"=\"\"}[$__interval]))",
+          "legendFormat": "{{altinn.designer.notification.contact_method.type}}"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "B",
+          "expr": "sum by (\"altinn.designer.notification.contact_method.type\")(increase_pure({\"altinn.designer.notification.deliveries\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\", \"altinn.service_owner\"=~\"$service_owner\", \"altinn.environment\"=~\"$target_env\", \"altinn.designer.notification.kind\"=\"alert\", \"altinn.designer.notification.audience\"=\"service_owner\", \"error.type\"!=\"\"}[$__interval]))",
+          "legendFormat": "{{altinn.designer.notification.contact_method.type}} failed"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "C",
+          "expr": "sum(increase_pure({\"altinn.designer.notification.deliveries\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\", \"altinn.service_owner\"=~\"$service_owner\", \"altinn.environment\"=~\"$target_env\", \"altinn.designer.notification.kind\"=\"alert\", \"altinn.designer.notification.audience\"=\"internal\", \"error.type\"=\"\"}[$__interval]))",
+          "legendFormat": "internal"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "D",
+          "expr": "sum(increase_pure({\"altinn.designer.notification.deliveries\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\", \"altinn.service_owner\"=~\"$service_owner\", \"altinn.environment\"=~\"$target_env\", \"altinn.designer.notification.kind\"=\"alert\", \"altinn.designer.notification.audience\"=\"internal\", \"error.type\"!=\"\"}[$__interval]))",
+          "legendFormat": "internal failed"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "min": 0,
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 80,
+            "lineWidth": 1,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/failed/"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "internal"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "purple"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 16,
+      "type": "table",
+      "title": "Alerts by service owner and environment",
+      "description": "Alerts and their deliveries over the time range, per service owner and runtime environment. Sorted by alerts; select a column header to sort by another.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "altinn-studio-metrics"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 34,
+        "w": 24,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "A",
+          "expr": "sum by (\"altinn.service_owner\", \"altinn.environment\")(increase_pure({\"altinn.designer.notification.deliveries\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\", \"altinn.service_owner\"=~\"$service_owner\", \"altinn.environment\"=~\"$target_env\", \"altinn.designer.notification.kind\"=\"alert\", \"altinn.designer.notification.audience\"=\"internal\"}[$__range])) > 0",
+          "legendFormat": "",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "B",
+          "expr": "sum by (\"altinn.service_owner\", \"altinn.environment\")(increase_pure({\"altinn.designer.notification.deliveries\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\", \"altinn.service_owner\"=~\"$service_owner\", \"altinn.environment\"=~\"$target_env\", \"altinn.designer.notification.kind\"=\"alert\", \"altinn.designer.notification.audience\"=\"service_owner\", \"error.type\"=\"\"}[$__range])) > 0",
+          "legendFormat": "",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "C",
+          "expr": "sum by (\"altinn.service_owner\", \"altinn.environment\")(increase_pure({\"altinn.designer.notification.deliveries\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\", \"altinn.service_owner\"=~\"$service_owner\", \"altinn.environment\"=~\"$target_env\", \"altinn.designer.notification.kind\"=\"alert\", \"altinn.designer.notification.audience\"=\"service_owner\", \"error.type\"!=\"\"}[$__range])) > 0",
+          "legendFormat": "",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "D",
+          "expr": "sum by (\"altinn.service_owner\", \"altinn.environment\")(increase_pure({\"altinn.designer.notification.deliveries\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$env\", \"altinn.service_owner\"=~\"$service_owner\", \"altinn.environment\"=~\"$target_env\", \"altinn.designer.notification.kind\"=\"alert\", \"altinn.designer.notification.audience\"=\"internal\", \"error.type\"!=\"\"}[$__range])) > 0",
+          "legendFormat": "",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "indexByName": {
+              "altinn.service_owner": 0,
+              "altinn.environment": 1,
+              "Value #A": 2,
+              "Value #B": 3,
+              "Value #C": 4,
+              "Value #D": 5
+            },
+            "renameByName": {
+              "altinn.service_owner": "Service owner",
+              "altinn.environment": "Environment",
+              "Value #A": "Alerts",
+              "Value #B": "Deliveries sent",
+              "Value #C": "Deliveries failed",
+              "Value #D": "Internal Slack failed"
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "noValue": "",
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": true,
+            "filterable": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Deliveries failed"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Internal Slack failed"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "countRows": false
+        },
+        "sortBy": [
+          {
+            "displayName": "Alerts",
+            "desc": true
+          }
+        ]
+      }
+    },
+    {
+      "id": 17,
+      "type": "row",
+      "title": "Failures (traces)",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 42,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 18,
+      "type": "table",
+      "title": "Recent failed reports and deliveries",
+      "description": "The latest failed reports, deliveries to service owners and posts to the internal Slack channel, newest first, from Designer's spans through altinn-studio-traces-logsql (LogsQL). Notifications about failed deploys are left out. Tail sampling keeps every trace with an error, so the list is complete. A report that failed because a delivery failed is listed together with that delivery; the exception on the delivery is the cause. Filter the list with Filters above, such as span_attr:altinn.service_owner. Select a trace to open it.",
+      "datasource": {
+        "type": "victoriametrics-logs-datasource",
+        "uid": "altinn-studio-traces-logsql"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 43,
+        "w": 24,
+        "h": 10
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "victoriametrics-logs-datasource",
+            "uid": "altinn-studio-traces-logsql"
+          },
+          "refId": "A",
+          "queryType": "instant",
+          "expr": "{resource_attr:service.name=\"studio-designer\"} \"resource_attr:deployment.environment.name\":$env name:in(\"PeriodicReportJob.SendReport\", \"NotificationService.SendContactMethodAsync\", \"NotificationService.NotifyInternalAsync\") status_code:2 !\"span_attr:altinn.designer.notification.kind\":=deployment | sort by (_time desc) limit 500 | fields _time, name, \"span_attr:altinn.designer.notification.kind\", \"span_attr:altinn.service_owner\", \"span_attr:altinn.environment\", \"span_attr:altinn.designer.notification.contact_method.type\", \"event:event_attr:exception.type:0\", \"event:event_attr:exception.message:0\", trace_id | rename trace_id as trace",
+          "maxLines": 500
+        }
+      ],
+      "transformations": [
+        {
+          "id": "extractFields",
+          "options": {
+            "source": "labels",
+            "format": "json",
+            "replace": false,
+            "keepTime": false
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Line": true,
+              "id": true,
+              "labels": true,
+              "streams": true,
+              "streamId": true,
+              "detected_level": true,
+              "trace_id": true
+            },
+            "indexByName": {
+              "Time": 0,
+              "name": 1,
+              "span_attr:altinn.designer.notification.kind": 2,
+              "span_attr:altinn.service_owner": 3,
+              "span_attr:altinn.environment": 4,
+              "span_attr:altinn.designer.notification.contact_method.type": 5,
+              "event:event_attr:exception.type:0": 6,
+              "event:event_attr:exception.message:0": 7,
+              "trace": 8
+            },
+            "renameByName": {},
+            "includeByName": {}
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": true,
+            "filterable": true
+          },
+          "displayName": "",
+          "noValue": ""
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Time"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Time"
+              },
+              {
+                "id": "custom.width",
+                "value": 150
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "name"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "PeriodicReportJob.SendReport": {
+                        "text": "Report",
+                        "index": 0
+                      },
+                      "NotificationService.SendContactMethodAsync": {
+                        "text": "Delivery to service owner",
+                        "index": 1
+                      },
+                      "NotificationService.NotifyInternalAsync": {
+                        "text": "Internal Slack post",
+                        "index": 2
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "trace"
+            },
+            "properties": [
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "View trace",
+                    "url": "",
+                    "internal": {
+                      "datasourceUid": "altinn-studio-traces",
+                      "datasourceName": "altinn-studio-traces",
+                      "query": {
+                        "queryType": "traceql",
+                        "query": "${__value.raw}"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "name"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Failed"
+              },
+              {
+                "id": "custom.width",
+                "value": 180
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "span_attr:altinn.designer.notification.kind"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Kind"
+              },
+              {
+                "id": "custom.width",
+                "value": 115
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "span_attr:altinn.service_owner"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Service owner"
+              },
+              {
+                "id": "custom.width",
+                "value": 115
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "span_attr:altinn.environment"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Environment"
+              },
+              {
+                "id": "custom.width",
+                "value": 105
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "span_attr:altinn.designer.notification.contact_method.type"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Contact method"
+              },
+              {
+                "id": "custom.width",
+                "value": 125
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "event:event_attr:exception.type:0"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Exception"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "event:event_attr:exception.message:0"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Message"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "trace"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Trace"
+              },
+              {
+                "id": "custom.width",
+                "value": 100
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "count"
+          ],
+          "countRows": false
+        },
+        "sortBy": [
+          {
+            "displayName": "Time",
+            "desc": true
+          }
+        ]
+      }
+    }
+  ]
+}
