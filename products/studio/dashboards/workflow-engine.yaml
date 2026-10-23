@@ -1,0 +1,16 @@
+# The workflow engine (workflow-engine-app) across the runtime environments. Lands in the Altinn
+# Studio folder (external-grafana-studio, defined in ../alerting/folder.yaml) beside Studio's alert
+# rules.
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: external-grafana-studio-workflow-engine
+  namespace: grafana
+spec:
+  folderRef: external-grafana-studio
+  instanceSelector:
+    matchLabels:
+      dashboards: external-grafana
+  configMapRef:
+    name: dashboard-studio-workflow-engine
+    key: workflow-engine.json

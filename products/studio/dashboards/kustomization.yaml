@@ -8,6 +8,7 @@ resources:
   - pdf3.yaml
   - observability-overview.yaml
   - designer.yaml
+  - workflow-engine.yaml
 configMapGenerator:
   - name: dashboard-studio-pdf3
     files:
@@ -18,3 +19,6 @@ configMapGenerator:
   - name: dashboard-studio-designer
     files:
       - designer.json
+  - name: dashboard-studio-workflow-engine
+    files:
+      - workflow-engine.json
