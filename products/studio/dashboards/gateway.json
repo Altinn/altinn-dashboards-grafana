@@ -182,7 +182,7 @@
       {
         "name": "filters",
         "label": "Filters",
-        "description": "Filters the trace tables (LogsQL) on any span field, such as span_attr:altinn.app or span_attr:altinn.app.deploy.build.id. The metric panels have no such labels and are not filtered.",
+        "description": "Filters the trace tables (LogsQL) on any span field, such as span_attr:altinn.app or span_attr:altinn.app_deploy.build.id. The metric panels have no such labels and are not filtered.",
         "type": "adhoc",
         "datasource": {
           "type": "victoriametrics-logs-datasource",
@@ -2192,7 +2192,7 @@
           "id": 71,
           "type": "table",
           "title": "Recent deploy events",
-          "description": "The latest 200 Flux deploy events the gateway received, from the webhook's span, with the app, the Studio environment that deployed it, the Azure DevOps build (altinn.app.deploy.build.id) and, when Designer did not get the event, the error type. The trace is the webhook's own; Deploy traces below opens the deploy's. The gateway marks every trace it takes part in to be kept, so these lists are complete. Select a trace ID to open the trace.",
+          "description": "The latest 200 Flux deploy events the gateway received, from the webhook's span, with the app, the Studio environment that deployed it, the Azure DevOps build (altinn.app_deploy.build.id) and, when Designer did not get the event, the error type. The trace is the webhook's own; Deploy traces below opens the deploy's. The gateway marks every trace it takes part in to be kept, so these lists are complete. Select a trace ID to open the trace.",
           "datasource": {
             "type": "victoriametrics-logs-datasource",
             "uid": "altinn-studio-traces-logsql"
@@ -2211,7 +2211,7 @@
               },
               "refId": "A",
               "queryType": "instant",
-              "expr": "{resource_attr:service.name=\"gateway\"} \"resource_attr:deployment.environment.name\":$env \"resource_attr:altinn.service_owner\":~\"^(${service_owner:regex})$\" kind:2 \"span_attr:altinn.gateway.flux.reason\":* | sort by (_time desc) limit 200 | fields _time, \"span_attr:altinn.gateway.flux.reason\", \"resource_attr:altinn.service_owner\", \"span_attr:altinn.app\", \"span_attr:altinn.gateway.origin_environment\", \"span_attr:altinn.app.deploy.build.id\", \"span_attr:error.type\", duration, trace_id | rename trace_id as trace",
+              "expr": "{resource_attr:service.name=\"gateway\"} \"resource_attr:deployment.environment.name\":$env \"resource_attr:altinn.service_owner\":~\"^(${service_owner:regex})$\" kind:2 \"span_attr:altinn.gateway.flux.reason\":* | sort by (_time desc) limit 200 | fields _time, \"span_attr:altinn.gateway.flux.reason\", \"resource_attr:altinn.service_owner\", \"span_attr:altinn.app\", \"span_attr:altinn.gateway.origin_environment\", \"span_attr:altinn.app_deploy.build.id\", \"span_attr:error.type\", duration, trace_id | rename trace_id as trace",
               "maxLines": 200
             }
           ],
@@ -2255,7 +2255,7 @@
                   "resource_attr:altinn.service_owner": 2,
                   "span_attr:altinn.app": 3,
                   "span_attr:altinn.gateway.origin_environment": 4,
-                  "span_attr:altinn.app.deploy.build.id": 5,
+                  "span_attr:altinn.app_deploy.build.id": 5,
                   "span_attr:error.type": 6,
                   "duration": 7,
                   "trace": 8
@@ -2391,7 +2391,7 @@
               {
                 "matcher": {
                   "id": "byName",
-                  "options": "span_attr:altinn.app.deploy.build.id"
+                  "options": "span_attr:altinn.app_deploy.build.id"
                 },
                 "properties": [
                   {
@@ -2449,7 +2449,7 @@
               },
               "refId": "A",
               "queryType": "instant",
-              "expr": "{resource_attr:service.name=\"gateway\"} \"resource_attr:deployment.environment.name\":$env \"resource_attr:altinn.service_owner\":~\"^(${service_owner:regex})$\" name:\"FluxWebhook.ProcessEvent\" | sort by (_time desc) limit 200 | fields _time, \"span_attr:altinn.gateway.flux.reason\", \"resource_attr:altinn.service_owner\", \"span_attr:altinn.app\", \"span_attr:altinn.gateway.origin_environment\", \"span_attr:altinn.app.deploy.build.id\", \"span_attr:error.type\", duration, trace_id | rename trace_id as trace",
+              "expr": "{resource_attr:service.name=\"gateway\"} \"resource_attr:deployment.environment.name\":$env \"resource_attr:altinn.service_owner\":~\"^(${service_owner:regex})$\" name:\"FluxWebhook.ProcessEvent\" | sort by (_time desc) limit 200 | fields _time, \"span_attr:altinn.gateway.flux.reason\", \"resource_attr:altinn.service_owner\", \"span_attr:altinn.app\", \"span_attr:altinn.gateway.origin_environment\", \"span_attr:altinn.app_deploy.build.id\", \"span_attr:error.type\", duration, trace_id | rename trace_id as trace",
               "maxLines": 200
             }
           ],
@@ -2493,7 +2493,7 @@
                   "resource_attr:altinn.service_owner": 2,
                   "span_attr:altinn.app": 3,
                   "span_attr:altinn.gateway.origin_environment": 4,
-                  "span_attr:altinn.app.deploy.build.id": 5,
+                  "span_attr:altinn.app_deploy.build.id": 5,
                   "span_attr:error.type": 6,
                   "duration": 7,
                   "trace": 8
@@ -2629,7 +2629,7 @@
               {
                 "matcher": {
                   "id": "byName",
-                  "options": "span_attr:altinn.app.deploy.build.id"
+                  "options": "span_attr:altinn.app_deploy.build.id"
                 },
                 "properties": [
                   {
