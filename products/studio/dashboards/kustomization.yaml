@@ -9,6 +9,7 @@ resources:
   - observability-overview.yaml
   - designer.yaml
   - workflow-engine.yaml
+  - reports-and-alerts.yaml
 configMapGenerator:
   - name: dashboard-studio-pdf3
     files:
@@ -22,3 +23,6 @@ configMapGenerator:
   - name: dashboard-studio-workflow-engine
     files:
       - workflow-engine.json
+  - name: dashboard-studio-reports-and-alerts
+    files:
+      - reports-and-alerts.json

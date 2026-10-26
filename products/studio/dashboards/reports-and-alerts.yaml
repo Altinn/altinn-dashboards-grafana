@@ -1,0 +1,16 @@
+# The periodic reports and alerts Altinn Studio Designer sends to service owners, from its
+# notification counters and spans. Lands in the Altinn Studio folder (external-grafana-studio,
+# defined in ../alerting/folder.yaml).
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: external-grafana-studio-reports-and-alerts
+  namespace: grafana
+spec:
+  folderRef: external-grafana-studio
+  instanceSelector:
+    matchLabels:
+      dashboards: external-grafana
+  configMapRef:
+    name: dashboard-studio-reports-and-alerts
+    key: reports-and-alerts.json
