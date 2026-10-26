@@ -14,7 +14,8 @@ exclusions:
       The operator dashboard reads the operator's metrics, and its failed runs from
       altinn-studio-traces and altinn-studio-traces-logsql.
       The gateway dashboard reads the gateway's metrics, lists its spans through
-      altinn-studio-traces-logsql and links them to altinn-studio-traces.
+      altinn-studio-traces-logsql and links them to altinn-studio-traces, and
+      shows its logs from altinn-studio-logs.
     entries:
       - dashboard: "Altinn Studio — PDF3"
       - dashboard: "Altinn Studio — Observability"
