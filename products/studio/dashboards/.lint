@@ -11,12 +11,15 @@ exclusions:
       The reports and alerts dashboard reads Designer's notification counters and
       lists failures from its spans the same way.
       The workflow engine dashboard reads only the engine's metrics.
+      The operator dashboard reads the operator's metrics, and its failed runs from
+      altinn-studio-traces and altinn-studio-traces-logsql.
     entries:
       - dashboard: "Altinn Studio — PDF3"
       - dashboard: "Altinn Studio — Observability"
       - dashboard: "Altinn Studio — Designer"
       - dashboard: "Altinn Studio - Workflow Engine"
       - dashboard: "Altinn Studio — Reports and alerts"
+      - dashboard: "Altinn Studio — Operator"
   template-datasource-rule:
     reason: >-
       No datasource template variable by design; see panel-datasource-rule.
@@ -26,3 +29,4 @@ exclusions:
       - dashboard: "Altinn Studio — Designer"
       - dashboard: "Altinn Studio - Workflow Engine"
       - dashboard: "Altinn Studio — Reports and alerts"
+      - dashboard: "Altinn Studio — Operator"

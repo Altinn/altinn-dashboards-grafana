@@ -1,0 +1,15 @@
+# The runtime operator in every service owner cluster. Lands in the Altinn Studio folder
+# (external-grafana-studio, defined in ../alerting/folder.yaml) beside Studio's alert rules.
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: external-grafana-studio-operator
+  namespace: grafana
+spec:
+  folderRef: external-grafana-studio
+  instanceSelector:
+    matchLabels:
+      dashboards: external-grafana
+  configMapRef:
+    name: dashboard-studio-operator
+    key: operator.json
