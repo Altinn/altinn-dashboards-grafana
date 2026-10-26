@@ -11,6 +11,7 @@ resources:
   - workflow-engine.yaml
   - reports-and-alerts.yaml
   - operator.yaml
+  - gateway.yaml
 configMapGenerator:
   - name: dashboard-studio-pdf3
     files:
@@ -30,3 +31,6 @@ configMapGenerator:
   - name: dashboard-studio-operator
     files:
       - operator.json
+  - name: dashboard-studio-gateway
+    files:
+      - gateway.json
