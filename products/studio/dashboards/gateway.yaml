@@ -1,0 +1,16 @@
+# The runtime gateway in every service owner's cluster: Designer's API, deploy events and Azure
+# Monitor queries. Lands in the Altinn Studio folder (external-grafana-studio, defined in
+# ../alerting/folder.yaml).
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: external-grafana-studio-gateway
+  namespace: grafana
+spec:
+  folderRef: external-grafana-studio
+  instanceSelector:
+    matchLabels:
+      dashboards: external-grafana
+  configMapRef:
+    name: dashboard-studio-gateway
+    key: gateway.json
