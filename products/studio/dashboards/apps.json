@@ -1,0 +1,1302 @@
+{
+  "uid": "altinn-studio-apps",
+  "title": "Altinn Studio — Apps",
+  "description": "The service owners' apps: how many there are, how many are deployed to and running in each environment, and how many are created and deployed. Designer counts the apps in Gitea's database and the deployed apps in its deployment history every 15 minutes, and counts creations and deployment outcomes as they happen (altinn.designer.app.*, from Designer in the selected Studio environment). Each service owner cluster's operator counts the apps running there (altinn.operator.app.count). All from altinn-studio-metrics, which isn't sampled and keeps 90 days. The counts are right from the first report, while the counters and the trend lines only reach back to when the services started reporting them. Designer may run several replicas that report the same counts, so the queries take their maximum. Leave out service owners, such as the test organization ttd, with the regex in Leave out.",
+  "tags": [
+    "altinn-studio",
+    "apps"
+  ],
+  "editable": false,
+  "schemaVersion": 42,
+  "refresh": "15m",
+  "time": {
+    "from": "now-30d",
+    "to": "now"
+  },
+  "timezone": "browser",
+  "graphTooltip": 1,
+  "timepicker": {
+    "refresh_intervals": [
+      "15m",
+      "1h"
+    ]
+  },
+  "links": [
+    {
+      "asDropdown": true,
+      "icon": "external link",
+      "includeVars": false,
+      "keepTime": true,
+      "tags": [
+        "altinn-studio"
+      ],
+      "targetBlank": false,
+      "title": "Studio dashboards",
+      "type": "dashboards"
+    }
+  ],
+  "annotations": {
+    "list": []
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "studio",
+        "label": "Studio environment",
+        "description": "Studio environment whose Designer reports the apps (deployment.environment.name). Only prod deploys to production.",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "altinn-studio-metrics"
+        },
+        "query": {
+          "qryType": 1,
+          "query": "label_values({\"altinn.designer.app.count\", \"service.name\"=\"studio-designer\"}, \"deployment.environment.name\")",
+          "refId": "studio"
+        },
+        "definition": "label_values({\"altinn.designer.app.count\", \"service.name\"=\"studio-designer\"}, \"deployment.environment.name\")",
+        "refresh": 2,
+        "includeAll": false,
+        "multi": false,
+        "current": {
+          "selected": true,
+          "text": "prod",
+          "value": "prod"
+        },
+        "sort": 1
+      },
+      {
+        "name": "exclude",
+        "label": "Leave out",
+        "description": "Service owners to leave out, as a regex on altinn.service_owner, such as ttd|digdir. Empty leaves out none.",
+        "type": "textbox",
+        "query": "ttd",
+        "current": {
+          "selected": false,
+          "text": "ttd",
+          "value": "ttd"
+        },
+        "hide": 0
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Apps",
+      "description": "App repositories in the service owners' organizations in Studio's Gitea, private ones included. Shared repositories (datamodels, content, resources) and apps in developers' own accounts don't count. Designer counts them in Gitea's database every 15 minutes (altinn.designer.app.count).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "altinn-studio-metrics"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 4,
+        "h": 4
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "A",
+          "expr": "sum(max by (\"altinn.service_owner\") ({\"altinn.designer.app.count\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=\"$studio\", \"altinn.service_owner\"!~\"$exclude\"}))",
+          "legendFormat": "",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "min": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "text"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value",
+        "wideLayout": false,
+        "text": {
+          "titleSize": 14,
+          "valueSize": 32
+        }
+      }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Deployed to prod",
+      "description": "Apps whose latest successful deployment to production is a deploy rather than a decommission, from Designer's deployment history (altinn.designer.deployed_app.count).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "altinn-studio-metrics"
+      },
+      "gridPos": {
+        "x": 4,
+        "y": 0,
+        "w": 4,
+        "h": 4
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "A",
+          "expr": "sum(max by (\"altinn.service_owner\") ({\"altinn.designer.deployed_app.count\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=\"$studio\", \"altinn.service_owner\"!~\"$exclude\", \"altinn.environment\"=\"prod\"}))",
+          "legendFormat": "",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "min": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "text"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value",
+        "wideLayout": false,
+        "text": {
+          "titleSize": 14,
+          "valueSize": 32
+        }
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Running in prod",
+      "description": "Apps in the production clusters whose Deployment has a ready replica, as each cluster's operator sees it (altinn.operator.app.count). Only clusters whose operator reports the metric count.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "altinn-studio-metrics"
+      },
+      "gridPos": {
+        "x": 8,
+        "y": 0,
+        "w": 4,
+        "h": 4
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "A",
+          "expr": "sum(max by (\"altinn.service_owner\") ({\"altinn.operator.app.count\", \"service.name\"=\"operator\", \"altinn.service_owner\"!~\"$exclude\", \"deployment.environment.name\"=\"prod\", \"altinn.operator.app.state\"=\"running\"}))",
+          "legendFormat": "",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "min": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "text"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value",
+        "wideLayout": false,
+        "text": {
+          "titleSize": 14,
+          "valueSize": 32
+        }
+      }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Not running in prod",
+      "description": "Apps in the production clusters without a ready replica: the app fails to start, or is being deployed for the first time. The inactivity scaler doesn't run in production, so none are scaled down on purpose. No data when no production operator reports the metric.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "altinn-studio-metrics"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 0,
+        "w": 4,
+        "h": 4
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "A",
+          "expr": "sum(max by (\"altinn.service_owner\") ({\"altinn.operator.app.count\", \"service.name\"=\"operator\", \"altinn.service_owner\"!~\"$exclude\", \"deployment.environment.name\"=\"prod\", \"altinn.operator.app.state\"=\"not_running\"}))",
+          "legendFormat": "",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "min": 0,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value",
+        "wideLayout": false,
+        "text": {
+          "titleSize": 14,
+          "valueSize": 32
+        }
+      }
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "New apps",
+      "description": "Apps created in Studio in the time range, from a template or as a copy (altinn.designer.app.creations). Counted from when Designer started reporting it.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "altinn-studio-metrics"
+      },
+      "gridPos": {
+        "x": 16,
+        "y": 0,
+        "w": 4,
+        "h": 4
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "A",
+          "expr": "sum (increase_pure({\"altinn.designer.app.creations\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=\"$studio\", \"altinn.service_owner\"!~\"$exclude\"}[$__range])) or vector(0)",
+          "legendFormat": "",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "min": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "text"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value",
+        "wideLayout": false,
+        "text": {
+          "titleSize": 14,
+          "valueSize": 32
+        }
+      }
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "First deploys to prod",
+      "description": "Apps deployed to production successfully for the first time in the time range: the deploy that took an app live (altinn.designer.app.deployments with altinn.designer.app.deployment.first).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "altinn-studio-metrics"
+      },
+      "gridPos": {
+        "x": 20,
+        "y": 0,
+        "w": 4,
+        "h": 4
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "A",
+          "expr": "sum (increase_pure({\"altinn.designer.app.deployments\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=\"$studio\", \"altinn.service_owner\"!~\"$exclude\", \"altinn.environment\"=\"prod\", \"altinn.designer.app.deployment.first\"=\"true\"}[$__range])) or vector(0)",
+          "legendFormat": "",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "min": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "text"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value",
+        "wideLayout": false,
+        "text": {
+          "titleSize": 14,
+          "valueSize": 32
+        }
+      }
+    },
+    {
+      "id": 7,
+      "type": "bargauge",
+      "title": "From created to running",
+      "description": "Apps at each step from created to running in production, now. An app counts as deployed to an environment while its latest successful deployment there is a deploy.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "altinn-studio-metrics"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 4,
+        "w": 8,
+        "h": 9
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "A",
+          "expr": "sum(max by (\"altinn.service_owner\") ({\"altinn.designer.app.count\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=\"$studio\", \"altinn.service_owner\"!~\"$exclude\"}))",
+          "legendFormat": "Created",
+          "instant": true,
+          "range": false
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "B",
+          "expr": "sum(max by (\"altinn.service_owner\") ({\"altinn.designer.deployed_app.count\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=\"$studio\", \"altinn.service_owner\"!~\"$exclude\", \"altinn.environment\"=\"tt02\"}))",
+          "legendFormat": "Deployed to tt02",
+          "instant": true,
+          "range": false
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "C",
+          "expr": "sum(max by (\"altinn.service_owner\") ({\"altinn.designer.deployed_app.count\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=\"$studio\", \"altinn.service_owner\"!~\"$exclude\", \"altinn.environment\"=\"prod\"}))",
+          "legendFormat": "Deployed to production",
+          "instant": true,
+          "range": false
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "D",
+          "expr": "sum(max by (\"altinn.service_owner\") ({\"altinn.operator.app.count\", \"service.name\"=\"operator\", \"altinn.service_owner\"!~\"$exclude\", \"deployment.environment.name\"=\"prod\", \"altinn.operator.app.state\"=\"running\"}))",
+          "legendFormat": "Running in production",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "min": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "displayMode": "basic",
+        "showUnfilled": true,
+        "valueMode": "color",
+        "namePlacement": "top",
+        "sizing": "auto"
+      }
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "Apps over time",
+      "description": "The numbers from the bar chart over the time range. Metrics are kept for 90 days, so the lines start at most 90 days back, and at the earliest when Designer and the operators started reporting them.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "altinn-studio-metrics"
+      },
+      "gridPos": {
+        "x": 8,
+        "y": 4,
+        "w": 16,
+        "h": 9
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "A",
+          "expr": "sum(max by (\"altinn.service_owner\") ({\"altinn.designer.app.count\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=\"$studio\", \"altinn.service_owner\"!~\"$exclude\"}))",
+          "legendFormat": "Created"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "B",
+          "expr": "sum(max by (\"altinn.service_owner\") ({\"altinn.designer.deployed_app.count\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=\"$studio\", \"altinn.service_owner\"!~\"$exclude\", \"altinn.environment\"=\"tt02\"}))",
+          "legendFormat": "Deployed to tt02"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "C",
+          "expr": "sum(max by (\"altinn.service_owner\") ({\"altinn.designer.deployed_app.count\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=\"$studio\", \"altinn.service_owner\"!~\"$exclude\", \"altinn.environment\"=\"prod\"}))",
+          "legendFormat": "Deployed to production"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "D",
+          "expr": "sum(max by (\"altinn.service_owner\") ({\"altinn.operator.app.count\", \"service.name\"=\"operator\", \"altinn.service_owner\"!~\"$exclude\", \"deployment.environment.name\"=\"prod\", \"altinn.operator.app.state\"=\"running\"}))",
+          "legendFormat": "Running in production"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 1,
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 20,
+      "type": "row",
+      "title": "Activity",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 13,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 9,
+      "type": "timeseries",
+      "title": "Apps created",
+      "description": "Apps created per day, from a template or as a copy of another app.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "altinn-studio-metrics"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 14,
+        "w": 6,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "A",
+          "expr": "sum by (\"altinn.designer.app.creation.source\") (increase_pure({\"altinn.designer.app.creations\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=\"$studio\", \"altinn.service_owner\"!~\"$exclude\"}[$__interval]))",
+          "legendFormat": "{{altinn.designer.app.creation.source}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "min": 0,
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 80,
+            "lineWidth": 1,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "interval": "1d"
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "Deploys",
+      "description": "Successful deploys per day by environment, the first ones included. A deploy counts when the cluster reports the install or upgrade.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "altinn-studio-metrics"
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 14,
+        "w": 6,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "A",
+          "expr": "sum by (\"altinn.environment\") (increase_pure({\"altinn.designer.app.deployments\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=\"$studio\", \"altinn.service_owner\"!~\"$exclude\", \"altinn.designer.app.deployment.type\"=\"deploy\", \"error.type\"=\"\"}[$__interval]))",
+          "legendFormat": "{{altinn.environment}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "min": 0,
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 80,
+            "lineWidth": 1,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "interval": "1d"
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "Decommissions",
+      "description": "Apps taken out of an environment per day, by environment: by a developer, or by the inactivity undeploy outside production.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "altinn-studio-metrics"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 14,
+        "w": 6,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "A",
+          "expr": "sum by (\"altinn.environment\") (increase_pure({\"altinn.designer.app.deployments\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=\"$studio\", \"altinn.service_owner\"!~\"$exclude\", \"altinn.designer.app.deployment.type\"=\"decommission\", \"error.type\"=\"\"}[$__interval]))",
+          "legendFormat": "{{altinn.environment}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "min": 0,
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 80,
+            "lineWidth": 1,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "interval": "1d"
+    },
+    {
+      "id": 12,
+      "type": "timeseries",
+      "title": "Failed deployments",
+      "description": "Deploys and decommissions per day that failed, by what failed: the pipeline (pipeline_failed), or the cluster's install, upgrade or uninstall.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "altinn-studio-metrics"
+      },
+      "gridPos": {
+        "x": 18,
+        "y": 14,
+        "w": 6,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "A",
+          "expr": "sum by (\"error.type\") (increase_pure({\"altinn.designer.app.deployments\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=\"$studio\", \"altinn.service_owner\"!~\"$exclude\", \"error.type\"!=\"\"}[$__interval]))",
+          "legendFormat": "{{error.type}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "min": 0,
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 80,
+            "lineWidth": 1,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "interval": "1d"
+    },
+    {
+      "id": 21,
+      "type": "row",
+      "title": "Clusters",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 22,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 13,
+      "type": "timeseries",
+      "title": "Apps in the clusters",
+      "description": "Apps in the service owners' clusters by environment and state, from each cluster's operator. Outside production, not_running includes apps the inactivity scaler has scaled to zero.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "altinn-studio-metrics"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 23,
+        "w": 12,
+        "h": 9
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "A",
+          "expr": "sum by (\"deployment.environment.name\", \"altinn.operator.app.state\") (max by (\"deployment.environment.name\", \"altinn.service_owner\", \"altinn.operator.app.state\") ({\"altinn.operator.app.count\", \"service.name\"=\"operator\", \"altinn.service_owner\"!~\"$exclude\"}))",
+          "legendFormat": "{{deployment.environment.name}} {{altinn.operator.app.state}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 1,
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 14,
+      "type": "table",
+      "title": "Where Designer and the clusters disagree",
+      "description": "Service owners and environments where the apps Designer has deployed differ from the apps in the cluster. More in Designer: deployments it counts as successful that the cluster doesn't have, such as ones from before Designer recorded the cluster's outcome. More in the cluster: apps deployed outside Designer. Only clusters whose operator reports altinn.operator.app.count are compared.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "altinn-studio-metrics"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 23,
+        "w": 12,
+        "h": 9
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "A",
+          "expr": "(max by (\"altinn.service_owner\", \"altinn.environment\") ({\"altinn.designer.deployed_app.count\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=\"$studio\", \"altinn.service_owner\"!~\"$exclude\"})) and on (\"altinn.service_owner\", \"altinn.environment\") ((max by (\"altinn.service_owner\", \"altinn.environment\") ({\"altinn.designer.deployed_app.count\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=\"$studio\", \"altinn.service_owner\"!~\"$exclude\"})) - on (\"altinn.service_owner\", \"altinn.environment\") (sum by (\"altinn.service_owner\", \"altinn.environment\") (label_replace(max by (\"altinn.service_owner\", \"deployment.environment.name\", \"altinn.operator.app.state\") ({\"altinn.operator.app.count\", \"service.name\"=\"operator\", \"altinn.service_owner\"!~\"$exclude\"}), \"altinn.environment\", \"$1\", \"deployment.environment.name\", \"(.*)\"))) != 0)",
+          "legendFormat": "",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "B",
+          "expr": "(sum by (\"altinn.service_owner\", \"altinn.environment\") (label_replace(max by (\"altinn.service_owner\", \"deployment.environment.name\", \"altinn.operator.app.state\") ({\"altinn.operator.app.count\", \"service.name\"=\"operator\", \"altinn.service_owner\"!~\"$exclude\"}), \"altinn.environment\", \"$1\", \"deployment.environment.name\", \"(.*)\"))) and on (\"altinn.service_owner\", \"altinn.environment\") ((max by (\"altinn.service_owner\", \"altinn.environment\") ({\"altinn.designer.deployed_app.count\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=\"$studio\", \"altinn.service_owner\"!~\"$exclude\"})) - on (\"altinn.service_owner\", \"altinn.environment\") (sum by (\"altinn.service_owner\", \"altinn.environment\") (label_replace(max by (\"altinn.service_owner\", \"deployment.environment.name\", \"altinn.operator.app.state\") ({\"altinn.operator.app.count\", \"service.name\"=\"operator\", \"altinn.service_owner\"!~\"$exclude\"}), \"altinn.environment\", \"$1\", \"deployment.environment.name\", \"(.*)\"))) != 0)",
+          "legendFormat": "",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "noValue": "–",
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "altinn.service_owner"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Service owner"
+              },
+              {
+                "id": "custom.width",
+                "value": 140
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "altinn.environment"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Environment"
+              },
+              {
+                "id": "custom.width",
+                "value": 110
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Value #A"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Deployed (Designer)"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Value #B"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "In the cluster"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "sortBy": [
+          {
+            "displayName": "Deployed (Designer)",
+            "desc": true
+          }
+        ]
+      }
+    },
+    {
+      "id": 22,
+      "type": "row",
+      "title": "Service owners",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 32,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 15,
+      "type": "table",
+      "title": "Apps by service owner",
+      "description": "Each service owner's apps now, and its activity in the time range. Service owners without apps show with zero; a dash is a number that wasn't reported, such as when Designer couldn't count. Deploys to production count successful deploys, the first ones included.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "altinn-studio-metrics"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 33,
+        "w": 24,
+        "h": 12
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "A",
+          "expr": "max by (\"altinn.service_owner\") ({\"altinn.designer.app.count\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=\"$studio\", \"altinn.service_owner\"!~\"$exclude\"})",
+          "legendFormat": "",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "B",
+          "expr": "max by (\"altinn.service_owner\") ({\"altinn.designer.deployed_app.count\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=\"$studio\", \"altinn.service_owner\"!~\"$exclude\", \"altinn.environment\"=\"tt02\"})",
+          "legendFormat": "",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "C",
+          "expr": "max by (\"altinn.service_owner\") ({\"altinn.designer.deployed_app.count\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=\"$studio\", \"altinn.service_owner\"!~\"$exclude\", \"altinn.environment\"=\"prod\"})",
+          "legendFormat": "",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "D",
+          "expr": "max by (\"altinn.service_owner\") ({\"altinn.operator.app.count\", \"service.name\"=\"operator\", \"altinn.service_owner\"!~\"$exclude\", \"deployment.environment.name\"=\"prod\", \"altinn.operator.app.state\"=\"running\"})",
+          "legendFormat": "",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "E",
+          "expr": "sum by (\"altinn.service_owner\") (increase_pure({\"altinn.designer.app.creations\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=\"$studio\", \"altinn.service_owner\"!~\"$exclude\"}[$__range]))",
+          "legendFormat": "",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "F",
+          "expr": "sum by (\"altinn.service_owner\") (increase_pure({\"altinn.designer.app.deployments\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=\"$studio\", \"altinn.service_owner\"!~\"$exclude\", \"altinn.environment\"=\"prod\", \"altinn.designer.app.deployment.type\"=\"deploy\", \"error.type\"=\"\"}[$__range]))",
+          "legendFormat": "",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "noValue": "–",
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "altinn.service_owner"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Service owner"
+              },
+              {
+                "id": "custom.width",
+                "value": 160
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Value #A"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Apps"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Value #B"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Deployed to tt02"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Value #C"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Deployed to production"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Value #D"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Running in production"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Value #E"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Created in range"
+              },
+              {
+                "id": "noValue",
+                "value": "0"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Value #F"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Deploys to production in range"
+              },
+              {
+                "id": "noValue",
+                "value": "0"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "sortBy": [
+          {
+            "displayName": "Apps",
+            "desc": true
+          }
+        ]
+      }
+    }
+  ]
+}
