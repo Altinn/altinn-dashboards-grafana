@@ -12,6 +12,7 @@ resources:
   - reports-and-alerts.yaml
   - operator.yaml
   - gateway.yaml
+  - apps.yaml
 configMapGenerator:
   - name: dashboard-studio-pdf3
     files:
@@ -34,3 +35,6 @@ configMapGenerator:
   - name: dashboard-studio-gateway
     files:
       - gateway.json
+  - name: dashboard-studio-apps
+    files:
+      - apps.json
