@@ -262,7 +262,7 @@
       "id": 4,
       "type": "stat",
       "title": "Not running in prod",
-      "description": "Apps in the production clusters without a ready replica: the app fails to start, or is being deployed for the first time. The inactivity scaler doesn't run in production, so none are scaled down on purpose.",
+      "description": "Apps in the production clusters without a ready replica: the app fails to start, or is being deployed for the first time. The inactivity scaler doesn't run in production, so none are scaled down on purpose. No data when no production operator reports the metric.",
       "datasource": {
         "type": "prometheus",
         "uid": "altinn-studio-metrics"
@@ -280,7 +280,7 @@
             "uid": "altinn-studio-metrics"
           },
           "refId": "A",
-          "expr": "sum(max by (\"altinn.service_owner\") ({\"altinn.operator.app.count\", \"service.name\"=\"operator\", \"altinn.service_owner\"!~\"$exclude\", \"deployment.environment.name\"=\"prod\", \"altinn.operator.app.state\"=\"not_running\"})) or vector(0)",
+          "expr": "sum(max by (\"altinn.service_owner\") ({\"altinn.operator.app.count\", \"service.name\"=\"operator\", \"altinn.service_owner\"!~\"$exclude\", \"deployment.environment.name\"=\"prod\", \"altinn.operator.app.state\"=\"not_running\"}))",
           "legendFormat": "",
           "instant": true,
           "range": false
@@ -980,7 +980,7 @@
         "defaults": {
           "unit": "none",
           "decimals": 0,
-          "noValue": "0",
+          "noValue": "–",
           "custom": {
             "align": "auto",
             "cellOptions": {
@@ -1076,7 +1076,7 @@
       "id": 15,
       "type": "table",
       "title": "Apps by service owner",
-      "description": "Each service owner's apps now, and its activity in the time range. Service owners without apps show with zero. Deploys to production count successful deploys, the first ones included.",
+      "description": "Each service owner's apps now, and its activity in the time range. Service owners without apps show with zero; a dash is a number that wasn't reported, such as when Designer couldn't count. Deploys to production count successful deploys, the first ones included.",
       "datasource": {
         "type": "prometheus",
         "uid": "altinn-studio-metrics"
@@ -1179,7 +1179,7 @@
         "defaults": {
           "unit": "none",
           "decimals": 0,
-          "noValue": "0",
+          "noValue": "–",
           "custom": {
             "align": "auto",
             "cellOptions": {
@@ -1262,6 +1262,10 @@
               {
                 "id": "displayName",
                 "value": "Created in range"
+              },
+              {
+                "id": "noValue",
+                "value": "0"
               }
             ]
           },
@@ -1274,6 +1278,10 @@
               {
                 "id": "displayName",
                 "value": "Deploys to production in range"
+              },
+              {
+                "id": "noValue",
+                "value": "0"
               }
             ]
           }
