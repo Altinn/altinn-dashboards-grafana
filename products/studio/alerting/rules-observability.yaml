@@ -1,3 +1,12 @@
+# Critical alerts for the Victoria observability stack in Studio prod, from its own metrics,
+# scraped by vmagent-self (Altinn/altinn-studio infra/observability/studio/victoria). Every rule
+# queries altinn-studio-metrics, notifies Studio Slack Critical once a day while it lasts, and
+# links to its panel on the Altinn Studio — Observability dashboard. Only the heartbeat fires on
+# missing data or a query error. Keep each uid on edits.
+#
+# Test them locally on the devenv fixture's full monitoring profile (Altinn/altinn-studio
+# src/Runtime/devenv): make test-alerts-check, make test-alerts and make test-alerts-quiet, with
+# DEVENV_DASHBOARDS_REPOSITORY pointing at this checkout.
 apiVersion: grafana.integreatly.org/v1beta1
 kind: GrafanaAlertRuleGroup
 metadata:
@@ -11,35 +20,41 @@ spec:
       dashboards: external-grafana
   interval: 1m
   rules:
-    - uid: studio-obs-agent-queue-drops-prod
-      title: Observability agent queue dropping data
+    # The heartbeat, and the only rule that fires on missing data or a query error; every other
+    # rule treats both as OK, so one broken path gives this one alert. vmagent-self scrapes itself,
+    # so its own up series stops when it stops, when it cannot write to the metrics storage, or when
+    # Grafana cannot read through the observability-proxy. The pending period rides out a restart
+    # of vmagent-self (a Recreate rollout) or the proxy.
+    - uid: studio-obs-heartbeat-prod
+      title: 'Observability self-monitoring stale'
       condition: C
-      # A drop is already data loss from this copy, so do not add a pending period.
-      for: 0s
-      noDataState: NoData
-      execErrState: Error
+      for: 5m
+      noDataState: Alerting
+      execErrState: Alerting
       labels:
-        AlertType: Observability
+        AlertType: Heartbeat
         Env: Prod
         Product: Studio
         Severity: Critical
       annotations:
-        summary: 'Observability {{ $labels.job }} queue dropping data for storage copy {{ $labels.copy }}'
+        summary: 'Observability self-monitoring has stopped: the stack''s own metrics are stale or cannot be read'
         description: >-
-          The agent discarded buffered data for copy {{ $labels.copy }} in the last 5 minutes
-          because its persistent queue filled. The other copy may still contain this data.
-          Check destination availability, storage disk space and agent queue space.
-        resolution: >-
-          No new queue drops were detected in the last 5 minutes.
-          Previously discarded data has not been recovered.
+          vmagent-self's own up series has had no fresh sample for about 10 minutes (5 to go stale,
+          5 pending), or Grafana has failed to query altinn-studio-metrics for 5. Every other
+          observability alert is blind until this resolves. First check the vmagent-self pod in the
+          observability namespace, then the observability-proxy (the datasource's path) and
+          vmsingle-metrics-a/b.
+        resolution: 'vmagent-self''s metrics reach Grafana again.'
         __dashboardUid__: altinn-studio-observability
-        __panelId__: "10"
+        __panelId__: "2"
       notificationSettings:
         receiver: Studio Slack Critical
+        # State alerts: one reminder a day while it lasts, rather than the root policy's 4h.
+        repeat_interval: 24h
       data:
         - refId: A
           relativeTimeRange:
-            from: 300
+            from: 600
             to: 0
           datasourceUid: altinn-studio-metrics
           model:
@@ -47,14 +62,174 @@ spec:
               type: prometheus
               uid: altinn-studio-metrics
             editorMode: code
-            # Match panel 10 with a fixed window. Apply increase before summing replicas
-            # so their counter resets are handled independently. URL 1 is a, URL 2 is b.
-            # Do not replace missing data with zero: it must notify as a monitoring failure.
-            expr: >-
+            expr: |-
+              count(up{job="vmagent-self"} == 1)
+            instant: true
+            range: false
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: A
+        - refId: C
+          relativeTimeRange:
+            from: 600
+            to: 0
+          datasourceUid: __expr__
+          model:
+            conditions:
+              - evaluator:
+                  params: [1]
+                  type: lt
+                operator:
+                  type: and
+                query:
+                  params: [C]
+                reducer:
+                  params: []
+                  type: last
+                type: query
+            datasource:
+              type: __expr__
+              uid: __expr__
+            expression: A
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: C
+            type: threshold
+    # Data the agents discarded for a storage copy: blocks dropped from a full persistent queue, or
+    # blocks the storage copy rejected for good. Either is a permanent gap in that copy. The
+    # counters are increased per series before the sum, so a restarted agent's reset is handled.
+    # The copy is the remote-write URL's position: path 1_/2_ or url 1:/2: (overview panel 10).
+    - uid: studio-obs-agent-queue-drops-prod
+      title: 'Observability agent queue dropping data'
+      condition: C
+      for: 0s
+      noDataState: OK
+      execErrState: OK
+      labels:
+        AlertType: DataLoss
+        Env: Prod
+        Product: Studio
+        Severity: Critical
+      annotations:
+        summary: 'Observability {{ $labels.job }} dropping data for storage copy {{ $labels.copy }}'
+        description: >-
+          The agent discarded data for copy {{ $labels.copy }} in the last 5 minutes, because its
+          persistent queue filled or the copy rejected it. That copy now has a gap; the other copy
+          may still hold the data. First check that the copy is up and writable (the Storage copy
+          down and Storage read-only alerts), then the agent's queue space.
+        resolution: 'No new drops in the last 5 minutes. The data already discarded is not recovered.'
+        __dashboardUid__: altinn-studio-observability
+        __panelId__: "10"
+      notificationSettings:
+        receiver: Studio Slack Critical
+        # State alerts: one reminder a day while it lasts, rather than the root policy's 4h.
+        repeat_interval: 24h
+      data:
+        - refId: A
+          relativeTimeRange:
+            from: 600
+            to: 0
+          datasourceUid: altinn-studio-metrics
+          model:
+            datasource:
+              type: prometheus
+              uid: altinn-studio-metrics
+            editorMode: code
+            expr: |-
               sum by (job, copy) (
                 label_replace(
                   label_replace(
                     increase(vm_persistentqueue_blocks_dropped_total{job=~"vmagent|vlagent|vtagent"}[5m]),
+                    "copy", "a", "path", ".*/1_[^/]*"
+                  ),
+                  "copy", "b", "path", ".*/2_[^/]*"
+                )
+                or
+                label_replace(
+                  label_replace(
+                    increase({__name__=~"(vmagent|vlagent|vtagent)_remotewrite_packets_dropped_total", job=~"vmagent|vlagent|vtagent"}[5m]),
+                    "copy", "a", "url", "1:.*"
+                  ),
+                  "copy", "b", "url", "2:.*"
+                )
+              )
+            instant: true
+            range: false
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: A
+        - refId: C
+          relativeTimeRange:
+            from: 600
+            to: 0
+          datasourceUid: __expr__
+          model:
+            conditions:
+              - evaluator:
+                  params: [0]
+                  type: gt
+                operator:
+                  type: and
+                query:
+                  params: [C]
+                reducer:
+                  params: []
+                  type: last
+                type: query
+            datasource:
+              type: __expr__
+              uid: __expr__
+            expression: A
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: C
+            type: threshold
+    # An agent's queue for a storage copy holds more than half of what it may: the queued bytes
+    # against the queued bytes plus the room left, which is the per-copy limit (20 GiB) or the
+    # volume's free space if less. Past it, drops follow in hours (overview panel 9).
+    - uid: studio-obs-agent-queue-half-full-prod
+      title: 'Observability agent queue past half'
+      condition: C
+      for: 5m
+      noDataState: OK
+      execErrState: OK
+      labels:
+        AlertType: Capacity
+        Env: Prod
+        Product: Studio
+        Severity: Critical
+      annotations:
+        summary: 'Observability {{ $labels.job }} queue for storage copy {{ $labels.copy }} is past half full'
+        description: >-
+          The agent cannot deliver to copy {{ $labels.copy }} and has queued more than half of what
+          it may hold for it ({{ humanizePercentage $values.A.Value }}). When the queue is full it
+          drops the oldest data. First find why the copy is not taking writes: down, read-only or
+          out of disk.
+        resolution: 'The queue is below half again.'
+        __dashboardUid__: altinn-studio-observability
+        __panelId__: "9"
+      notificationSettings:
+        receiver: Studio Slack Critical
+        # State alerts: one reminder a day while it lasts, rather than the root policy's 4h.
+        repeat_interval: 24h
+      data:
+        - refId: A
+          relativeTimeRange:
+            from: 600
+            to: 0
+          datasourceUid: altinn-studio-metrics
+          model:
+            datasource:
+              type: prometheus
+              uid: altinn-studio-metrics
+            editorMode: code
+            expr: |-
+              max by (job, copy) (
+                label_replace(
+                  label_replace(
+                    vm_persistentqueue_bytes_pending{job=~"vmagent|vlagent|vtagent"}
+                    /
+                    (vm_persistentqueue_bytes_pending{job=~"vmagent|vlagent|vtagent"} + vm_persistentqueue_free_disk_space_bytes{job=~"vmagent|vlagent|vtagent"}),
                     "copy", "a", "path", ".*/1_[^/]*"
                   ),
                   "copy", "b", "path", ".*/2_[^/]*"
@@ -67,13 +242,604 @@ spec:
             refId: A
         - refId: C
           relativeTimeRange:
-            from: 300
+            from: 600
+            to: 0
+          datasourceUid: __expr__
+          model:
+            conditions:
+              - evaluator:
+                  params: [0.5]
+                  type: gt
+                operator:
+                  type: and
+                query:
+                  params: [C]
+                reducer:
+                  params: []
+                  type: last
+                type: query
+            datasource:
+              type: __expr__
+              uid: __expr__
+            expression: A
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: C
+            type: threshold
+    # One storage copy has failed its scrape for 30 minutes. The agents queue its writes and reads
+    # fail over to the other copy, so nothing is lost yet, but the pair has no redundancy
+    # (overview panel 3).
+    - uid: studio-obs-storage-copy-down-prod
+      title: 'Observability storage copy down'
+      condition: C
+      for: 30m
+      noDataState: OK
+      execErrState: OK
+      labels:
+        AlertType: Availability
+        Env: Prod
+        Product: Studio
+        Severity: Critical
+      annotations:
+        summary: 'Observability {{ $labels.signal }} storage copy {{ $labels.copy }} ({{ $labels.job }}) has been down for 30 minutes'
+        description: >-
+          vmagent-self cannot scrape {{ $labels.job }} copy {{ $labels.copy }}. Writes to it queue
+          in the agents and reads use the other copy. First check the pod and its volume in the
+          observability namespace (events, restarts, scheduling).
+        resolution: 'The copy answers its scrapes again.'
+        __dashboardUid__: altinn-studio-observability
+        __panelId__: "3"
+      notificationSettings:
+        receiver: Studio Slack Critical
+        # State alerts: one reminder a day while it lasts, rather than the root policy's 4h.
+        repeat_interval: 24h
+      data:
+        - refId: A
+          relativeTimeRange:
+            from: 600
+            to: 0
+          datasourceUid: altinn-studio-metrics
+          model:
+            datasource:
+              type: prometheus
+              uid: altinn-studio-metrics
+            editorMode: code
+            expr: |-
+              max by (job, signal, copy) (up{job=~"vmsingle|vlsingle|vtsingle"})
+            instant: true
+            range: false
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: A
+        - refId: C
+          relativeTimeRange:
+            from: 600
+            to: 0
+          datasourceUid: __expr__
+          model:
+            conditions:
+              - evaluator:
+                  params: [1]
+                  type: lt
+                operator:
+                  type: and
+                query:
+                  params: [C]
+                reducer:
+                  params: []
+                  type: last
+                type: query
+            datasource:
+              type: __expr__
+              uid: __expr__
+            expression: A
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: C
+            type: threshold
+    # Both storage copies of a signal are down, so its reads fail. For metrics, this rule's own query
+    # then fails too, and the heartbeat fires instead (overview panel 3).
+    - uid: studio-obs-signal-unavailable-prod
+      title: 'Observability signal unavailable'
+      condition: C
+      for: 3m
+      noDataState: OK
+      execErrState: OK
+      labels:
+        AlertType: Availability
+        Env: Prod
+        Product: Studio
+        Severity: Critical
+      annotations:
+        summary: 'Observability {{ $labels.signal }} unavailable: both storage copies ({{ $labels.job }}) are down'
+        description: >-
+          Neither copy of {{ $labels.signal }} answers, so Grafana cannot read it and the agents
+          queue every write. First check both {{ $labels.job }} pods and their node pool in the
+          observability namespace.
+        resolution: 'At least one copy answers again.'
+        __dashboardUid__: altinn-studio-observability
+        __panelId__: "3"
+      notificationSettings:
+        receiver: Studio Slack Critical
+        # State alerts: one reminder a day while it lasts, rather than the root policy's 4h.
+        repeat_interval: 24h
+      data:
+        - refId: A
+          relativeTimeRange:
+            from: 600
+            to: 0
+          datasourceUid: altinn-studio-metrics
+          model:
+            datasource:
+              type: prometheus
+              uid: altinn-studio-metrics
+            editorMode: code
+            expr: |-
+              max by (job, signal) (up{job=~"vmsingle|vlsingle|vtsingle"})
+            instant: true
+            range: false
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: A
+        - refId: C
+          relativeTimeRange:
+            from: 600
+            to: 0
+          datasourceUid: __expr__
+          model:
+            conditions:
+              - evaluator:
+                  params: [1]
+                  type: lt
+                operator:
+                  type: and
+                query:
+                  params: [C]
+                reducer:
+                  params: []
+                  type: last
+                type: query
+            datasource:
+              type: __expr__
+              uid: __expr__
+            expression: A
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: C
+            type: threshold
+    # A storage copy refuses writes: VMSingle below -storage.minFreeDiskSpaceBytes (100 GiB), or
+    # VictoriaLogs or VictoriaTraces with a full disk. The agents queue its writes (overview panel 12).
+    - uid: studio-obs-storage-read-only-prod
+      title: 'Observability storage read-only'
+      condition: C
+      for: 5m
+      noDataState: OK
+      execErrState: OK
+      labels:
+        AlertType: Capacity
+        Env: Prod
+        Product: Studio
+        Severity: Critical
+      annotations:
+        summary: 'Observability {{ $labels.signal }} storage copy {{ $labels.copy }} ({{ $labels.job }}) is read-only'
+        description: >-
+          {{ $labels.job }} copy {{ $labels.copy }} has stopped accepting writes because its disk is
+          too full, so the agents queue them. First free or grow the volume; for VMSingle, check
+          that the 90-day retention fits the 512 GiB volume above the 100 GiB floor.
+        resolution: 'The copy accepts writes again.'
+        __dashboardUid__: altinn-studio-observability
+        __panelId__: "12"
+      notificationSettings:
+        receiver: Studio Slack Critical
+        # State alerts: one reminder a day while it lasts, rather than the root policy's 4h.
+        repeat_interval: 24h
+      data:
+        - refId: A
+          relativeTimeRange:
+            from: 600
+            to: 0
+          datasourceUid: altinn-studio-metrics
+          model:
+            datasource:
+              type: prometheus
+              uid: altinn-studio-metrics
+            editorMode: code
+            expr: |-
+              max by (job, signal, copy) (
+                {__name__=~"vm_storage_is_read_only|vl_storage_is_read_only|vt_storage_is_read_only", job=~"vmsingle|vlsingle|vtsingle"}
+              )
+            instant: true
+            range: false
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: A
+        - refId: C
+          relativeTimeRange:
+            from: 600
             to: 0
           datasourceUid: __expr__
           model:
             conditions:
               - evaluator:
                   params: [0]
+                  type: gt
+                operator:
+                  type: and
+                query:
+                  params: [C]
+                reducer:
+                  params: []
+                  type: last
+                type: query
+            datasource:
+              type: __expr__
+              uid: __expr__
+            expression: A
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: C
+            type: threshold
+    # VMSingle reaches its free-space floor within 7 days at the last day's rate, as the overview's
+    # "Days until floor" (panel 13) computes it. It only counts a copy whose free space has shrunk
+    # over the last day, which also needs a day of history, so a short dip does not fire it.
+    - uid: studio-obs-metrics-disk-running-out-prod
+      title: 'Observability metrics disk running out'
+      condition: C
+      for: 1h
+      noDataState: OK
+      execErrState: OK
+      labels:
+        AlertType: Capacity
+        Env: Prod
+        Product: Studio
+        Severity: Critical
+      annotations:
+        summary: 'Observability VMSingle copy {{ $labels.copy }} reaches its free-space floor in {{ humanize $values.A.Value }} days'
+        description: >-
+          At the last day's growth, VMSingle copy {{ $labels.copy }} goes read-only within a week.
+          First look for a cardinality or volume increase (Ingest quality on the overview), then
+          shorten the retention or grow the volume.
+        resolution: 'The free space is no longer on course to reach the floor within a week.'
+        __dashboardUid__: altinn-studio-observability
+        __panelId__: "13"
+      notificationSettings:
+        receiver: Studio Slack Critical
+        # State alerts: one reminder a day while it lasts, rather than the root policy's 4h.
+        repeat_interval: 24h
+      data:
+        - refId: A
+          relativeTimeRange:
+            from: 600
+            to: 0
+          datasourceUid: altinn-studio-metrics
+          model:
+            datasource:
+              type: prometheus
+              uid: altinn-studio-metrics
+            editorMode: code
+            expr: |-
+              (
+                vm_free_disk_space_bytes{job="vmsingle"} - vm_free_disk_space_limit_bytes{job="vmsingle"}
+              )
+              / (-deriv(vm_free_disk_space_bytes{job="vmsingle"}[1d]) > 0) / 86400
+              and
+              vm_free_disk_space_bytes{job="vmsingle"} < vm_free_disk_space_bytes{job="vmsingle"} offset 1d
+            instant: true
+            range: false
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: A
+        - refId: C
+          relativeTimeRange:
+            from: 600
+            to: 0
+          datasourceUid: __expr__
+          model:
+            conditions:
+              - evaluator:
+                  params: [7]
+                  type: lt
+                operator:
+                  type: and
+                query:
+                  params: [C]
+                reducer:
+                  params: []
+                  type: last
+                type: query
+            datasource:
+              type: __expr__
+              uid: __expr__
+            expression: A
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: C
+            type: threshold
+    # Fewer than two observability-proxy replicas answer scrapes. The replicas are found through DNS,
+    # so a gone pod drops out instead of showing 0: count the ones up (overview panel 25). With no
+    # replica at all, or no scraper, there is no data and this stays quiet: Grafana's queries go
+    # through the proxy and the heartbeat rule fires on that.
+    - uid: studio-obs-proxy-degraded-prod
+      title: 'Observability proxy degraded'
+      condition: C
+      for: 15m
+      noDataState: OK
+      execErrState: OK
+      labels:
+        AlertType: Availability
+        Env: Prod
+        Product: Studio
+        Severity: Critical
+      annotations:
+        summary: 'Observability proxy degraded: {{ $values.A.Value }} of 2 replicas up'
+        description: >-
+          Fewer than two observability-proxy replicas have answered vmagent-self for 15 minutes, so
+          all ingest and queries depend on the rest. First check the observability-proxy Deployment
+          and its pods in the observability namespace.
+        resolution: 'Both replicas answer again.'
+        __dashboardUid__: altinn-studio-observability
+        __panelId__: "25"
+      notificationSettings:
+        receiver: Studio Slack Critical
+        # State alerts: one reminder a day while it lasts, rather than the root policy's 4h.
+        repeat_interval: 24h
+      data:
+        - refId: A
+          relativeTimeRange:
+            from: 600
+            to: 0
+          datasourceUid: altinn-studio-metrics
+          model:
+            datasource:
+              type: prometheus
+              uid: altinn-studio-metrics
+            editorMode: code
+            expr: |-
+              count(up{job="observability-proxy"} == 1) or count(up{job="observability-proxy"}) * 0
+            instant: true
+            range: false
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: A
+        - refId: C
+          relativeTimeRange:
+            from: 600
+            to: 0
+          datasourceUid: __expr__
+          model:
+            conditions:
+              - evaluator:
+                  params: [2]
+                  type: lt
+                operator:
+                  type: and
+                query:
+                  params: [C]
+                reducer:
+                  params: []
+                  type: last
+                type: query
+            datasource:
+              type: __expr__
+              uid: __expr__
+            expression: A
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: C
+            type: threshold
+    # The proxy fails to forward OTLP writes to an agent, on the agent's or the proxy's side; clients
+    # that cancel are not counted. Selected by direction rather than destination, since a write with
+    # no destination available carries none. Collectors retry, so this fires when it lasts (overview
+    # panel 31).
+    - uid: studio-obs-ingest-forwarding-errors-prod
+      title: 'Observability ingest forwarding failing'
+      condition: C
+      for: 10m
+      noDataState: OK
+      execErrState: OK
+      labels:
+        AlertType: Ingest
+        Env: Prod
+        Product: Studio
+        Severity: Critical
+      annotations:
+        summary: 'Observability proxy failing to forward {{ $labels.signal }} to its agent ({{ $labels.error_type }})'
+        description: >-
+          For 10 minutes the observability-proxy has failed to forward {{ $labels.signal }} writes
+          to the agent ({{ $labels.error_type }}). The collectors retry and queue meanwhile. First
+          check the agent StatefulSet and its pods (vmagent-metrics, vlagent-logs or
+          vtagent-traces).
+        resolution: 'Writes reach the agent again.'
+        __dashboardUid__: altinn-studio-observability
+        __panelId__: "31"
+      notificationSettings:
+        receiver: Studio Slack Critical
+        # State alerts: one reminder a day while it lasts, rather than the root policy's 4h.
+        repeat_interval: 24h
+      data:
+        - refId: A
+          relativeTimeRange:
+            from: 600
+            to: 0
+          datasourceUid: altinn-studio-metrics
+          model:
+            datasource:
+              type: prometheus
+              uid: altinn-studio-metrics
+            editorMode: code
+            expr: |-
+              sum by (signal, error_type) (
+                label_replace(
+                  increase(altinn_observability_proxy_forwarding_errors_total{altinn_observability_proxy_direction="ingest"}[5m]),
+                  "signal", "$1", "altinn_observability_proxy_signal", "(.*)"
+                )
+              )
+            instant: true
+            range: false
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: A
+        - refId: C
+          relativeTimeRange:
+            from: 600
+            to: 0
+          datasourceUid: __expr__
+          model:
+            conditions:
+              - evaluator:
+                  params: [0]
+                  type: gt
+                operator:
+                  type: and
+                query:
+                  params: [C]
+                reducer:
+                  params: []
+                  type: last
+                type: query
+            datasource:
+              type: __expr__
+              uid: __expr__
+            expression: A
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: C
+            type: threshold
+    # Sustained 401s on OTLP writes: a source with a missing or unknown token, such as one removed
+    # too early in a rotation. A 401 has no identity, so this counts by reason and signal. The
+    # threshold and pending period ignore an occasional stray request (overview panel 29).
+    - uid: studio-obs-ingest-unauthenticated-prod
+      title: 'Observability ingest refused: unauthenticated'
+      condition: C
+      for: 15m
+      noDataState: OK
+      execErrState: OK
+      labels:
+        AlertType: Ingest
+        Env: Prod
+        Product: Studio
+        Severity: Critical
+      annotations:
+        summary: 'Observability ingest refusing {{ $labels.signal }} writes with 401 ({{ $labels.error_type }})'
+        description: >-
+          For 15 minutes, more than 10 {{ $labels.signal }} writes in each 10 minutes have been
+          refused with 401 ({{ $labels.error_type }}); that telemetry is lost once the collector
+          gives up. First check which collector's token changed: a rotation in Key Vault, or the
+          token Secret in a cluster.
+        resolution: 'Writes are no longer refused with 401.'
+        __dashboardUid__: altinn-studio-observability
+        __panelId__: "29"
+      notificationSettings:
+        receiver: Studio Slack Critical
+        # State alerts: one reminder a day while it lasts, rather than the root policy's 4h.
+        repeat_interval: 24h
+      data:
+        - refId: A
+          relativeTimeRange:
+            from: 600
+            to: 0
+          datasourceUid: altinn-studio-metrics
+          model:
+            datasource:
+              type: prometheus
+              uid: altinn-studio-metrics
+            editorMode: code
+            expr: |-
+              sum by (signal, error_type) (
+                label_replace(
+                  increase(altinn_observability_proxy_authentication_failures_total{altinn_observability_proxy_direction="ingest"}[10m]),
+                  "signal", "$1", "altinn_observability_proxy_signal", "(.*)"
+                )
+              )
+            instant: true
+            range: false
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: A
+        - refId: C
+          relativeTimeRange:
+            from: 600
+            to: 0
+          datasourceUid: __expr__
+          model:
+            conditions:
+              - evaluator:
+                  params: [10]
+                  type: gt
+                operator:
+                  type: and
+                query:
+                  params: [C]
+                reducer:
+                  params: []
+                  type: last
+                type: query
+            datasource:
+              type: __expr__
+              uid: __expr__
+            expression: A
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: C
+            type: threshold
+    # Sustained 429s from the proxy's own per-identity limit on OTLP writes (overview panel 30).
+    - uid: studio-obs-ingest-rate-limited-prod
+      title: 'Observability ingest refused: rate limited'
+      condition: C
+      for: 15m
+      noDataState: OK
+      execErrState: OK
+      labels:
+        AlertType: Ingest
+        Env: Prod
+        Product: Studio
+        Severity: Critical
+      annotations:
+        summary: 'Observability ingest rate-limiting {{ $labels.source_identity }}'
+        description: >-
+          For 15 minutes, the observability-proxy has refused more than 10 writes from {{
+          $labels.source_identity }} in each 10 minutes with 429. The collectors back off and may
+          drop data. First check whether the source sends more than usual; otherwise raise its limit
+          (ObservabilityProxy__RateLimiting__PermitLimits in the proxy's Deployment).
+        resolution: 'The source is no longer rate-limited.'
+        __dashboardUid__: altinn-studio-observability
+        __panelId__: "30"
+      notificationSettings:
+        receiver: Studio Slack Critical
+        # State alerts: one reminder a day while it lasts, rather than the root policy's 4h.
+        repeat_interval: 24h
+      data:
+        - refId: A
+          relativeTimeRange:
+            from: 600
+            to: 0
+          datasourceUid: altinn-studio-metrics
+          model:
+            datasource:
+              type: prometheus
+              uid: altinn-studio-metrics
+            editorMode: code
+            expr: |-
+              sum by (source_identity) (
+                label_replace(
+                  increase(altinn_observability_proxy_rate_limit_rejections_total{altinn_observability_proxy_direction="ingest"}[10m]),
+                  "source_identity", "$1", "altinn_observability_proxy_source_identity", "(.*)"
+                )
+              )
+            instant: true
+            range: false
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: A
+        - refId: C
+          relativeTimeRange:
+            from: 600
+            to: 0
+          datasourceUid: __expr__
+          model:
+            conditions:
+              - evaluator:
+                  params: [10]
                   type: gt
                 operator:
                   type: and
