@@ -16,6 +16,10 @@ exclusions:
       The gateway dashboard reads the gateway's metrics, lists its spans through
       altinn-studio-traces-logsql and links them to altinn-studio-traces, and
       shows its logs from altinn-studio-logs.
+      The app deploys dashboard joins Designer's and the gateway's spans per deploy
+      through altinn-studio-traces-logsql, links them to altinn-studio-traces, reads
+      Flux's results and the hand-off from altinn-studio-metrics, and shows deploy
+      logs from altinn-studio-logs.
     entries:
       - dashboard: "Altinn Studio - PDF3"
       - dashboard: "Altinn Studio - Observability"
@@ -24,6 +28,7 @@ exclusions:
       - dashboard: "Altinn Studio - Reports and alerts"
       - dashboard: "Altinn Studio - Operator"
       - dashboard: "Altinn Studio - Gateway"
+      - dashboard: "Altinn Studio - App deploys"
   template-datasource-rule:
     reason: >-
       No datasource template variable by design; see panel-datasource-rule.
@@ -35,3 +40,4 @@ exclusions:
       - dashboard: "Altinn Studio - Reports and alerts"
       - dashboard: "Altinn Studio - Operator"
       - dashboard: "Altinn Studio - Gateway"
+      - dashboard: "Altinn Studio - App deploys"

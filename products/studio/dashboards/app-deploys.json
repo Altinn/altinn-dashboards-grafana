@@ -1,0 +1,3814 @@
+{
+  "uid": "altinn-studio-app-deploys",
+  "title": "Altinn Studio - App deploys",
+  "description": "App deploys and undeploys from Altinn Studio, end to end: the deploy request to Designer, the Azure DevOps pipeline Designer queues and polls, Designer's reconcile call to the runtime gateway, and Flux's install or upgrade result, which the gateway passes back to Designer. Designer marks every deploy's trace to be kept and the trace continues through the pipeline's HelmRelease into the gateway, so most panels join each deploy's spans by trace ID (altinn-studio-traces-logsql, LogsQL) to show it as one row with its outcome and the time each phase took. Flux's results and the hand-off between Designer and the gateways also come from their metrics (altinn-studio-metrics). Filter by the Studio environment that deployed (dev, staging, prod), the environment deployed to and the service owner. Designer's request metrics carry only the Studio environment. Phase times are worked out from the trace: Pipeline is within 10 s of the pipeline's end, since Designer polls every 10 s, and a deploy whose request is outside the time range is left out. The Azure DevOps pipeline sends no telemetry, so its own steps and failure reasons are not here. Datasource UIDs are pinned, matching the other Altinn Studio dashboards.",
+  "tags": [
+    "altinn-studio",
+    "deploys"
+  ],
+  "editable": false,
+  "schemaVersion": 42,
+  "refresh": "5m",
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "timezone": "browser",
+  "graphTooltip": 1,
+  "timepicker": {
+    "refresh_intervals": [
+      "1m",
+      "5m",
+      "15m",
+      "1h"
+    ]
+  },
+  "links": [
+    {
+      "asDropdown": true,
+      "icon": "external link",
+      "includeVars": false,
+      "keepTime": true,
+      "tags": [
+        "altinn-studio"
+      ],
+      "targetBlank": false,
+      "title": "Studio dashboards",
+      "type": "dashboards"
+    }
+  ],
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "studio_env",
+        "label": "Studio environment",
+        "description": "Studio environment that deployed the app (Designer's deployment.environment.name, the gateway's altinn.gateway.origin_environment).",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "altinn-studio-metrics"
+        },
+        "query": {
+          "qryType": 1,
+          "query": "label_values({\"http.server.request.duration_count\", \"service.name\"=\"studio-designer\"}, \"deployment.environment.name\")",
+          "refId": "studio_env"
+        },
+        "definition": "label_values({\"http.server.request.duration_count\", \"service.name\"=\"studio-designer\"}, \"deployment.environment.name\")",
+        "refresh": 2,
+        "includeAll": true,
+        "multi": true,
+        "allValue": ".*",
+        "sort": 1,
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        }
+      },
+      {
+        "name": "env",
+        "label": "Environment",
+        "description": "Runtime environment the app was deployed to (the gateway's deployment.environment.name, Designer's altinn.environment).",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "altinn-studio-metrics"
+        },
+        "query": {
+          "qryType": 1,
+          "query": "label_values({\"http.server.request.duration_count\", \"service.name\"=\"gateway\"}, \"deployment.environment.name\")",
+          "refId": "env"
+        },
+        "definition": "label_values({\"http.server.request.duration_count\", \"service.name\"=\"gateway\"}, \"deployment.environment.name\")",
+        "refresh": 2,
+        "includeAll": true,
+        "multi": true,
+        "allValue": ".*",
+        "sort": 1,
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        }
+      },
+      {
+        "name": "service_owner",
+        "label": "Service owner",
+        "description": "Service owner whose app was deployed (altinn.service_owner).",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "altinn-studio-metrics"
+        },
+        "query": {
+          "qryType": 1,
+          "query": "label_values({\"http.server.request.duration_count\", \"service.name\"=\"gateway\", \"deployment.environment.name\"=~\"$env\"}, \"altinn.service_owner\")",
+          "refId": "service_owner"
+        },
+        "definition": "label_values({\"http.server.request.duration_count\", \"service.name\"=\"gateway\", \"deployment.environment.name\"=~\"$env\"}, \"altinn.service_owner\")",
+        "refresh": 2,
+        "includeAll": true,
+        "multi": true,
+        "allValue": ".*",
+        "sort": 1,
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Deploys",
+      "description": "Deploy requests to Designer (POST .../deployments) in the time range, from their server spans. Designer marks every deploy request's trace to be kept, so the count is complete.",
+      "datasource": {
+        "type": "victoriametrics-logs-datasource",
+        "uid": "altinn-studio-traces-logsql"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 3,
+        "h": 4
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "victoriametrics-logs-datasource",
+            "uid": "altinn-studio-traces-logsql"
+          },
+          "refId": "A",
+          "expr": "{resource_attr:service.name=\"studio-designer\"} \"resource_attr:deployment.environment.name\":~\"^(${studio_env:regex})$\" kind:2 name:~\"^POST /designer/api/.+/deployments$\" \"span_attr:altinn.environment\":~\"^(${env:regex})$\" \"span_attr:altinn.service_owner\":~\"^(${service_owner:regex})$\" | stats count() deploys",
+          "queryType": "stats"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "center"
+      }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Failed requests",
+      "description": "Deploy requests that failed with a server error, most of them before Designer queued the pipeline. Failed and unfinished deploys lists them, with links to their traces.",
+      "datasource": {
+        "type": "victoriametrics-logs-datasource",
+        "uid": "altinn-studio-traces-logsql"
+      },
+      "gridPos": {
+        "x": 3,
+        "y": 0,
+        "w": 3,
+        "h": 4
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "victoriametrics-logs-datasource",
+            "uid": "altinn-studio-traces-logsql"
+          },
+          "refId": "A",
+          "expr": "{resource_attr:service.name=\"studio-designer\"} \"resource_attr:deployment.environment.name\":~\"^(${studio_env:regex})$\" kind:2 name:~\"^POST /designer/api/.+/deployments$\" \"span_attr:altinn.environment\":~\"^(${env:regex})$\" \"span_attr:altinn.service_owner\":~\"^(${service_owner:regex})$\" status_code:2 | stats count() failed",
+          "queryType": "stats"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "center"
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Failed pipelines",
+      "description": "Deploys whose Azure DevOps pipeline ended without Designer asking the runtime to reconcile, which it does only after a pipeline that succeeded. Worked out from the deploy's trace: Designer stopped polling the pipeline more than a minute ago and made no reconcile call.",
+      "datasource": {
+        "type": "victoriametrics-logs-datasource",
+        "uid": "altinn-studio-traces-logsql"
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 0,
+        "w": 3,
+        "h": 4
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "victoriametrics-logs-datasource",
+            "uid": "altinn-studio-traces-logsql"
+          },
+          "refId": "A",
+          "expr": "{resource_attr:service.name=~\"studio-designer|gateway\"} ((kind:2 name:~\"^POST /designer/api/.+/deployments$\") or name:=\"DeploymentPipelinePollingJob.Execute\" or (kind:3 \"span_attr:url.full\":~\"/reconcile$\") or name:=\"FluxWebhook.ProcessEvent\" or name:=\"PublishAltinnAppServiceResource\") | stats by (trace_id) count() if (kind:2) requests, min(start_time_unix_nano) if (kind:2) started, max(\"resource_attr:deployment.environment.name\") if (kind:2) studio_env, max(\"span_attr:altinn.environment\") if (kind:2) env, max(\"span_attr:altinn.service_owner\") if (kind:2) service_owner, max(\"span_attr:altinn.app\") if (kind:2) app, max(\"span_attr:enduser.id\") if (kind:2) user, max(\"span_attr:http.response.status_code\") if (kind:2) status, count() if (name:=\"DeploymentPipelinePollingJob.Execute\") polls, max(end_time_unix_nano) if (name:=\"DeploymentPipelinePollingJob.Execute\") last_poll, count() if (kind:3) reconciles, count() if (kind:3 status_code:2) reconcile_failed, min(start_time_unix_nano) if (name:=\"FluxWebhook.ProcessEvent\") flux_at, max(\"span_attr:altinn.gateway.flux.reason\") if (name:=\"FluxWebhook.ProcessEvent\") flux_reason, max(\"span_attr:altinn.app_deploy.build.id\") if (name:=\"FluxWebhook.ProcessEvent\") build_id, count() if (name:=\"FluxWebhook.ProcessEvent\" status_code:2) not_passed_on, max(\"span_attr:altinn.designer.resource_registry.publish.result\") if (name:=\"PublishAltinnAppServiceResource\") registry, max(\"span_attr:altinn.designer.resource_registry.publish.validation_errors\") if (name:=\"PublishAltinnAppServiceResource\") registry_errors | filter requests:>0 | filter studio_env:~\"^(${studio_env:regex})$\" env:~\"^(${env:regex})$\" service_owner:~\"^(${service_owner:regex})$\" | math (last_poll - started) / 1e9 as pipeline_s, (flux_at - last_poll) / 1e9 as flux_s, (flux_at - started) / 1e9 as total_s, (now() - last_poll) / 1e9 as since_poll_s, started / 1e6 as started_ms | format if (flux_reason:*) \"<flux_reason>\" as outcome | format if (outcome:\"\" status:~\"^5\") \"Request failed\" as outcome | format if (outcome:\"\" reconcile_failed:>0) \"Reconcile failed\" as outcome | format if (outcome:\"\" reconciles:>0 since_poll_s:>900) \"No Flux event\" as outcome | format if (outcome:\"\" reconciles:>0) \"Waiting for Flux\" as outcome | format if (outcome:\"\" polls:>0 since_poll_s:<60) \"Pipeline running\" as outcome | format if (outcome:\"\" polls:>0) \"Pipeline failed\" as outcome | format if (outcome:\"\") \"Not queued\" as outcome | filter outcome:=\"Pipeline failed\" | stats count() failed",
+          "queryType": "stats"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "center"
+      }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Flux success rate",
+      "description": "Installs and upgrades that succeeded, out of all install and upgrade results Flux reported to the runtime gateways in the time range (altinn.gateway.deploy_events). Uninstalls are under Undeploys.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "altinn-studio-metrics"
+      },
+      "gridPos": {
+        "x": 9,
+        "y": 0,
+        "w": 3,
+        "h": 4
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "A",
+          "expr": "sum(increase_pure({\"altinn.gateway.deploy_events\", \"service.name\"=\"gateway\", \"deployment.environment.name\"=~\"$env\", \"altinn.service_owner\"=~\"$service_owner\", \"altinn.gateway.origin_environment\"=~\"$studio_env\", \"altinn.gateway.flux.reason\"=~\"(Install|Upgrade)Succeeded\"}[$__range])) / sum(increase_pure({\"altinn.gateway.deploy_events\", \"service.name\"=\"gateway\", \"deployment.environment.name\"=~\"$env\", \"altinn.service_owner\"=~\"$service_owner\", \"altinn.gateway.origin_environment\"=~\"$studio_env\", \"altinn.gateway.flux.reason\"=~\"(Install|Upgrade)(Succeeded|Failed)\"}[$__range]))",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 0.9
+              },
+              {
+                "color": "green",
+                "value": 0.97
+              }
+            ]
+          },
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "center"
+      }
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Flux failures",
+      "description": "InstallFailed and UpgradeFailed results from Flux in the time range (altinn.gateway.deploy_events). Designer posts each to the internal Slack channel and the service owner's contact points.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "altinn-studio-metrics"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 0,
+        "w": 3,
+        "h": 4
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "A",
+          "expr": "sum(increase_pure({\"altinn.gateway.deploy_events\", \"service.name\"=\"gateway\", \"deployment.environment.name\"=~\"$env\", \"altinn.service_owner\"=~\"$service_owner\", \"altinn.gateway.origin_environment\"=~\"$studio_env\", \"altinn.gateway.flux.reason\"=~\"(Install|Upgrade)Failed\"}[$__range])) or vector(0)",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "center"
+      }
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "Deploy time p50",
+      "description": "Median time from the deploy request to Flux's install or upgrade result, over the deploys in the time range that have one. Worked out from each deploy's trace.",
+      "datasource": {
+        "type": "victoriametrics-logs-datasource",
+        "uid": "altinn-studio-traces-logsql"
+      },
+      "gridPos": {
+        "x": 15,
+        "y": 0,
+        "w": 3,
+        "h": 4
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "victoriametrics-logs-datasource",
+            "uid": "altinn-studio-traces-logsql"
+          },
+          "refId": "A",
+          "expr": "{resource_attr:service.name=~\"studio-designer|gateway\"} ((kind:2 name:~\"^POST /designer/api/.+/deployments$\") or name:=\"DeploymentPipelinePollingJob.Execute\" or (kind:3 \"span_attr:url.full\":~\"/reconcile$\") or name:=\"FluxWebhook.ProcessEvent\" or name:=\"PublishAltinnAppServiceResource\") | stats by (trace_id) count() if (kind:2) requests, min(start_time_unix_nano) if (kind:2) started, max(\"resource_attr:deployment.environment.name\") if (kind:2) studio_env, max(\"span_attr:altinn.environment\") if (kind:2) env, max(\"span_attr:altinn.service_owner\") if (kind:2) service_owner, max(\"span_attr:altinn.app\") if (kind:2) app, max(\"span_attr:enduser.id\") if (kind:2) user, max(\"span_attr:http.response.status_code\") if (kind:2) status, count() if (name:=\"DeploymentPipelinePollingJob.Execute\") polls, max(end_time_unix_nano) if (name:=\"DeploymentPipelinePollingJob.Execute\") last_poll, count() if (kind:3) reconciles, count() if (kind:3 status_code:2) reconcile_failed, min(start_time_unix_nano) if (name:=\"FluxWebhook.ProcessEvent\") flux_at, max(\"span_attr:altinn.gateway.flux.reason\") if (name:=\"FluxWebhook.ProcessEvent\") flux_reason, max(\"span_attr:altinn.app_deploy.build.id\") if (name:=\"FluxWebhook.ProcessEvent\") build_id, count() if (name:=\"FluxWebhook.ProcessEvent\" status_code:2) not_passed_on, max(\"span_attr:altinn.designer.resource_registry.publish.result\") if (name:=\"PublishAltinnAppServiceResource\") registry, max(\"span_attr:altinn.designer.resource_registry.publish.validation_errors\") if (name:=\"PublishAltinnAppServiceResource\") registry_errors | filter requests:>0 | filter studio_env:~\"^(${studio_env:regex})$\" env:~\"^(${env:regex})$\" service_owner:~\"^(${service_owner:regex})$\" | math (last_poll - started) / 1e9 as pipeline_s, (flux_at - last_poll) / 1e9 as flux_s, (flux_at - started) / 1e9 as total_s, (now() - last_poll) / 1e9 as since_poll_s, started / 1e6 as started_ms | format if (flux_reason:*) \"<flux_reason>\" as outcome | format if (outcome:\"\" status:~\"^5\") \"Request failed\" as outcome | format if (outcome:\"\" reconcile_failed:>0) \"Reconcile failed\" as outcome | format if (outcome:\"\" reconciles:>0 since_poll_s:>900) \"No Flux event\" as outcome | format if (outcome:\"\" reconciles:>0) \"Waiting for Flux\" as outcome | format if (outcome:\"\" polls:>0 since_poll_s:<60) \"Pipeline running\" as outcome | format if (outcome:\"\" polls:>0) \"Pipeline failed\" as outcome | format if (outcome:\"\") \"Not queued\" as outcome | filter flux_at:* | stats quantile(0.5, total_s) p50",
+          "queryType": "stats"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "center"
+      }
+    },
+    {
+      "id": 7,
+      "type": "stat",
+      "title": "Deploy time p95",
+      "description": "95th percentile of the time from the deploy request to Flux's install or upgrade result, over the deploys in the time range that have one.",
+      "datasource": {
+        "type": "victoriametrics-logs-datasource",
+        "uid": "altinn-studio-traces-logsql"
+      },
+      "gridPos": {
+        "x": 18,
+        "y": 0,
+        "w": 3,
+        "h": 4
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "victoriametrics-logs-datasource",
+            "uid": "altinn-studio-traces-logsql"
+          },
+          "refId": "A",
+          "expr": "{resource_attr:service.name=~\"studio-designer|gateway\"} ((kind:2 name:~\"^POST /designer/api/.+/deployments$\") or name:=\"DeploymentPipelinePollingJob.Execute\" or (kind:3 \"span_attr:url.full\":~\"/reconcile$\") or name:=\"FluxWebhook.ProcessEvent\" or name:=\"PublishAltinnAppServiceResource\") | stats by (trace_id) count() if (kind:2) requests, min(start_time_unix_nano) if (kind:2) started, max(\"resource_attr:deployment.environment.name\") if (kind:2) studio_env, max(\"span_attr:altinn.environment\") if (kind:2) env, max(\"span_attr:altinn.service_owner\") if (kind:2) service_owner, max(\"span_attr:altinn.app\") if (kind:2) app, max(\"span_attr:enduser.id\") if (kind:2) user, max(\"span_attr:http.response.status_code\") if (kind:2) status, count() if (name:=\"DeploymentPipelinePollingJob.Execute\") polls, max(end_time_unix_nano) if (name:=\"DeploymentPipelinePollingJob.Execute\") last_poll, count() if (kind:3) reconciles, count() if (kind:3 status_code:2) reconcile_failed, min(start_time_unix_nano) if (name:=\"FluxWebhook.ProcessEvent\") flux_at, max(\"span_attr:altinn.gateway.flux.reason\") if (name:=\"FluxWebhook.ProcessEvent\") flux_reason, max(\"span_attr:altinn.app_deploy.build.id\") if (name:=\"FluxWebhook.ProcessEvent\") build_id, count() if (name:=\"FluxWebhook.ProcessEvent\" status_code:2) not_passed_on, max(\"span_attr:altinn.designer.resource_registry.publish.result\") if (name:=\"PublishAltinnAppServiceResource\") registry, max(\"span_attr:altinn.designer.resource_registry.publish.validation_errors\") if (name:=\"PublishAltinnAppServiceResource\") registry_errors | filter requests:>0 | filter studio_env:~\"^(${studio_env:regex})$\" env:~\"^(${env:regex})$\" service_owner:~\"^(${service_owner:regex})$\" | math (last_poll - started) / 1e9 as pipeline_s, (flux_at - last_poll) / 1e9 as flux_s, (flux_at - started) / 1e9 as total_s, (now() - last_poll) / 1e9 as since_poll_s, started / 1e6 as started_ms | format if (flux_reason:*) \"<flux_reason>\" as outcome | format if (outcome:\"\" status:~\"^5\") \"Request failed\" as outcome | format if (outcome:\"\" reconcile_failed:>0) \"Reconcile failed\" as outcome | format if (outcome:\"\" reconciles:>0 since_poll_s:>900) \"No Flux event\" as outcome | format if (outcome:\"\" reconciles:>0) \"Waiting for Flux\" as outcome | format if (outcome:\"\" polls:>0 since_poll_s:<60) \"Pipeline running\" as outcome | format if (outcome:\"\" polls:>0) \"Pipeline failed\" as outcome | format if (outcome:\"\") \"Not queued\" as outcome | filter flux_at:* | stats quantile(0.95, total_s) p95",
+          "queryType": "stats"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "center"
+      }
+    },
+    {
+      "id": 8,
+      "type": "stat",
+      "title": "Undeploys",
+      "description": "Undeploys whose pipeline Designer queued in the time range: from Designer (POST .../deployments/undeploy) and from the nightly undeploy of inactive apps. Undeploys skipped because one was already pending are left out.",
+      "datasource": {
+        "type": "victoriametrics-logs-datasource",
+        "uid": "altinn-studio-traces-logsql"
+      },
+      "gridPos": {
+        "x": 21,
+        "y": 0,
+        "w": 3,
+        "h": 4
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "victoriametrics-logs-datasource",
+            "uid": "altinn-studio-traces-logsql"
+          },
+          "refId": "A",
+          "expr": "{resource_attr:service.name=\"studio-designer\"} ((kind:2 name:~\"^POST /designer/api/.+/deployments/undeploy$\") or name:=\"execute AppInactivityUndeployAppJob\" or name:=\"DeploymentPipelinePollingJob.Execute\" or (kind:3 \"span_attr:url.full\":~\"/reconcile$\")) | stats by (trace_id) count() if (kind:2 name:~\"^POST /designer/api/.+/deployments/undeploy$\") manual, count() if (name:=\"execute AppInactivityUndeployAppJob\") automatic, min(start_time_unix_nano) if ((kind:2 name:~\"^POST /designer/api/.+/deployments/undeploy$\") or name:=\"execute AppInactivityUndeployAppJob\") started, max(\"resource_attr:deployment.environment.name\") if ((kind:2 name:~\"^POST /designer/api/.+/deployments/undeploy$\") or name:=\"execute AppInactivityUndeployAppJob\") studio_env, max(\"span_attr:altinn.environment\") if ((kind:2 name:~\"^POST /designer/api/.+/deployments/undeploy$\") or name:=\"execute AppInactivityUndeployAppJob\") env, max(\"span_attr:altinn.service_owner\") if ((kind:2 name:~\"^POST /designer/api/.+/deployments/undeploy$\") or name:=\"execute AppInactivityUndeployAppJob\") service_owner, max(\"span_attr:altinn.app\") if ((kind:2 name:~\"^POST /designer/api/.+/deployments/undeploy$\") or name:=\"execute AppInactivityUndeployAppJob\") app, max(\"span_attr:enduser.id\") if (kind:2 name:~\"^POST /designer/api/.+/deployments/undeploy$\") user, count() if (((kind:2 name:~\"^POST /designer/api/.+/deployments/undeploy$\") or name:=\"execute AppInactivityUndeployAppJob\") status_code:2) failed, count() if (name:=\"DeploymentPipelinePollingJob.Execute\") polls, max(end_time_unix_nano) if (name:=\"DeploymentPipelinePollingJob.Execute\") last_poll, count() if (kind:3) reconciles, count() if (kind:3 status_code:2) reconcile_failed | filter polls:>0 (manual:>0 or automatic:>0) | filter studio_env:~\"^(${studio_env:regex})$\" env:~\"^(${env:regex})$\" service_owner:~\"^(${service_owner:regex})$\" | math (last_poll - started) / 1e9 as pipeline_s, (now() - last_poll) / 1e9 as since_poll_s, started / 1e6 as started_ms | format if (manual:>0) \"Manual\" as trigger | format if (automatic:>0) \"Inactivity\" as trigger | format if (failed:>0) \"Failed\" as outcome | format if (outcome:\"\" reconcile_failed:>0) \"Reconcile failed\" as outcome | format if (outcome:\"\" reconciles:>0) \"Pipeline finished\" as outcome | format if (outcome:\"\" since_poll_s:<60) \"Pipeline running\" as outcome | format if (outcome:\"\") \"Pipeline failed\" as outcome | stats count() undeploys",
+          "queryType": "stats"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "center"
+      }
+    },
+    {
+      "id": 9,
+      "type": "row",
+      "title": "Deploys",
+      "gridPos": {
+        "x": 0,
+        "y": 4,
+        "w": 24,
+        "h": 1
+      },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "Deploys requested by environment",
+      "description": "Deploy requests to Designer per interval, by the environment deployed to (altinn.environment on the request span).",
+      "datasource": {
+        "type": "victoriametrics-logs-datasource",
+        "uid": "altinn-studio-traces-logsql"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 5,
+        "w": 8,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "victoriametrics-logs-datasource",
+            "uid": "altinn-studio-traces-logsql"
+          },
+          "refId": "A",
+          "expr": "{resource_attr:service.name=\"studio-designer\"} \"resource_attr:deployment.environment.name\":~\"^(${studio_env:regex})$\" kind:2 name:~\"^POST /designer/api/.+/deployments$\" \"span_attr:altinn.environment\":~\"^(${env:regex})$\" \"span_attr:altinn.service_owner\":~\"^(${service_owner:regex})$\" | stats by (\"span_attr:altinn.environment\") count() deploys",
+          "queryType": "statsRange",
+          "legendFormat": "{{span_attr:altinn.environment}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 60,
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "Flux results by reason",
+      "description": "Flux's install and upgrade results for apps, as the runtime gateways count them (altinn.gateway.deploy_events), per interval. Uninstalls are under Undeploys.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "altinn-studio-metrics"
+      },
+      "gridPos": {
+        "x": 8,
+        "y": 5,
+        "w": 8,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "A",
+          "expr": "sum by (\"altinn.gateway.flux.reason\") (increase_pure({\"altinn.gateway.deploy_events\", \"service.name\"=\"gateway\", \"deployment.environment.name\"=~\"$env\", \"altinn.service_owner\"=~\"$service_owner\", \"altinn.gateway.origin_environment\"=~\"$studio_env\", \"altinn.gateway.flux.reason\"=~\"(Install|Upgrade).*\"}[$__interval]))",
+          "legendFormat": "{{altinn.gateway.flux.reason}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 60,
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "InstallSucceeded"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "UpgradeSucceeded"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "UninstallSucceeded"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "InstallFailed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "UpgradeFailed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "UninstallFailed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 12,
+      "type": "bargauge",
+      "title": "Outcomes",
+      "description": "Deploys requested in the time range by how far they got, from each deploy's trace: Flux's result (InstallSucceeded, UpgradeSucceeded, InstallFailed, UpgradeFailed); Request failed (Designer answered the deploy request with a server error); Pipeline running or Pipeline failed (Designer is still polling the Azure DevOps pipeline, or stopped without a reconcile call, which it makes only after a pipeline that succeeded); Reconcile failed (Designer could not ask the runtime gateway to reconcile); Waiting for Flux, then No Flux event after 15 minutes (the pipeline succeeded, but no Flux result has come back in the deploy's trace).",
+      "datasource": {
+        "type": "victoriametrics-logs-datasource",
+        "uid": "altinn-studio-traces-logsql"
+      },
+      "gridPos": {
+        "x": 16,
+        "y": 5,
+        "w": 8,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "victoriametrics-logs-datasource",
+            "uid": "altinn-studio-traces-logsql"
+          },
+          "refId": "A",
+          "expr": "{resource_attr:service.name=~\"studio-designer|gateway\"} ((kind:2 name:~\"^POST /designer/api/.+/deployments$\") or name:=\"DeploymentPipelinePollingJob.Execute\" or (kind:3 \"span_attr:url.full\":~\"/reconcile$\") or name:=\"FluxWebhook.ProcessEvent\" or name:=\"PublishAltinnAppServiceResource\") | stats by (trace_id) count() if (kind:2) requests, min(start_time_unix_nano) if (kind:2) started, max(\"resource_attr:deployment.environment.name\") if (kind:2) studio_env, max(\"span_attr:altinn.environment\") if (kind:2) env, max(\"span_attr:altinn.service_owner\") if (kind:2) service_owner, max(\"span_attr:altinn.app\") if (kind:2) app, max(\"span_attr:enduser.id\") if (kind:2) user, max(\"span_attr:http.response.status_code\") if (kind:2) status, count() if (name:=\"DeploymentPipelinePollingJob.Execute\") polls, max(end_time_unix_nano) if (name:=\"DeploymentPipelinePollingJob.Execute\") last_poll, count() if (kind:3) reconciles, count() if (kind:3 status_code:2) reconcile_failed, min(start_time_unix_nano) if (name:=\"FluxWebhook.ProcessEvent\") flux_at, max(\"span_attr:altinn.gateway.flux.reason\") if (name:=\"FluxWebhook.ProcessEvent\") flux_reason, max(\"span_attr:altinn.app_deploy.build.id\") if (name:=\"FluxWebhook.ProcessEvent\") build_id, count() if (name:=\"FluxWebhook.ProcessEvent\" status_code:2) not_passed_on, max(\"span_attr:altinn.designer.resource_registry.publish.result\") if (name:=\"PublishAltinnAppServiceResource\") registry, max(\"span_attr:altinn.designer.resource_registry.publish.validation_errors\") if (name:=\"PublishAltinnAppServiceResource\") registry_errors | filter requests:>0 | filter studio_env:~\"^(${studio_env:regex})$\" env:~\"^(${env:regex})$\" service_owner:~\"^(${service_owner:regex})$\" | math (last_poll - started) / 1e9 as pipeline_s, (flux_at - last_poll) / 1e9 as flux_s, (flux_at - started) / 1e9 as total_s, (now() - last_poll) / 1e9 as since_poll_s, started / 1e6 as started_ms | format if (flux_reason:*) \"<flux_reason>\" as outcome | format if (outcome:\"\" status:~\"^5\") \"Request failed\" as outcome | format if (outcome:\"\" reconcile_failed:>0) \"Reconcile failed\" as outcome | format if (outcome:\"\" reconciles:>0 since_poll_s:>900) \"No Flux event\" as outcome | format if (outcome:\"\" reconciles:>0) \"Waiting for Flux\" as outcome | format if (outcome:\"\" polls:>0 since_poll_s:<60) \"Pipeline running\" as outcome | format if (outcome:\"\" polls:>0) \"Pipeline failed\" as outcome | format if (outcome:\"\") \"Not queued\" as outcome | stats by (outcome) count() deploys | sort by (deploys desc)",
+          "queryType": "stats",
+          "legendFormat": "{{outcome}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*Succeeded$"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*(Failed|failed|No Flux event).*"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "displayMode": "basic",
+        "showUnfilled": true,
+        "valueMode": "color",
+        "namePlacement": "left",
+        "sizing": "auto"
+      }
+    },
+    {
+      "id": 13,
+      "type": "table",
+      "title": "Time per phase by environment",
+      "description": "How long deploys took in each environment deployed to, from each deploy's trace. Pipeline is from the deploy request until Designer's last poll of the Azure DevOps pipeline, so it includes the time queued in Azure DevOps and is within 10 s of the pipeline's end. Flux is from there to Flux's install or upgrade result. Total is the whole, request to result. Deploys without a Flux result count only towards Pipeline.",
+      "datasource": {
+        "type": "victoriametrics-logs-datasource",
+        "uid": "altinn-studio-traces-logsql"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 13,
+        "w": 12,
+        "h": 7
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "victoriametrics-logs-datasource",
+            "uid": "altinn-studio-traces-logsql"
+          },
+          "refId": "A",
+          "expr": "{resource_attr:service.name=~\"studio-designer|gateway\"} ((kind:2 name:~\"^POST /designer/api/.+/deployments$\") or name:=\"DeploymentPipelinePollingJob.Execute\" or (kind:3 \"span_attr:url.full\":~\"/reconcile$\") or name:=\"FluxWebhook.ProcessEvent\" or name:=\"PublishAltinnAppServiceResource\") | stats by (trace_id) count() if (kind:2) requests, min(start_time_unix_nano) if (kind:2) started, max(\"resource_attr:deployment.environment.name\") if (kind:2) studio_env, max(\"span_attr:altinn.environment\") if (kind:2) env, max(\"span_attr:altinn.service_owner\") if (kind:2) service_owner, max(\"span_attr:altinn.app\") if (kind:2) app, max(\"span_attr:enduser.id\") if (kind:2) user, max(\"span_attr:http.response.status_code\") if (kind:2) status, count() if (name:=\"DeploymentPipelinePollingJob.Execute\") polls, max(end_time_unix_nano) if (name:=\"DeploymentPipelinePollingJob.Execute\") last_poll, count() if (kind:3) reconciles, count() if (kind:3 status_code:2) reconcile_failed, min(start_time_unix_nano) if (name:=\"FluxWebhook.ProcessEvent\") flux_at, max(\"span_attr:altinn.gateway.flux.reason\") if (name:=\"FluxWebhook.ProcessEvent\") flux_reason, max(\"span_attr:altinn.app_deploy.build.id\") if (name:=\"FluxWebhook.ProcessEvent\") build_id, count() if (name:=\"FluxWebhook.ProcessEvent\" status_code:2) not_passed_on, max(\"span_attr:altinn.designer.resource_registry.publish.result\") if (name:=\"PublishAltinnAppServiceResource\") registry, max(\"span_attr:altinn.designer.resource_registry.publish.validation_errors\") if (name:=\"PublishAltinnAppServiceResource\") registry_errors | filter requests:>0 | filter studio_env:~\"^(${studio_env:regex})$\" env:~\"^(${env:regex})$\" service_owner:~\"^(${service_owner:regex})$\" | math (last_poll - started) / 1e9 as pipeline_s, (flux_at - last_poll) / 1e9 as flux_s, (flux_at - started) / 1e9 as total_s, (now() - last_poll) / 1e9 as since_poll_s, started / 1e6 as started_ms | format if (flux_reason:*) \"<flux_reason>\" as outcome | format if (outcome:\"\" status:~\"^5\") \"Request failed\" as outcome | format if (outcome:\"\" reconcile_failed:>0) \"Reconcile failed\" as outcome | format if (outcome:\"\" reconciles:>0 since_poll_s:>900) \"No Flux event\" as outcome | format if (outcome:\"\" reconciles:>0) \"Waiting for Flux\" as outcome | format if (outcome:\"\" polls:>0 since_poll_s:<60) \"Pipeline running\" as outcome | format if (outcome:\"\" polls:>0) \"Pipeline failed\" as outcome | format if (outcome:\"\") \"Not queued\" as outcome | stats by (env) count() deploys, count() if (outcome:~\"^(Install|Upgrade)Succeeded$\") succeeded, quantile(0.5, pipeline_s) if (reconciles:>0) pipeline_p50, quantile(0.95, pipeline_s) if (reconciles:>0) pipeline_p95, quantile(0.5, flux_s) if (flux_at:*) flux_p50, quantile(0.95, flux_s) if (flux_at:*) flux_p95, quantile(0.5, total_s) if (flux_at:*) total_p50, quantile(0.95, total_s) if (flux_at:*) total_p95",
+          "queryType": "stats"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "labelsToFields",
+          "options": {
+            "mode": "columns",
+            "valueLabel": "__name__"
+          }
+        },
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "convertFieldType",
+          "options": {
+            "conversions": [
+              {
+                "targetField": "deploys",
+                "destinationType": "number"
+              },
+              {
+                "targetField": "succeeded",
+                "destinationType": "number"
+              },
+              {
+                "targetField": "pipeline_p50",
+                "destinationType": "number"
+              },
+              {
+                "targetField": "pipeline_p95",
+                "destinationType": "number"
+              },
+              {
+                "targetField": "flux_p50",
+                "destinationType": "number"
+              },
+              {
+                "targetField": "flux_p95",
+                "destinationType": "number"
+              },
+              {
+                "targetField": "total_p50",
+                "destinationType": "number"
+              },
+              {
+                "targetField": "total_p95",
+                "destinationType": "number"
+              }
+            ],
+            "fields": {}
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "indexByName": {
+              "env": 0,
+              "deploys": 1,
+              "succeeded": 2,
+              "pipeline_p50": 3,
+              "pipeline_p95": 4,
+              "flux_p50": 5,
+              "flux_p95": 6,
+              "total_p50": 7,
+              "total_p95": 8
+            },
+            "renameByName": {},
+            "includeByName": {
+              "env": true,
+              "deploys": true,
+              "succeeded": true,
+              "pipeline_p50": true,
+              "pipeline_p95": true,
+              "flux_p50": true,
+              "flux_p95": true,
+              "total_p50": true,
+              "total_p95": true
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": true,
+            "filterable": false,
+            "minWidth": 70
+          },
+          "displayName": "",
+          "noValue": "",
+          "unit": "short"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "env"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Environment"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "deploys"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Deploys"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "succeeded"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Succeeded"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "pipeline_p50"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Pipeline p50"
+              },
+              {
+                "id": "unit",
+                "value": "s"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "pipeline_p95"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Pipeline p95"
+              },
+              {
+                "id": "unit",
+                "value": "s"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "flux_p50"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Flux p50"
+              },
+              {
+                "id": "unit",
+                "value": "s"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "flux_p95"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Flux p95"
+              },
+              {
+                "id": "unit",
+                "value": "s"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "total_p50"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Total p50"
+              },
+              {
+                "id": "unit",
+                "value": "s"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "total_p95"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Total p95"
+              },
+              {
+                "id": "unit",
+                "value": "s"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "fields": ""
+        },
+        "sortBy": [
+          {
+            "displayName": "Deploys",
+            "desc": true
+          }
+        ]
+      }
+    },
+    {
+      "id": 14,
+      "type": "table",
+      "title": "Service owners",
+      "description": "Deploys per service owner and environment deployed to, from each deploy's trace. Failed counts every outcome other than success that is not still in progress: Flux failures, failed requests, pipelines and reconcile calls, and deploys with no Flux event after 15 minutes. Select a column header to sort.",
+      "datasource": {
+        "type": "victoriametrics-logs-datasource",
+        "uid": "altinn-studio-traces-logsql"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 13,
+        "w": 12,
+        "h": 7
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "victoriametrics-logs-datasource",
+            "uid": "altinn-studio-traces-logsql"
+          },
+          "refId": "A",
+          "expr": "{resource_attr:service.name=~\"studio-designer|gateway\"} ((kind:2 name:~\"^POST /designer/api/.+/deployments$\") or name:=\"DeploymentPipelinePollingJob.Execute\" or (kind:3 \"span_attr:url.full\":~\"/reconcile$\") or name:=\"FluxWebhook.ProcessEvent\" or name:=\"PublishAltinnAppServiceResource\") | stats by (trace_id) count() if (kind:2) requests, min(start_time_unix_nano) if (kind:2) started, max(\"resource_attr:deployment.environment.name\") if (kind:2) studio_env, max(\"span_attr:altinn.environment\") if (kind:2) env, max(\"span_attr:altinn.service_owner\") if (kind:2) service_owner, max(\"span_attr:altinn.app\") if (kind:2) app, max(\"span_attr:enduser.id\") if (kind:2) user, max(\"span_attr:http.response.status_code\") if (kind:2) status, count() if (name:=\"DeploymentPipelinePollingJob.Execute\") polls, max(end_time_unix_nano) if (name:=\"DeploymentPipelinePollingJob.Execute\") last_poll, count() if (kind:3) reconciles, count() if (kind:3 status_code:2) reconcile_failed, min(start_time_unix_nano) if (name:=\"FluxWebhook.ProcessEvent\") flux_at, max(\"span_attr:altinn.gateway.flux.reason\") if (name:=\"FluxWebhook.ProcessEvent\") flux_reason, max(\"span_attr:altinn.app_deploy.build.id\") if (name:=\"FluxWebhook.ProcessEvent\") build_id, count() if (name:=\"FluxWebhook.ProcessEvent\" status_code:2) not_passed_on, max(\"span_attr:altinn.designer.resource_registry.publish.result\") if (name:=\"PublishAltinnAppServiceResource\") registry, max(\"span_attr:altinn.designer.resource_registry.publish.validation_errors\") if (name:=\"PublishAltinnAppServiceResource\") registry_errors | filter requests:>0 | filter studio_env:~\"^(${studio_env:regex})$\" env:~\"^(${env:regex})$\" service_owner:~\"^(${service_owner:regex})$\" | math (last_poll - started) / 1e9 as pipeline_s, (flux_at - last_poll) / 1e9 as flux_s, (flux_at - started) / 1e9 as total_s, (now() - last_poll) / 1e9 as since_poll_s, started / 1e6 as started_ms | format if (flux_reason:*) \"<flux_reason>\" as outcome | format if (outcome:\"\" status:~\"^5\") \"Request failed\" as outcome | format if (outcome:\"\" reconcile_failed:>0) \"Reconcile failed\" as outcome | format if (outcome:\"\" reconciles:>0 since_poll_s:>900) \"No Flux event\" as outcome | format if (outcome:\"\" reconciles:>0) \"Waiting for Flux\" as outcome | format if (outcome:\"\" polls:>0 since_poll_s:<60) \"Pipeline running\" as outcome | format if (outcome:\"\" polls:>0) \"Pipeline failed\" as outcome | format if (outcome:\"\") \"Not queued\" as outcome | stats by (service_owner, env) count() deploys, count() if (outcome:~\"^(Install|Upgrade)Succeeded$\") succeeded, count() if (outcome:~\"Failed|failed|No Flux event\") failed, quantile(0.5, total_s) if (flux_at:*) total_p50",
+          "queryType": "stats"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "labelsToFields",
+          "options": {
+            "mode": "columns",
+            "valueLabel": "__name__"
+          }
+        },
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "convertFieldType",
+          "options": {
+            "conversions": [
+              {
+                "targetField": "deploys",
+                "destinationType": "number"
+              },
+              {
+                "targetField": "succeeded",
+                "destinationType": "number"
+              },
+              {
+                "targetField": "failed",
+                "destinationType": "number"
+              },
+              {
+                "targetField": "total_p50",
+                "destinationType": "number"
+              }
+            ],
+            "fields": {}
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "indexByName": {
+              "service_owner": 0,
+              "env": 1,
+              "deploys": 2,
+              "succeeded": 3,
+              "failed": 4,
+              "total_p50": 5
+            },
+            "renameByName": {},
+            "includeByName": {
+              "service_owner": true,
+              "env": true,
+              "deploys": true,
+              "succeeded": true,
+              "failed": true,
+              "total_p50": true
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": true,
+            "filterable": false,
+            "minWidth": 70
+          },
+          "displayName": "",
+          "noValue": "",
+          "unit": "short"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "service_owner"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Service owner"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "env"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Environment"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "deploys"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Deploys"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "succeeded"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Succeeded"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "failed"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Failed"
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "text",
+                      "value": null
+                    },
+                    {
+                      "color": "red",
+                      "value": 1
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "total_p50"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Deploy time p50"
+              },
+              {
+                "id": "unit",
+                "value": "s"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "fields": ""
+        },
+        "sortBy": [
+          {
+            "displayName": "Failed",
+            "desc": true
+          }
+        ]
+      }
+    },
+    {
+      "id": 15,
+      "type": "table",
+      "title": "Recent deploys",
+      "description": "The latest 200 deploys requested in the time range, one per row, from each deploy's trace, which joins Designer's request, its polls of the Azure DevOps pipeline, its reconcile call to the runtime gateway and the gateway's Flux event. Pipeline, Flux and Total are as in Time per phase by environment; Outcome as in Outcomes. Build is the Azure DevOps build, known once Flux's result arrives. Resource Registry is the result of publishing the app's service resource before the pipeline is queued; a failure does not stop the deploy. Select a trace ID to open the trace.",
+      "datasource": {
+        "type": "victoriametrics-logs-datasource",
+        "uid": "altinn-studio-traces-logsql"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 20,
+        "w": 24,
+        "h": 12
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "victoriametrics-logs-datasource",
+            "uid": "altinn-studio-traces-logsql"
+          },
+          "refId": "A",
+          "expr": "{resource_attr:service.name=~\"studio-designer|gateway\"} ((kind:2 name:~\"^POST /designer/api/.+/deployments$\") or name:=\"DeploymentPipelinePollingJob.Execute\" or (kind:3 \"span_attr:url.full\":~\"/reconcile$\") or name:=\"FluxWebhook.ProcessEvent\" or name:=\"PublishAltinnAppServiceResource\") | stats by (trace_id) count() if (kind:2) requests, min(start_time_unix_nano) if (kind:2) started, max(\"resource_attr:deployment.environment.name\") if (kind:2) studio_env, max(\"span_attr:altinn.environment\") if (kind:2) env, max(\"span_attr:altinn.service_owner\") if (kind:2) service_owner, max(\"span_attr:altinn.app\") if (kind:2) app, max(\"span_attr:enduser.id\") if (kind:2) user, max(\"span_attr:http.response.status_code\") if (kind:2) status, count() if (name:=\"DeploymentPipelinePollingJob.Execute\") polls, max(end_time_unix_nano) if (name:=\"DeploymentPipelinePollingJob.Execute\") last_poll, count() if (kind:3) reconciles, count() if (kind:3 status_code:2) reconcile_failed, min(start_time_unix_nano) if (name:=\"FluxWebhook.ProcessEvent\") flux_at, max(\"span_attr:altinn.gateway.flux.reason\") if (name:=\"FluxWebhook.ProcessEvent\") flux_reason, max(\"span_attr:altinn.app_deploy.build.id\") if (name:=\"FluxWebhook.ProcessEvent\") build_id, count() if (name:=\"FluxWebhook.ProcessEvent\" status_code:2) not_passed_on, max(\"span_attr:altinn.designer.resource_registry.publish.result\") if (name:=\"PublishAltinnAppServiceResource\") registry, max(\"span_attr:altinn.designer.resource_registry.publish.validation_errors\") if (name:=\"PublishAltinnAppServiceResource\") registry_errors | filter requests:>0 | filter studio_env:~\"^(${studio_env:regex})$\" env:~\"^(${env:regex})$\" service_owner:~\"^(${service_owner:regex})$\" | math (last_poll - started) / 1e9 as pipeline_s, (flux_at - last_poll) / 1e9 as flux_s, (flux_at - started) / 1e9 as total_s, (now() - last_poll) / 1e9 as since_poll_s, started / 1e6 as started_ms | format if (flux_reason:*) \"<flux_reason>\" as outcome | format if (outcome:\"\" status:~\"^5\") \"Request failed\" as outcome | format if (outcome:\"\" reconcile_failed:>0) \"Reconcile failed\" as outcome | format if (outcome:\"\" reconciles:>0 since_poll_s:>900) \"No Flux event\" as outcome | format if (outcome:\"\" reconciles:>0) \"Waiting for Flux\" as outcome | format if (outcome:\"\" polls:>0 since_poll_s:<60) \"Pipeline running\" as outcome | format if (outcome:\"\" polls:>0) \"Pipeline failed\" as outcome | format if (outcome:\"\") \"Not queued\" as outcome | sort by (started desc) limit 200 | fields started_ms, studio_env, env, service_owner, app, user, outcome, pipeline_s, flux_s, total_s, build_id, registry, trace_id | rename trace_id as trace",
+          "queryType": "instant",
+          "maxLines": 200
+        }
+      ],
+      "transformations": [
+        {
+          "id": "extractFields",
+          "options": {
+            "source": "labels",
+            "format": "json",
+            "replace": false,
+            "keepTime": false
+          }
+        },
+        {
+          "id": "convertFieldType",
+          "options": {
+            "conversions": [
+              {
+                "targetField": "started_ms",
+                "destinationType": "number"
+              },
+              {
+                "targetField": "pipeline_s",
+                "destinationType": "number"
+              },
+              {
+                "targetField": "flux_s",
+                "destinationType": "number"
+              },
+              {
+                "targetField": "total_s",
+                "destinationType": "number"
+              }
+            ],
+            "fields": {}
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "indexByName": {
+              "started_ms": 0,
+              "studio_env": 1,
+              "env": 2,
+              "service_owner": 3,
+              "app": 4,
+              "user": 5,
+              "outcome": 6,
+              "pipeline_s": 7,
+              "flux_s": 8,
+              "total_s": 9,
+              "build_id": 10,
+              "registry": 11,
+              "trace": 12
+            },
+            "renameByName": {},
+            "includeByName": {
+              "started_ms": true,
+              "studio_env": true,
+              "env": true,
+              "service_owner": true,
+              "app": true,
+              "user": true,
+              "outcome": true,
+              "pipeline_s": true,
+              "flux_s": true,
+              "total_s": true,
+              "build_id": true,
+              "registry": true,
+              "trace": true
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": true,
+            "filterable": true
+          },
+          "displayName": "",
+          "noValue": "",
+          "unit": "short"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "started_ms"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Requested"
+              },
+              {
+                "id": "custom.width",
+                "value": 185
+              },
+              {
+                "id": "unit",
+                "value": "dateTimeAsLocal"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "studio_env"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Studio"
+              },
+              {
+                "id": "custom.width",
+                "value": 70
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "env"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Environment"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "service_owner"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Service owner"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "app"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "App"
+              },
+              {
+                "id": "custom.width",
+                "value": 220
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "user"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "User"
+              },
+              {
+                "id": "custom.width",
+                "value": 130
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "outcome"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Outcome"
+              },
+              {
+                "id": "custom.width",
+                "value": 170
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "regex",
+                    "options": {
+                      "pattern": ".*Succeeded$",
+                      "result": {
+                        "color": "green",
+                        "index": 0
+                      }
+                    }
+                  },
+                  {
+                    "type": "regex",
+                    "options": {
+                      "pattern": "^(Pipeline finished)$",
+                      "result": {
+                        "color": "green",
+                        "index": 1
+                      }
+                    }
+                  },
+                  {
+                    "type": "regex",
+                    "options": {
+                      "pattern": "^(Waiting for Flux|Pipeline running)$",
+                      "result": {
+                        "color": "blue",
+                        "index": 2
+                      }
+                    }
+                  },
+                  {
+                    "type": "regex",
+                    "options": {
+                      "pattern": ".*",
+                      "result": {
+                        "color": "red",
+                        "index": 3
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "pipeline_s"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Pipeline"
+              },
+              {
+                "id": "custom.width",
+                "value": 95
+              },
+              {
+                "id": "unit",
+                "value": "s"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "flux_s"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Flux"
+              },
+              {
+                "id": "custom.width",
+                "value": 95
+              },
+              {
+                "id": "unit",
+                "value": "s"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "total_s"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Total"
+              },
+              {
+                "id": "custom.width",
+                "value": 95
+              },
+              {
+                "id": "unit",
+                "value": "s"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "build_id"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Build"
+              },
+              {
+                "id": "custom.width",
+                "value": 100
+              },
+              {
+                "id": "unit",
+                "value": "string"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "registry"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Resource Registry"
+              },
+              {
+                "id": "custom.width",
+                "value": 160
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "trace"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Trace"
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "View trace",
+                    "url": "",
+                    "internal": {
+                      "datasourceUid": "altinn-studio-traces",
+                      "datasourceName": "altinn-studio-traces",
+                      "query": {
+                        "queryType": "traceql",
+                        "query": "${__value.raw}"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.width",
+                "value": 110
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "fields": ""
+        }
+      }
+    },
+    {
+      "id": 16,
+      "type": "row",
+      "title": "Failures",
+      "gridPos": {
+        "x": 0,
+        "y": 32,
+        "w": 24,
+        "h": 1
+      },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 17,
+      "type": "table",
+      "title": "Failed and unfinished deploys",
+      "description": "Deploys in the time range that did not end with a successful install or upgrade, newest first: failed requests, pipelines, reconcile calls and Flux results, and deploys still waiting for the pipeline or for Flux. A failed pipeline's log is in Azure DevOps; Designer's Slack message on a Flux failure links to the app's pod logs. Select a trace ID to open the trace.",
+      "datasource": {
+        "type": "victoriametrics-logs-datasource",
+        "uid": "altinn-studio-traces-logsql"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 33,
+        "w": 24,
+        "h": 9
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "victoriametrics-logs-datasource",
+            "uid": "altinn-studio-traces-logsql"
+          },
+          "refId": "A",
+          "expr": "{resource_attr:service.name=~\"studio-designer|gateway\"} ((kind:2 name:~\"^POST /designer/api/.+/deployments$\") or name:=\"DeploymentPipelinePollingJob.Execute\" or (kind:3 \"span_attr:url.full\":~\"/reconcile$\") or name:=\"FluxWebhook.ProcessEvent\" or name:=\"PublishAltinnAppServiceResource\") | stats by (trace_id) count() if (kind:2) requests, min(start_time_unix_nano) if (kind:2) started, max(\"resource_attr:deployment.environment.name\") if (kind:2) studio_env, max(\"span_attr:altinn.environment\") if (kind:2) env, max(\"span_attr:altinn.service_owner\") if (kind:2) service_owner, max(\"span_attr:altinn.app\") if (kind:2) app, max(\"span_attr:enduser.id\") if (kind:2) user, max(\"span_attr:http.response.status_code\") if (kind:2) status, count() if (name:=\"DeploymentPipelinePollingJob.Execute\") polls, max(end_time_unix_nano) if (name:=\"DeploymentPipelinePollingJob.Execute\") last_poll, count() if (kind:3) reconciles, count() if (kind:3 status_code:2) reconcile_failed, min(start_time_unix_nano) if (name:=\"FluxWebhook.ProcessEvent\") flux_at, max(\"span_attr:altinn.gateway.flux.reason\") if (name:=\"FluxWebhook.ProcessEvent\") flux_reason, max(\"span_attr:altinn.app_deploy.build.id\") if (name:=\"FluxWebhook.ProcessEvent\") build_id, count() if (name:=\"FluxWebhook.ProcessEvent\" status_code:2) not_passed_on, max(\"span_attr:altinn.designer.resource_registry.publish.result\") if (name:=\"PublishAltinnAppServiceResource\") registry, max(\"span_attr:altinn.designer.resource_registry.publish.validation_errors\") if (name:=\"PublishAltinnAppServiceResource\") registry_errors | filter requests:>0 | filter studio_env:~\"^(${studio_env:regex})$\" env:~\"^(${env:regex})$\" service_owner:~\"^(${service_owner:regex})$\" | math (last_poll - started) / 1e9 as pipeline_s, (flux_at - last_poll) / 1e9 as flux_s, (flux_at - started) / 1e9 as total_s, (now() - last_poll) / 1e9 as since_poll_s, started / 1e6 as started_ms | format if (flux_reason:*) \"<flux_reason>\" as outcome | format if (outcome:\"\" status:~\"^5\") \"Request failed\" as outcome | format if (outcome:\"\" reconcile_failed:>0) \"Reconcile failed\" as outcome | format if (outcome:\"\" reconciles:>0 since_poll_s:>900) \"No Flux event\" as outcome | format if (outcome:\"\" reconciles:>0) \"Waiting for Flux\" as outcome | format if (outcome:\"\" polls:>0 since_poll_s:<60) \"Pipeline running\" as outcome | format if (outcome:\"\" polls:>0) \"Pipeline failed\" as outcome | format if (outcome:\"\") \"Not queued\" as outcome | filter not outcome:~\"^(Install|Upgrade)Succeeded$\" | sort by (started desc) limit 200 | fields started_ms, studio_env, env, service_owner, app, user, outcome, pipeline_s, flux_s, total_s, build_id, registry, trace_id | rename trace_id as trace",
+          "queryType": "instant",
+          "maxLines": 200
+        }
+      ],
+      "transformations": [
+        {
+          "id": "extractFields",
+          "options": {
+            "source": "labels",
+            "format": "json",
+            "replace": false,
+            "keepTime": false
+          }
+        },
+        {
+          "id": "convertFieldType",
+          "options": {
+            "conversions": [
+              {
+                "targetField": "started_ms",
+                "destinationType": "number"
+              },
+              {
+                "targetField": "pipeline_s",
+                "destinationType": "number"
+              },
+              {
+                "targetField": "flux_s",
+                "destinationType": "number"
+              },
+              {
+                "targetField": "total_s",
+                "destinationType": "number"
+              }
+            ],
+            "fields": {}
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "indexByName": {
+              "started_ms": 0,
+              "studio_env": 1,
+              "env": 2,
+              "service_owner": 3,
+              "app": 4,
+              "user": 5,
+              "outcome": 6,
+              "pipeline_s": 7,
+              "flux_s": 8,
+              "total_s": 9,
+              "build_id": 10,
+              "registry": 11,
+              "trace": 12
+            },
+            "renameByName": {},
+            "includeByName": {
+              "started_ms": true,
+              "studio_env": true,
+              "env": true,
+              "service_owner": true,
+              "app": true,
+              "user": true,
+              "outcome": true,
+              "pipeline_s": true,
+              "flux_s": true,
+              "total_s": true,
+              "build_id": true,
+              "registry": true,
+              "trace": true
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": true,
+            "filterable": true
+          },
+          "displayName": "",
+          "noValue": "",
+          "unit": "short"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "started_ms"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Requested"
+              },
+              {
+                "id": "custom.width",
+                "value": 185
+              },
+              {
+                "id": "unit",
+                "value": "dateTimeAsLocal"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "studio_env"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Studio"
+              },
+              {
+                "id": "custom.width",
+                "value": 70
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "env"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Environment"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "service_owner"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Service owner"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "app"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "App"
+              },
+              {
+                "id": "custom.width",
+                "value": 220
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "user"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "User"
+              },
+              {
+                "id": "custom.width",
+                "value": 130
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "outcome"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Outcome"
+              },
+              {
+                "id": "custom.width",
+                "value": 170
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "regex",
+                    "options": {
+                      "pattern": ".*Succeeded$",
+                      "result": {
+                        "color": "green",
+                        "index": 0
+                      }
+                    }
+                  },
+                  {
+                    "type": "regex",
+                    "options": {
+                      "pattern": "^(Pipeline finished)$",
+                      "result": {
+                        "color": "green",
+                        "index": 1
+                      }
+                    }
+                  },
+                  {
+                    "type": "regex",
+                    "options": {
+                      "pattern": "^(Waiting for Flux|Pipeline running)$",
+                      "result": {
+                        "color": "blue",
+                        "index": 2
+                      }
+                    }
+                  },
+                  {
+                    "type": "regex",
+                    "options": {
+                      "pattern": ".*",
+                      "result": {
+                        "color": "red",
+                        "index": 3
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "pipeline_s"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Pipeline"
+              },
+              {
+                "id": "custom.width",
+                "value": 95
+              },
+              {
+                "id": "unit",
+                "value": "s"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "flux_s"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Flux"
+              },
+              {
+                "id": "custom.width",
+                "value": 95
+              },
+              {
+                "id": "unit",
+                "value": "s"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "total_s"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Total"
+              },
+              {
+                "id": "custom.width",
+                "value": 95
+              },
+              {
+                "id": "unit",
+                "value": "s"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "build_id"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Build"
+              },
+              {
+                "id": "custom.width",
+                "value": 100
+              },
+              {
+                "id": "unit",
+                "value": "string"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "registry"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Resource Registry"
+              },
+              {
+                "id": "custom.width",
+                "value": 160
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "trace"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Trace"
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "View trace",
+                    "url": "",
+                    "internal": {
+                      "datasourceUid": "altinn-studio-traces",
+                      "datasourceName": "altinn-studio-traces",
+                      "query": {
+                        "queryType": "traceql",
+                        "query": "${__value.raw}"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.width",
+                "value": 110
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "fields": ""
+        }
+      }
+    },
+    {
+      "id": 18,
+      "type": "table",
+      "title": "Flux failures by service owner",
+      "description": "InstallFailed and UpgradeFailed results per service owner and environment in the time range (altinn.gateway.deploy_events).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "altinn-studio-metrics"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 42,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "A",
+          "expr": "sum by (\"altinn.service_owner\", \"deployment.environment.name\", \"altinn.gateway.flux.reason\") (increase_pure({\"altinn.gateway.deploy_events\", \"service.name\"=\"gateway\", \"deployment.environment.name\"=~\"$env\", \"altinn.service_owner\"=~\"$service_owner\", \"altinn.gateway.origin_environment\"=~\"$studio_env\", \"altinn.gateway.flux.reason\"=~\"(Install|Upgrade)Failed\"}[$__range])) > 0",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "indexByName": {
+              "altinn.service_owner": 0,
+              "deployment.environment.name": 1,
+              "altinn.gateway.flux.reason": 2,
+              "Value": 3
+            },
+            "renameByName": {},
+            "includeByName": {
+              "altinn.service_owner": true,
+              "deployment.environment.name": true,
+              "altinn.gateway.flux.reason": true,
+              "Value": true
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": true,
+            "filterable": true
+          },
+          "displayName": "",
+          "noValue": "",
+          "unit": "short"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "altinn.service_owner"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Service owner"
+              },
+              {
+                "id": "custom.width",
+                "value": 140
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "deployment.environment.name"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Environment"
+              },
+              {
+                "id": "custom.width",
+                "value": 120
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "altinn.gateway.flux.reason"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Reason"
+              },
+              {
+                "id": "custom.width",
+                "value": 160
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Value"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Failures"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "fields": ""
+        },
+        "sortBy": [
+          {
+            "displayName": "Failures",
+            "desc": true
+          }
+        ]
+      }
+    },
+    {
+      "id": 19,
+      "type": "table",
+      "title": "Resource Registry publish failures",
+      "description": "Deploys in the time range whose app could not be published to the Resource Registry, with the validation errors the registry returned (altinn.designer.resource_registry.publish.*). Designer publishes before it queues the pipeline and deploys the app anyway. Select a trace ID to open the trace.",
+      "datasource": {
+        "type": "victoriametrics-logs-datasource",
+        "uid": "altinn-studio-traces-logsql"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 42,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "victoriametrics-logs-datasource",
+            "uid": "altinn-studio-traces-logsql"
+          },
+          "refId": "A",
+          "expr": "{resource_attr:service.name=~\"studio-designer|gateway\"} ((kind:2 name:~\"^POST /designer/api/.+/deployments$\") or name:=\"DeploymentPipelinePollingJob.Execute\" or (kind:3 \"span_attr:url.full\":~\"/reconcile$\") or name:=\"FluxWebhook.ProcessEvent\" or name:=\"PublishAltinnAppServiceResource\") | stats by (trace_id) count() if (kind:2) requests, min(start_time_unix_nano) if (kind:2) started, max(\"resource_attr:deployment.environment.name\") if (kind:2) studio_env, max(\"span_attr:altinn.environment\") if (kind:2) env, max(\"span_attr:altinn.service_owner\") if (kind:2) service_owner, max(\"span_attr:altinn.app\") if (kind:2) app, max(\"span_attr:enduser.id\") if (kind:2) user, max(\"span_attr:http.response.status_code\") if (kind:2) status, count() if (name:=\"DeploymentPipelinePollingJob.Execute\") polls, max(end_time_unix_nano) if (name:=\"DeploymentPipelinePollingJob.Execute\") last_poll, count() if (kind:3) reconciles, count() if (kind:3 status_code:2) reconcile_failed, min(start_time_unix_nano) if (name:=\"FluxWebhook.ProcessEvent\") flux_at, max(\"span_attr:altinn.gateway.flux.reason\") if (name:=\"FluxWebhook.ProcessEvent\") flux_reason, max(\"span_attr:altinn.app_deploy.build.id\") if (name:=\"FluxWebhook.ProcessEvent\") build_id, count() if (name:=\"FluxWebhook.ProcessEvent\" status_code:2) not_passed_on, max(\"span_attr:altinn.designer.resource_registry.publish.result\") if (name:=\"PublishAltinnAppServiceResource\") registry, max(\"span_attr:altinn.designer.resource_registry.publish.validation_errors\") if (name:=\"PublishAltinnAppServiceResource\") registry_errors | filter requests:>0 | filter studio_env:~\"^(${studio_env:regex})$\" env:~\"^(${env:regex})$\" service_owner:~\"^(${service_owner:regex})$\" | math (last_poll - started) / 1e9 as pipeline_s, (flux_at - last_poll) / 1e9 as flux_s, (flux_at - started) / 1e9 as total_s, (now() - last_poll) / 1e9 as since_poll_s, started / 1e6 as started_ms | format if (flux_reason:*) \"<flux_reason>\" as outcome | format if (outcome:\"\" status:~\"^5\") \"Request failed\" as outcome | format if (outcome:\"\" reconcile_failed:>0) \"Reconcile failed\" as outcome | format if (outcome:\"\" reconciles:>0 since_poll_s:>900) \"No Flux event\" as outcome | format if (outcome:\"\" reconciles:>0) \"Waiting for Flux\" as outcome | format if (outcome:\"\" polls:>0 since_poll_s:<60) \"Pipeline running\" as outcome | format if (outcome:\"\" polls:>0) \"Pipeline failed\" as outcome | format if (outcome:\"\") \"Not queued\" as outcome | filter registry:* registry:!=\"success\" | sort by (started desc) limit 200 | fields started_ms, env, service_owner, app, registry, registry_errors, trace_id | rename trace_id as trace",
+          "queryType": "instant",
+          "maxLines": 200
+        }
+      ],
+      "transformations": [
+        {
+          "id": "extractFields",
+          "options": {
+            "source": "labels",
+            "format": "json",
+            "replace": false,
+            "keepTime": false
+          }
+        },
+        {
+          "id": "convertFieldType",
+          "options": {
+            "conversions": [
+              {
+                "targetField": "started_ms",
+                "destinationType": "number"
+              }
+            ],
+            "fields": {}
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "indexByName": {
+              "started_ms": 0,
+              "env": 1,
+              "service_owner": 2,
+              "app": 3,
+              "registry": 4,
+              "registry_errors": 5,
+              "trace": 6
+            },
+            "renameByName": {},
+            "includeByName": {
+              "started_ms": true,
+              "env": true,
+              "service_owner": true,
+              "app": true,
+              "registry": true,
+              "registry_errors": true,
+              "trace": true
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": true,
+            "filterable": true
+          },
+          "displayName": "",
+          "noValue": "",
+          "unit": "short"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "started_ms"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Requested"
+              },
+              {
+                "id": "custom.width",
+                "value": 185
+              },
+              {
+                "id": "unit",
+                "value": "dateTimeAsLocal"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "env"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Environment"
+              },
+              {
+                "id": "custom.width",
+                "value": 95
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "service_owner"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Service owner"
+              },
+              {
+                "id": "custom.width",
+                "value": 110
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "app"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "App"
+              },
+              {
+                "id": "custom.width",
+                "value": 140
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "registry"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Result"
+              },
+              {
+                "id": "custom.width",
+                "value": 120
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "registry_errors"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Validation errors"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "trace"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Trace"
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "View trace",
+                    "url": "",
+                    "internal": {
+                      "datasourceUid": "altinn-studio-traces",
+                      "datasourceName": "altinn-studio-traces",
+                      "query": {
+                        "queryType": "traceql",
+                        "query": "${__value.raw}"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.width",
+                "value": 110
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "fields": ""
+        }
+      }
+    },
+    {
+      "id": 20,
+      "type": "row",
+      "title": "Hand-off between Designer and the runtime",
+      "gridPos": {
+        "x": 0,
+        "y": 50,
+        "w": 24,
+        "h": 1
+      },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 21,
+      "type": "timeseries",
+      "title": "Flux results not passed on to Designer",
+      "description": "Flux results the runtime gateway could not pass on to the Studio environment that deployed the app, by error.type: helm_release_unresolved when the HelmRelease lacks the labels that name the app and build, otherwise the HTTP status or exception from Designer. Designer then never learns the result, and the deploy shows as waiting.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "altinn-studio-metrics"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 51,
+        "w": 6,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "A",
+          "expr": "sum by (\"error.type\") (increase_pure({\"altinn.gateway.deploy_events\", \"service.name\"=\"gateway\", \"deployment.environment.name\"=~\"$env\", \"altinn.service_owner\"=~\"$service_owner\", \"altinn.gateway.origin_environment\"=~\"$studio_env\", \"error.type\"!=\"\"}[$__interval]))",
+          "legendFormat": "{{error.type}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 60
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 22,
+      "type": "timeseries",
+      "title": "Reconcile requests by status code",
+      "description": "Designer's requests to the runtime gateways to reconcile an app's Flux resources after a pipeline succeeded, by the gateway's response status. Not filtered by Studio environment.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "altinn-studio-metrics"
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 51,
+        "w": 6,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "A",
+          "expr": "sum by (\"http.response.status_code\") (increase_pure({\"http.server.request.duration_count\", \"service.name\"=\"gateway\", \"deployment.environment.name\"=~\"$env\", \"altinn.service_owner\"=~\"$service_owner\", \"http.route\"=\"/runtime/gateway/api/v1/deploy/apps/{app}/{originEnvironment}/reconcile\"}[$__interval]))",
+          "legendFormat": "{{http.response.status_code}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 60
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 23,
+      "type": "timeseries",
+      "title": "Designer's deploy routes by status code",
+      "description": "Designer's responses on its deploy routes: deploy (POST .../deployments), undeploy, the deploy list and Flux results from the gateways (.../deployments/webhooks/events). A 404 on webhooks/events is an uninstall with no pending undeploy in Designer. Designer's request metrics have no service owner or environment deployed to, so only the Studio environment filter applies.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "altinn-studio-metrics"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 51,
+        "w": 6,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "A",
+          "expr": "label_replace(sum by (\"http.request.method\", \"http.route\", \"http.response.status_code\") (increase_pure({\"http.server.request.duration_count\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$studio_env\", \"http.route\"=~\".+/deployments(/undeploy|/webhooks/events)?\"}[$__interval])), \"route\", \"$1\", \"http.route\", \".*/(deployments.*)\")",
+          "legendFormat": "{{http.request.method}} {{route}} {{http.response.status_code}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 60,
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 24,
+      "type": "timeseries",
+      "title": "Failure notifications sent",
+      "description": "Designer's messages about a failed install, upgrade or uninstall (altinn.designer.notification.deliveries with kind deployment), by audience: the internal Slack channel and the service owner's contact points. A series with an error type is a message that could not be delivered.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "altinn-studio-metrics"
+      },
+      "gridPos": {
+        "x": 18,
+        "y": 51,
+        "w": 6,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "A",
+          "expr": "sum by (\"altinn.designer.notification.audience\", \"error.type\") (increase_pure({\"altinn.designer.notification.deliveries\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$studio_env\", \"altinn.designer.notification.kind\"=\"deployment\", \"altinn.environment\"=~\"$env\", \"altinn.service_owner\"=~\"$service_owner\"}[$__interval]))",
+          "legendFormat": "{{altinn.designer.notification.audience}} {{error.type}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 60
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".* .+"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 25,
+      "type": "row",
+      "title": "Undeploys",
+      "gridPos": {
+        "x": 0,
+        "y": 59,
+        "w": 24,
+        "h": 1
+      },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 26,
+      "type": "timeseries",
+      "title": "Undeploys by trigger",
+      "description": "Undeploy requests to Designer (Manual) and runs of the nightly undeploy of an inactive app (Inactivity, in at22, at23, at24, tt02 and yt01 only), per interval, including those Designer skipped or that failed.",
+      "datasource": {
+        "type": "victoriametrics-logs-datasource",
+        "uid": "altinn-studio-traces-logsql"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 60,
+        "w": 8,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "victoriametrics-logs-datasource",
+            "uid": "altinn-studio-traces-logsql"
+          },
+          "refId": "A",
+          "expr": "{resource_attr:service.name=\"studio-designer\"} \"resource_attr:deployment.environment.name\":~\"^(${studio_env:regex})$\" ((kind:2 name:~\"^POST /designer/api/.+/deployments/undeploy$\") or name:=\"execute AppInactivityUndeployAppJob\") \"span_attr:altinn.environment\":~\"^(${env:regex})$\" \"span_attr:altinn.service_owner\":~\"^(${service_owner:regex})$\" | format if (kind:2) \"Manual\" as trigger | format if (kind:1) \"Inactivity\" as trigger | stats by (trigger) count() undeploys",
+          "queryType": "statsRange",
+          "legendFormat": "{{trigger}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 60,
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 27,
+      "type": "timeseries",
+      "title": "Uninstall results",
+      "description": "Flux's uninstall results for apps, as the runtime gateways count them (altinn.gateway.deploy_events), per interval. The HelmRelease is gone by then, so these are not in the undeploy's trace.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "altinn-studio-metrics"
+      },
+      "gridPos": {
+        "x": 8,
+        "y": 60,
+        "w": 8,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "A",
+          "expr": "sum by (\"altinn.gateway.flux.reason\") (increase_pure({\"altinn.gateway.deploy_events\", \"service.name\"=\"gateway\", \"deployment.environment.name\"=~\"$env\", \"altinn.service_owner\"=~\"$service_owner\", \"altinn.gateway.origin_environment\"=~\"$studio_env\", \"altinn.gateway.flux.reason\"=~\"Uninstall.*\"}[$__interval]))",
+          "legendFormat": "{{altinn.gateway.flux.reason}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 60,
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "InstallSucceeded"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "UpgradeSucceeded"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "UninstallSucceeded"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "InstallFailed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "UpgradeFailed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "UninstallFailed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 28,
+      "type": "table",
+      "title": "Skipped undeploys",
+      "description": "Undeploys Designer skipped because another undeploy of the same app and environment was queued less than 10 minutes earlier (altinn.designer.undeploy.skip_reason), with that undeploy's age and build. Select a trace ID to open the trace.",
+      "datasource": {
+        "type": "victoriametrics-logs-datasource",
+        "uid": "altinn-studio-traces-logsql"
+      },
+      "gridPos": {
+        "x": 16,
+        "y": 60,
+        "w": 8,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "victoriametrics-logs-datasource",
+            "uid": "altinn-studio-traces-logsql"
+          },
+          "refId": "A",
+          "expr": "{resource_attr:service.name=\"studio-designer\"} \"resource_attr:deployment.environment.name\":~\"^(${studio_env:regex})$\" \"span_attr:altinn.designer.undeploy.skip_reason\":* \"span_attr:altinn.environment\":~\"^(${env:regex})$\" \"span_attr:altinn.service_owner\":~\"^(${service_owner:regex})$\" | sort by (_time desc) limit 200 | fields _time, \"span_attr:altinn.environment\", \"span_attr:altinn.service_owner\", \"span_attr:altinn.app\", \"span_attr:enduser.id\", \"span_attr:altinn.designer.undeploy.pending_age_seconds\", \"span_attr:altinn.app_deploy.build.id\", trace_id | rename trace_id as trace",
+          "queryType": "instant",
+          "maxLines": 200
+        }
+      ],
+      "transformations": [
+        {
+          "id": "extractFields",
+          "options": {
+            "source": "labels",
+            "format": "json",
+            "replace": false,
+            "keepTime": false
+          }
+        },
+        {
+          "id": "convertFieldType",
+          "options": {
+            "conversions": [
+              {
+                "targetField": "span_attr:altinn.designer.undeploy.pending_age_seconds",
+                "destinationType": "number"
+              }
+            ],
+            "fields": {}
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "indexByName": {
+              "Time": 0,
+              "span_attr:altinn.environment": 1,
+              "span_attr:altinn.service_owner": 2,
+              "span_attr:altinn.app": 3,
+              "span_attr:enduser.id": 4,
+              "span_attr:altinn.designer.undeploy.pending_age_seconds": 5,
+              "span_attr:altinn.app_deploy.build.id": 6,
+              "trace": 7
+            },
+            "renameByName": {},
+            "includeByName": {
+              "Time": true,
+              "span_attr:altinn.environment": true,
+              "span_attr:altinn.service_owner": true,
+              "span_attr:altinn.app": true,
+              "span_attr:enduser.id": true,
+              "span_attr:altinn.designer.undeploy.pending_age_seconds": true,
+              "span_attr:altinn.app_deploy.build.id": true,
+              "trace": true
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": true,
+            "filterable": true
+          },
+          "displayName": "",
+          "noValue": "",
+          "unit": "short"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Time"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Time"
+              },
+              {
+                "id": "custom.width",
+                "value": 185
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "span_attr:altinn.environment"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Environment"
+              },
+              {
+                "id": "custom.width",
+                "value": 95
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "span_attr:altinn.service_owner"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Service owner"
+              },
+              {
+                "id": "custom.width",
+                "value": 110
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "span_attr:altinn.app"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "App"
+              },
+              {
+                "id": "custom.width",
+                "value": 130
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "span_attr:enduser.id"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "User"
+              },
+              {
+                "id": "custom.width",
+                "value": 100
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "span_attr:altinn.designer.undeploy.pending_age_seconds"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Pending for"
+              },
+              {
+                "id": "custom.width",
+                "value": 90
+              },
+              {
+                "id": "unit",
+                "value": "s"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "span_attr:altinn.app_deploy.build.id"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Pending build"
+              },
+              {
+                "id": "custom.width",
+                "value": 100
+              },
+              {
+                "id": "unit",
+                "value": "string"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "trace"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Trace"
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "View trace",
+                    "url": "",
+                    "internal": {
+                      "datasourceUid": "altinn-studio-traces",
+                      "datasourceName": "altinn-studio-traces",
+                      "query": {
+                        "queryType": "traceql",
+                        "query": "${__value.raw}"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.width",
+                "value": 110
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "fields": ""
+        }
+      }
+    },
+    {
+      "id": 29,
+      "type": "table",
+      "title": "Recent undeploys",
+      "description": "The latest 200 undeploys in the time range whose pipeline Designer queued, one per row, from each undeploy's trace. Pipeline is from the request or job until Designer's last poll of the Azure DevOps pipeline. Outcome is Pipeline finished once Designer has asked the runtime gateway to reconcile, which it does only after a pipeline that succeeded; Flux's uninstall result is in Uninstall results. Select a trace ID to open the trace.",
+      "datasource": {
+        "type": "victoriametrics-logs-datasource",
+        "uid": "altinn-studio-traces-logsql"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 68,
+        "w": 24,
+        "h": 9
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "victoriametrics-logs-datasource",
+            "uid": "altinn-studio-traces-logsql"
+          },
+          "refId": "A",
+          "expr": "{resource_attr:service.name=\"studio-designer\"} ((kind:2 name:~\"^POST /designer/api/.+/deployments/undeploy$\") or name:=\"execute AppInactivityUndeployAppJob\" or name:=\"DeploymentPipelinePollingJob.Execute\" or (kind:3 \"span_attr:url.full\":~\"/reconcile$\")) | stats by (trace_id) count() if (kind:2 name:~\"^POST /designer/api/.+/deployments/undeploy$\") manual, count() if (name:=\"execute AppInactivityUndeployAppJob\") automatic, min(start_time_unix_nano) if ((kind:2 name:~\"^POST /designer/api/.+/deployments/undeploy$\") or name:=\"execute AppInactivityUndeployAppJob\") started, max(\"resource_attr:deployment.environment.name\") if ((kind:2 name:~\"^POST /designer/api/.+/deployments/undeploy$\") or name:=\"execute AppInactivityUndeployAppJob\") studio_env, max(\"span_attr:altinn.environment\") if ((kind:2 name:~\"^POST /designer/api/.+/deployments/undeploy$\") or name:=\"execute AppInactivityUndeployAppJob\") env, max(\"span_attr:altinn.service_owner\") if ((kind:2 name:~\"^POST /designer/api/.+/deployments/undeploy$\") or name:=\"execute AppInactivityUndeployAppJob\") service_owner, max(\"span_attr:altinn.app\") if ((kind:2 name:~\"^POST /designer/api/.+/deployments/undeploy$\") or name:=\"execute AppInactivityUndeployAppJob\") app, max(\"span_attr:enduser.id\") if (kind:2 name:~\"^POST /designer/api/.+/deployments/undeploy$\") user, count() if (((kind:2 name:~\"^POST /designer/api/.+/deployments/undeploy$\") or name:=\"execute AppInactivityUndeployAppJob\") status_code:2) failed, count() if (name:=\"DeploymentPipelinePollingJob.Execute\") polls, max(end_time_unix_nano) if (name:=\"DeploymentPipelinePollingJob.Execute\") last_poll, count() if (kind:3) reconciles, count() if (kind:3 status_code:2) reconcile_failed | filter polls:>0 (manual:>0 or automatic:>0) | filter studio_env:~\"^(${studio_env:regex})$\" env:~\"^(${env:regex})$\" service_owner:~\"^(${service_owner:regex})$\" | math (last_poll - started) / 1e9 as pipeline_s, (now() - last_poll) / 1e9 as since_poll_s, started / 1e6 as started_ms | format if (manual:>0) \"Manual\" as trigger | format if (automatic:>0) \"Inactivity\" as trigger | format if (failed:>0) \"Failed\" as outcome | format if (outcome:\"\" reconcile_failed:>0) \"Reconcile failed\" as outcome | format if (outcome:\"\" reconciles:>0) \"Pipeline finished\" as outcome | format if (outcome:\"\" since_poll_s:<60) \"Pipeline running\" as outcome | format if (outcome:\"\") \"Pipeline failed\" as outcome | sort by (started desc) limit 200 | fields started_ms, trigger, studio_env, env, service_owner, app, user, outcome, pipeline_s, trace_id | rename trace_id as trace",
+          "queryType": "instant",
+          "maxLines": 200
+        }
+      ],
+      "transformations": [
+        {
+          "id": "extractFields",
+          "options": {
+            "source": "labels",
+            "format": "json",
+            "replace": false,
+            "keepTime": false
+          }
+        },
+        {
+          "id": "convertFieldType",
+          "options": {
+            "conversions": [
+              {
+                "targetField": "started_ms",
+                "destinationType": "number"
+              },
+              {
+                "targetField": "pipeline_s",
+                "destinationType": "number"
+              }
+            ],
+            "fields": {}
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "indexByName": {
+              "started_ms": 0,
+              "trigger": 1,
+              "studio_env": 2,
+              "env": 3,
+              "service_owner": 4,
+              "app": 5,
+              "user": 6,
+              "outcome": 7,
+              "pipeline_s": 8,
+              "trace": 9
+            },
+            "renameByName": {},
+            "includeByName": {
+              "started_ms": true,
+              "trigger": true,
+              "studio_env": true,
+              "env": true,
+              "service_owner": true,
+              "app": true,
+              "user": true,
+              "outcome": true,
+              "pipeline_s": true,
+              "trace": true
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": true,
+            "filterable": true
+          },
+          "displayName": "",
+          "noValue": "",
+          "unit": "short"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "started_ms"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Requested"
+              },
+              {
+                "id": "custom.width",
+                "value": 185
+              },
+              {
+                "id": "unit",
+                "value": "dateTimeAsLocal"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "trigger"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Trigger"
+              },
+              {
+                "id": "custom.width",
+                "value": 90
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "studio_env"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Studio"
+              },
+              {
+                "id": "custom.width",
+                "value": 70
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "env"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Environment"
+              },
+              {
+                "id": "custom.width",
+                "value": 95
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "service_owner"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Service owner"
+              },
+              {
+                "id": "custom.width",
+                "value": 110
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "app"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "App"
+              },
+              {
+                "id": "custom.width",
+                "value": 170
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "user"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "User"
+              },
+              {
+                "id": "custom.width",
+                "value": 110
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "outcome"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Outcome"
+              },
+              {
+                "id": "custom.width",
+                "value": 150
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "regex",
+                    "options": {
+                      "pattern": ".*Succeeded$",
+                      "result": {
+                        "color": "green",
+                        "index": 0
+                      }
+                    }
+                  },
+                  {
+                    "type": "regex",
+                    "options": {
+                      "pattern": "^(Pipeline finished)$",
+                      "result": {
+                        "color": "green",
+                        "index": 1
+                      }
+                    }
+                  },
+                  {
+                    "type": "regex",
+                    "options": {
+                      "pattern": "^(Waiting for Flux|Pipeline running)$",
+                      "result": {
+                        "color": "blue",
+                        "index": 2
+                      }
+                    }
+                  },
+                  {
+                    "type": "regex",
+                    "options": {
+                      "pattern": ".*",
+                      "result": {
+                        "color": "red",
+                        "index": 3
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "pipeline_s"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Pipeline"
+              },
+              {
+                "id": "custom.width",
+                "value": 95
+              },
+              {
+                "id": "unit",
+                "value": "s"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "trace"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Trace"
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "View trace",
+                    "url": "",
+                    "internal": {
+                      "datasourceUid": "altinn-studio-traces",
+                      "datasourceName": "altinn-studio-traces",
+                      "query": {
+                        "queryType": "traceql",
+                        "query": "${__value.raw}"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.width",
+                "value": 110
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "fields": ""
+        }
+      }
+    },
+    {
+      "id": 31,
+      "type": "row",
+      "title": "Logs",
+      "gridPos": {
+        "x": 0,
+        "y": 77,
+        "w": 24,
+        "h": 1
+      },
+      "collapsed": true,
+      "panels": [
+        {
+          "id": 30,
+          "type": "logs",
+          "title": "Deploy warnings and errors",
+          "description": "Warning and error records about deploys from Designer and the runtime gateways (altinn-studio-logs), newest first, such as a reconcile call that failed, a Flux result Designer did not get, or a HelmRelease without the labels the gateway needs. A record written during a deploy carries its trace ID: open the record and select the trace link.",
+          "datasource": {
+            "type": "victoriametrics-logs-datasource",
+            "uid": "altinn-studio-logs"
+          },
+          "gridPos": {
+            "x": 0,
+            "y": 78,
+            "w": 24,
+            "h": 12
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "victoriametrics-logs-datasource",
+                "uid": "altinn-studio-logs"
+              },
+              "refId": "A",
+              "expr": "{service.name=~\"studio-designer|gateway\"} ((\"service.name\":=\"studio-designer\" \"deployment.environment.name\":~\"^(${studio_env:regex})$\") or (\"service.name\":=\"gateway\" \"deployment.environment.name\":~\"^(${env:regex})$\" \"altinn.service_owner\":~\"^(${service_owner:regex})$\")) _msg:~\"(?i)deploy|reconcil|helmrelease|flux\" | sort by (_time desc)",
+              "queryType": "instant",
+              "maxLines": 500
+            }
+          ],
+          "options": {
+            "showTime": true,
+            "wrapLogMessage": true,
+            "sortOrder": "Descending",
+            "enableLogDetails": true,
+            "dedupStrategy": "none",
+            "prettifyLogMessage": false,
+            "showCommonLabels": false,
+            "showLabels": false
+          }
+        }
+      ]
+    }
+  ]
+}
