@@ -1,6 +1,6 @@
 {
   "uid": "altinn-studio-observability",
-  "title": "Altinn Studio \u2014 Observability",
+  "title": "Altinn Studio - Observability",
   "description": "Health of the Victoria observability stack in Studio prod (namespace observability): the metrics, logs and traces storage pairs (copies a and b), observability-proxy in front of them, the agents replicating to them, and the VictoriaMetrics operator. From the stack's own metrics, scraped every 30 s by vmagent-self into the stack itself. This dashboard has no environment variable: these self-monitoring metrics describe only the Studio prod observability stack and have no deployment.environment.name dimension.",
   "tags": [
     "altinn-studio",

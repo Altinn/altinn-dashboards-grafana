@@ -17,21 +17,21 @@ exclusions:
       altinn-studio-traces-logsql and links them to altinn-studio-traces, and
       shows its logs from altinn-studio-logs.
     entries:
-      - dashboard: "Altinn Studio — PDF3"
-      - dashboard: "Altinn Studio — Observability"
-      - dashboard: "Altinn Studio — Designer"
+      - dashboard: "Altinn Studio - PDF3"
+      - dashboard: "Altinn Studio - Observability"
+      - dashboard: "Altinn Studio - Designer"
       - dashboard: "Altinn Studio - Workflow Engine"
-      - dashboard: "Altinn Studio — Reports and alerts"
-      - dashboard: "Altinn Studio — Operator"
-      - dashboard: "Altinn Studio — Gateway"
+      - dashboard: "Altinn Studio - Reports and alerts"
+      - dashboard: "Altinn Studio - Operator"
+      - dashboard: "Altinn Studio - Gateway"
   template-datasource-rule:
     reason: >-
       No datasource template variable by design; see panel-datasource-rule.
     entries:
-      - dashboard: "Altinn Studio — PDF3"
-      - dashboard: "Altinn Studio — Observability"
-      - dashboard: "Altinn Studio — Designer"
+      - dashboard: "Altinn Studio - PDF3"
+      - dashboard: "Altinn Studio - Observability"
+      - dashboard: "Altinn Studio - Designer"
       - dashboard: "Altinn Studio - Workflow Engine"
-      - dashboard: "Altinn Studio — Reports and alerts"
-      - dashboard: "Altinn Studio — Operator"
-      - dashboard: "Altinn Studio — Gateway"
+      - dashboard: "Altinn Studio - Reports and alerts"
+      - dashboard: "Altinn Studio - Operator"
+      - dashboard: "Altinn Studio - Gateway"

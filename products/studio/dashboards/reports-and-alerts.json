@@ -1,6 +1,6 @@
 {
   "uid": "altinn-studio-reports-and-alerts",
-  "title": "Altinn Studio — Reports and alerts",
+  "title": "Altinn Studio - Reports and alerts",
   "description": "The periodic reports and the alerts Altinn Studio Designer (service studio-designer) sends to service owners' contact points (email, SMS and Slack), and the alerts it posts to the Studio team's Slack channel. Counts come from Designer's counters altinn.designer.periodic_report.reports and altinn.designer.notification.deliveries (altinn-studio-metrics), which are not sampled; a failure carries error.type. Sent means Altinn Notifications accepted the order, or the Slack webhook answered with success. Whether an email or SMS then reached the recipient is known only to Altinn Notifications. Service owner and Runtime environment filter the metric panels; the trace table at the bottom, from Designer's spans through altinn-studio-traces-logsql, has its own Filters. Notifications about failed deploys are counted with kind deployment and are not shown here. Totals use increase_pure() over the range, which also counts a counter's first increment.",
   "tags": [
     "altinn-studio",

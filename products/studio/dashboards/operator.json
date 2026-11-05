@@ -1,6 +1,6 @@
 {
   "uid": "altinn-studio-operator",
-  "title": "Altinn Studio — Operator",
+  "title": "Altinn Studio - Operator",
   "description": "The runtime operator (service operator), one per service owner cluster, across the runtime environments. Its controllers run in the elected leader: Maskinporten clients and their key rotation, secret and app code sync, Key Vault sync, Grafana alert routing, CNPG databases and, outside prod, the inactivity scaler. Runs, failures and their duration per controller come from altinn.operator.run.duration (one point per reconcile or pass of a periodic sync, with error.type for a failed one); Maskinporten client states, the inactivity state and leadership from the operator's gauges; outgoing calls from http.client.request.duration; versions, process starts and clusters that stopped reporting from altinn.workload.start_time. All from altinn-studio-metrics, which isn't sampled. Below, for triage, the failed runs from their traces: tail sampling keeps every trace with an error. Service owner comes from altinn.service_owner, which the router in each service owner cluster sets on the resource. Rates use increase_pure() over $__rate_interval divided by its length rather than rate(), so a first failure on a new series shows. Blue markers are each version's first start per environment (90 days of history), orange markers each process start (off by default).",
   "tags": [
     "altinn-studio",
