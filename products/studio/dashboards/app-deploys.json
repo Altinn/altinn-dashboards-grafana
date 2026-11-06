@@ -1,7 +1,7 @@
 {
   "uid": "altinn-studio-app-deploys",
   "title": "Altinn Studio - App deploys",
-  "description": "App deploys and undeploys from Altinn Studio, end to end: the deploy request to Designer, the Azure DevOps pipeline Designer queues and polls, Designer's reconcile call to the runtime gateway, and Flux's install or upgrade result, which the gateway passes back to Designer. Designer marks every deploy's trace to be kept and the trace continues through the pipeline's HelmRelease into the gateway, so most panels join each deploy's spans by trace ID (altinn-studio-traces-logsql, LogsQL) to show it as one row with its outcome and the time each phase took. Failed pipelines and deploy times come from Designer's deploy metrics, and Flux's results and the hand-off between Designer and the gateways from the gateways' (altinn-studio-metrics). Filter by the Studio environment that deployed (dev, staging, prod), the environment deployed to and the service owner. Designer's request metrics carry only the Studio environment. Phase times are worked out from the trace: Pipeline is within 10 s of the pipeline's end, since Designer polls every 10 s, and a deploy whose request is outside the time range is left out. The Azure DevOps pipeline sends no telemetry, so its own steps and failure reasons are not here. Datasource UIDs are pinned, matching the other Altinn Studio dashboards.",
+  "description": "App deploys and undeploys from Altinn Studio, end to end: the deploy request to Designer, the Azure DevOps pipeline Designer queues and polls, Designer's reconcile call to the runtime gateway, and Flux's install or upgrade result, which the gateway passes back to Designer. The counts, failed pipelines and the time each phase took come from Designer's deploy metrics (altinn.designer.app_deploy.*, cicd.pipeline.run.duration), and Flux's results and the hand-off between Designer and the gateways from the gateways' metrics (altinn-studio-metrics). Designer marks every deploy's trace to be kept and the trace continues through the pipeline's HelmRelease into the gateway, so the tables of deploys and the outcomes join each deploy's spans by trace ID (altinn-studio-traces-logsql, LogsQL) to show it as one row, also while it is still running. Filter by the Studio environment that deployed (dev, staging, prod), the environment deployed to and the service owner. Designer's request metrics carry only the Studio environment, and Azure DevOps' queue and run time has no service owner. The Azure DevOps pipeline sends no telemetry of its own, so its steps and failure reasons are not here; Build links to the run. Datasource UIDs are pinned, matching the other Altinn Studio dashboards.",
   "tags": [
     "altinn-studio",
     "deploys"
@@ -160,10 +160,10 @@
       "id": 1,
       "type": "stat",
       "title": "Deploys",
-      "description": "Deploy requests to Designer (POST .../deployments) in the time range, from their server spans. Designer marks every deploy request's trace to be kept, so the count is complete.",
+      "description": "Deploy pipelines Designer queued in the time range (altinn.designer.app_deploy.queued). A request that failed before Designer queued the pipeline is under Failed requests.",
       "datasource": {
-        "type": "victoriametrics-logs-datasource",
-        "uid": "altinn-studio-traces-logsql"
+        "type": "prometheus",
+        "uid": "altinn-studio-metrics"
       },
       "gridPos": {
         "x": 0,
@@ -174,12 +174,13 @@
       "targets": [
         {
           "datasource": {
-            "type": "victoriametrics-logs-datasource",
-            "uid": "altinn-studio-traces-logsql"
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
           },
           "refId": "A",
-          "expr": "{resource_attr:service.name=\"studio-designer\"} \"resource_attr:deployment.environment.name\":~\"^(${studio_env:regex})$\" kind:2 name:~\"^POST /designer/api/.+/deployments$\" \"span_attr:altinn.environment\":~\"^(${env:regex})$\" \"span_attr:altinn.service_owner\":~\"^(${service_owner:regex})$\" | stats count() deploys",
-          "queryType": "stats"
+          "expr": "sum(increase_pure({\"altinn.designer.app_deploy.queued\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$studio_env\", \"altinn.environment\"=~\"$env\", \"altinn.service_owner\"=~\"$service_owner\", \"altinn.designer.app_deploy.pipeline.type\"=\"deploy\"}[$__range])) or vector(0)",
+          "instant": true,
+          "range": false
         }
       ],
       "fieldConfig": {
@@ -194,7 +195,8 @@
                 "value": null
               }
             ]
-          }
+          },
+          "decimals": 0
         },
         "overrides": []
       },
@@ -589,10 +591,10 @@
       "id": 8,
       "type": "stat",
       "title": "Undeploys",
-      "description": "Undeploys whose pipeline Designer queued in the time range: from Designer (POST .../deployments/undeploy) and from the nightly undeploy of inactive apps. Undeploys skipped because one was already pending are left out.",
+      "description": "Undeploy pipelines Designer queued in the time range, for undeploys someone asked for and for the nightly undeploy of inactive apps (altinn.designer.app_deploy.queued). Undeploys skipped because one was already pending are not queued.",
       "datasource": {
-        "type": "victoriametrics-logs-datasource",
-        "uid": "altinn-studio-traces-logsql"
+        "type": "prometheus",
+        "uid": "altinn-studio-metrics"
       },
       "gridPos": {
         "x": 21,
@@ -603,12 +605,13 @@
       "targets": [
         {
           "datasource": {
-            "type": "victoriametrics-logs-datasource",
-            "uid": "altinn-studio-traces-logsql"
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
           },
           "refId": "A",
-          "expr": "{resource_attr:service.name=\"studio-designer\"} ((kind:2 name:~\"^POST /designer/api/.+/deployments/undeploy$\") or name:=\"execute AppInactivityUndeployAppJob\" or name:=\"DeploymentPipelinePollingJob.Execute\" or (kind:3 \"span_attr:url.full\":~\"/reconcile$\")) | stats by (trace_id) count() if (kind:2 name:~\"^POST /designer/api/.+/deployments/undeploy$\") manual, count() if (name:=\"execute AppInactivityUndeployAppJob\") automatic, min(start_time_unix_nano) if ((kind:2 name:~\"^POST /designer/api/.+/deployments/undeploy$\") or name:=\"execute AppInactivityUndeployAppJob\") started, max(\"resource_attr:deployment.environment.name\") if ((kind:2 name:~\"^POST /designer/api/.+/deployments/undeploy$\") or name:=\"execute AppInactivityUndeployAppJob\") studio_env, max(\"span_attr:altinn.environment\") if ((kind:2 name:~\"^POST /designer/api/.+/deployments/undeploy$\") or name:=\"execute AppInactivityUndeployAppJob\") env, max(\"span_attr:altinn.service_owner\") if ((kind:2 name:~\"^POST /designer/api/.+/deployments/undeploy$\") or name:=\"execute AppInactivityUndeployAppJob\") service_owner, max(\"span_attr:altinn.app\") if ((kind:2 name:~\"^POST /designer/api/.+/deployments/undeploy$\") or name:=\"execute AppInactivityUndeployAppJob\") app, max(\"span_attr:enduser.id\") if (kind:2 name:~\"^POST /designer/api/.+/deployments/undeploy$\") user, count() if (((kind:2 name:~\"^POST /designer/api/.+/deployments/undeploy$\") or name:=\"execute AppInactivityUndeployAppJob\") status_code:2) failed, count() if (name:=\"DeploymentPipelinePollingJob.Execute\") polls, max(end_time_unix_nano) if (name:=\"DeploymentPipelinePollingJob.Execute\") last_poll, count() if (kind:3) reconciles, count() if (kind:3 status_code:2) reconcile_failed | filter polls:>0 (manual:>0 or automatic:>0) | filter studio_env:~\"^(${studio_env:regex})$\" env:~\"^(${env:regex})$\" service_owner:~\"^(${service_owner:regex})$\" | math (last_poll - started) / 1e9 as pipeline_s, (now() - last_poll) / 1e9 as since_poll_s, started / 1e6 as started_ms | format if (manual:>0) \"Manual\" as trigger | format if (automatic:>0) \"Inactivity\" as trigger | format if (failed:>0) \"Failed\" as outcome | format if (outcome:\"\" reconcile_failed:>0) \"Reconcile failed\" as outcome | format if (outcome:\"\" reconciles:>0) \"Pipeline finished\" as outcome | format if (outcome:\"\" since_poll_s:<60) \"Pipeline running\" as outcome | format if (outcome:\"\") \"Pipeline failed\" as outcome | stats count() undeploys",
-          "queryType": "stats"
+          "expr": "sum(increase_pure({\"altinn.designer.app_deploy.queued\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$studio_env\", \"altinn.environment\"=~\"$env\", \"altinn.service_owner\"=~\"$service_owner\", \"altinn.designer.app_deploy.pipeline.type\"=\"undeploy\"}[$__range])) or vector(0)",
+          "instant": true,
+          "range": false
         }
       ],
       "fieldConfig": {
@@ -623,7 +626,8 @@
                 "value": null
               }
             ]
-          }
+          },
+          "decimals": 0
         },
         "overrides": []
       },
@@ -657,11 +661,11 @@
     {
       "id": 10,
       "type": "timeseries",
-      "title": "Deploys requested by environment",
-      "description": "Deploy requests to Designer per interval, by the environment deployed to (altinn.environment on the request span).",
+      "title": "Deploys by environment",
+      "description": "Deploy pipelines Designer queued per interval, by the environment deployed to (altinn.designer.app_deploy.queued).",
       "datasource": {
-        "type": "victoriametrics-logs-datasource",
-        "uid": "altinn-studio-traces-logsql"
+        "type": "prometheus",
+        "uid": "altinn-studio-metrics"
       },
       "gridPos": {
         "x": 0,
@@ -672,13 +676,12 @@
       "targets": [
         {
           "datasource": {
-            "type": "victoriametrics-logs-datasource",
-            "uid": "altinn-studio-traces-logsql"
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
           },
           "refId": "A",
-          "expr": "{resource_attr:service.name=\"studio-designer\"} \"resource_attr:deployment.environment.name\":~\"^(${studio_env:regex})$\" kind:2 name:~\"^POST /designer/api/.+/deployments$\" \"span_attr:altinn.environment\":~\"^(${env:regex})$\" \"span_attr:altinn.service_owner\":~\"^(${service_owner:regex})$\" | stats by (\"span_attr:altinn.environment\") count() deploys",
-          "queryType": "statsRange",
-          "legendFormat": "{{span_attr:altinn.environment}}"
+          "expr": "sum by (\"altinn.environment\") (increase_pure({\"altinn.designer.app_deploy.queued\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$studio_env\", \"altinn.environment\"=~\"$env\", \"altinn.service_owner\"=~\"$service_owner\", \"altinn.designer.app_deploy.pipeline.type\"=\"deploy\"}[$__interval]))",
+          "legendFormat": "{{altinn.environment}}"
         }
       ],
       "fieldConfig": {
@@ -950,106 +953,138 @@
       "id": 13,
       "type": "table",
       "title": "Time per phase by environment",
-      "description": "How long deploys took in each environment deployed to, from each deploy's trace. Pipeline is from the deploy request until Designer's last poll of the Azure DevOps pipeline, so it includes the time queued in Azure DevOps and is within 10 s of the pipeline's end. Flux is from there to Flux's install or upgrade result. Total is the whole, request to result. Deploys without a Flux result count only towards Pipeline.",
+      "description": "How long deploys took in each environment deployed to, from Designer's deploy metrics. Deploys counts the deploys that ended in the time range, with Flux's result or a pipeline that did not succeed. Pipeline is from the deploy request until Designer saw the Azure DevOps pipeline succeed, within 10 s, so it includes the time queued in Azure DevOps (altinn.designer.app_deploy.pipeline.duration). Flux is from there to Flux's install or upgrade result (altinn.designer.app_deploy.flux.duration). Total is the whole, request to result (altinn.designer.app_deploy.duration). Quantiles are interpolated within the histograms' buckets.",
       "datasource": {
-        "type": "victoriametrics-logs-datasource",
-        "uid": "altinn-studio-traces-logsql"
+        "type": "prometheus",
+        "uid": "altinn-studio-metrics"
       },
       "gridPos": {
         "x": 0,
         "y": 13,
-        "w": 12,
-        "h": 7
+        "w": 24,
+        "h": 6
       },
       "targets": [
         {
           "datasource": {
-            "type": "victoriametrics-logs-datasource",
-            "uid": "altinn-studio-traces-logsql"
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
           },
           "refId": "A",
-          "expr": "{resource_attr:service.name=~\"studio-designer|gateway\"} ((kind:2 name:~\"^POST /designer/api/.+/deployments$\") or name:=\"DeploymentPipelinePollingJob.Execute\" or (kind:3 \"span_attr:url.full\":~\"/reconcile$\") or name:=\"FluxWebhook.ProcessEvent\" or name:=\"PublishAltinnAppServiceResource\") | stats by (trace_id) count() if (kind:2) requests, min(start_time_unix_nano) if (kind:2) started, max(\"resource_attr:deployment.environment.name\") if (kind:2) studio_env, max(\"span_attr:altinn.environment\") if (kind:2) env, max(\"span_attr:altinn.service_owner\") if (kind:2) service_owner, max(\"span_attr:altinn.app\") if (kind:2) app, max(\"span_attr:enduser.id\") if (kind:2) user, max(\"span_attr:http.response.status_code\") if (kind:2) status, count() if (name:=\"DeploymentPipelinePollingJob.Execute\") polls, max(end_time_unix_nano) if (name:=\"DeploymentPipelinePollingJob.Execute\") last_poll, count() if (kind:3) reconciles, count() if (kind:3 status_code:2) reconcile_failed, min(start_time_unix_nano) if (name:=\"FluxWebhook.ProcessEvent\") flux_at, max(\"span_attr:altinn.gateway.flux.reason\") if (name:=\"FluxWebhook.ProcessEvent\") flux_reason, max(\"span_attr:altinn.app_deploy.build.id\") build_id, count() if (name:=\"FluxWebhook.ProcessEvent\" status_code:2) not_passed_on, max(\"span_attr:altinn.designer.resource_registry.publish.result\") if (name:=\"PublishAltinnAppServiceResource\") registry, max(\"span_attr:altinn.designer.resource_registry.publish.validation_errors\") if (name:=\"PublishAltinnAppServiceResource\") registry_errors | filter requests:>0 | filter studio_env:~\"^(${studio_env:regex})$\" env:~\"^(${env:regex})$\" service_owner:~\"^(${service_owner:regex})$\" | math (last_poll - started) / 1e9 as pipeline_s, (flux_at - last_poll) / 1e9 as flux_s, (flux_at - started) / 1e9 as total_s, (now() - last_poll) / 1e9 as since_poll_s, started / 1e6 as started_ms | format if (flux_reason:*) \"<flux_reason>\" as outcome | format if (outcome:\"\" status:~\"^5\") \"Request failed\" as outcome | format if (outcome:\"\" reconcile_failed:>0) \"Reconcile failed\" as outcome | format if (outcome:\"\" reconciles:>0 since_poll_s:>900) \"No Flux event\" as outcome | format if (outcome:\"\" reconciles:>0) \"Waiting for Flux\" as outcome | format if (outcome:\"\" polls:>0 since_poll_s:<60) \"Pipeline running\" as outcome | format if (outcome:\"\" polls:>0) \"Pipeline failed\" as outcome | format if (outcome:\"\") \"Not queued\" as outcome | stats by (env) count() deploys, count() if (outcome:~\"^(Install|Upgrade)Succeeded$\") succeeded, quantile(0.5, pipeline_s) if (reconciles:>0) pipeline_p50, quantile(0.95, pipeline_s) if (reconciles:>0) pipeline_p95, quantile(0.5, flux_s) if (flux_at:*) flux_p50, quantile(0.95, flux_s) if (flux_at:*) flux_p95, quantile(0.5, total_s) if (flux_at:*) total_p50, quantile(0.95, total_s) if (flux_at:*) total_p95",
-          "queryType": "stats"
+          "expr": "sum by (\"altinn.environment\") (increase_pure({\"altinn.designer.app_deploy.duration_count\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$studio_env\", \"altinn.environment\"=~\"$env\", \"altinn.service_owner\"=~\"$service_owner\", \"altinn.designer.app_deploy.pipeline.type\"=\"deploy\"}[$__range]))",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "B",
+          "expr": "sum by (\"altinn.environment\") (increase_pure({\"altinn.designer.app_deploy.duration_count\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$studio_env\", \"altinn.environment\"=~\"$env\", \"altinn.service_owner\"=~\"$service_owner\", \"altinn.designer.app_deploy.pipeline.type\"=\"deploy\", \"altinn.designer.app_deploy.result\"=~\"(install|upgrade)_succeeded\"}[$__range]))",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "C",
+          "expr": "histogram_quantile(0.5, sum by (le, \"altinn.environment\") (increase_pure({\"altinn.designer.app_deploy.pipeline.duration_bucket\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$studio_env\", \"altinn.environment\"=~\"$env\", \"altinn.service_owner\"=~\"$service_owner\", \"altinn.designer.app_deploy.pipeline.type\"=\"deploy\", \"cicd.pipeline.result\"=\"success\"}[$__range])))",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "D",
+          "expr": "histogram_quantile(0.95, sum by (le, \"altinn.environment\") (increase_pure({\"altinn.designer.app_deploy.pipeline.duration_bucket\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$studio_env\", \"altinn.environment\"=~\"$env\", \"altinn.service_owner\"=~\"$service_owner\", \"altinn.designer.app_deploy.pipeline.type\"=\"deploy\", \"cicd.pipeline.result\"=\"success\"}[$__range])))",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "E",
+          "expr": "histogram_quantile(0.5, sum by (le, \"altinn.environment\") (increase_pure({\"altinn.designer.app_deploy.flux.duration_bucket\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$studio_env\", \"altinn.environment\"=~\"$env\", \"altinn.service_owner\"=~\"$service_owner\", \"altinn.designer.app_deploy.pipeline.type\"=\"deploy\", \"altinn.designer.app_deploy.result\"=~\"(install|upgrade)_(succeeded|failed)\"}[$__range])))",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "F",
+          "expr": "histogram_quantile(0.95, sum by (le, \"altinn.environment\") (increase_pure({\"altinn.designer.app_deploy.flux.duration_bucket\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$studio_env\", \"altinn.environment\"=~\"$env\", \"altinn.service_owner\"=~\"$service_owner\", \"altinn.designer.app_deploy.pipeline.type\"=\"deploy\", \"altinn.designer.app_deploy.result\"=~\"(install|upgrade)_(succeeded|failed)\"}[$__range])))",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "G",
+          "expr": "histogram_quantile(0.5, sum by (le, \"altinn.environment\") (increase_pure({\"altinn.designer.app_deploy.duration_bucket\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$studio_env\", \"altinn.environment\"=~\"$env\", \"altinn.service_owner\"=~\"$service_owner\", \"altinn.designer.app_deploy.pipeline.type\"=\"deploy\", \"altinn.designer.app_deploy.result\"=~\"(install|upgrade)_(succeeded|failed)\"}[$__range])))",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "H",
+          "expr": "histogram_quantile(0.95, sum by (le, \"altinn.environment\") (increase_pure({\"altinn.designer.app_deploy.duration_bucket\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$studio_env\", \"altinn.environment\"=~\"$env\", \"altinn.service_owner\"=~\"$service_owner\", \"altinn.designer.app_deploy.pipeline.type\"=\"deploy\", \"altinn.designer.app_deploy.result\"=~\"(install|upgrade)_(succeeded|failed)\"}[$__range])))",
+          "instant": true,
+          "range": false,
+          "format": "table"
         }
       ],
       "transformations": [
         {
-          "id": "labelsToFields",
-          "options": {
-            "mode": "columns",
-            "valueLabel": "__name__"
-          }
-        },
-        {
           "id": "merge",
           "options": {}
-        },
-        {
-          "id": "convertFieldType",
-          "options": {
-            "conversions": [
-              {
-                "targetField": "deploys",
-                "destinationType": "number"
-              },
-              {
-                "targetField": "succeeded",
-                "destinationType": "number"
-              },
-              {
-                "targetField": "pipeline_p50",
-                "destinationType": "number"
-              },
-              {
-                "targetField": "pipeline_p95",
-                "destinationType": "number"
-              },
-              {
-                "targetField": "flux_p50",
-                "destinationType": "number"
-              },
-              {
-                "targetField": "flux_p95",
-                "destinationType": "number"
-              },
-              {
-                "targetField": "total_p50",
-                "destinationType": "number"
-              },
-              {
-                "targetField": "total_p95",
-                "destinationType": "number"
-              }
-            ],
-            "fields": {}
-          }
         },
         {
           "id": "organize",
           "options": {
             "excludeByName": {},
             "indexByName": {
-              "env": 0,
-              "deploys": 1,
-              "succeeded": 2,
-              "pipeline_p50": 3,
-              "pipeline_p95": 4,
-              "flux_p50": 5,
-              "flux_p95": 6,
-              "total_p50": 7,
-              "total_p95": 8
+              "altinn.environment": 0,
+              "Value #A": 1,
+              "Value #B": 2,
+              "Value #C": 3,
+              "Value #D": 4,
+              "Value #E": 5,
+              "Value #F": 6,
+              "Value #G": 7,
+              "Value #H": 8
             },
             "renameByName": {},
             "includeByName": {
-              "env": true,
-              "deploys": true,
-              "succeeded": true,
-              "pipeline_p50": true,
-              "pipeline_p95": true,
-              "flux_p50": true,
-              "flux_p95": true,
-              "total_p50": true,
-              "total_p95": true
+              "altinn.environment": true,
+              "Value #A": true,
+              "Value #B": true,
+              "Value #C": true,
+              "Value #D": true,
+              "Value #E": true,
+              "Value #F": true,
+              "Value #G": true,
+              "Value #H": true
             }
           }
         }
@@ -1073,7 +1108,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "env"
+              "options": "altinn.environment"
             },
             "properties": [
               {
@@ -1085,7 +1120,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "deploys"
+              "options": "Value #A"
             },
             "properties": [
               {
@@ -1097,7 +1132,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "succeeded"
+              "options": "Value #B"
             },
             "properties": [
               {
@@ -1109,7 +1144,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "pipeline_p50"
+              "options": "Value #C"
             },
             "properties": [
               {
@@ -1129,7 +1164,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "pipeline_p95"
+              "options": "Value #D"
             },
             "properties": [
               {
@@ -1149,7 +1184,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "flux_p50"
+              "options": "Value #E"
             },
             "properties": [
               {
@@ -1169,7 +1204,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "flux_p95"
+              "options": "Value #F"
             },
             "properties": [
               {
@@ -1189,7 +1224,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "total_p50"
+              "options": "Value #G"
             },
             "properties": [
               {
@@ -1209,7 +1244,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "total_p95"
+              "options": "Value #H"
             },
             "properties": [
               {
@@ -1256,10 +1291,10 @@
         "uid": "altinn-studio-traces-logsql"
       },
       "gridPos": {
-        "x": 12,
-        "y": 13,
+        "x": 0,
+        "y": 19,
         "w": 12,
-        "h": 7
+        "h": 8
       },
       "targets": [
         {
@@ -1472,6 +1507,65 @@
     },
     {
       "id": 15,
+      "type": "timeseries",
+      "title": "Azure DevOps queue and run time",
+      "description": "How long the deploy pipeline's runs waited in Azure DevOps' queue for an agent (pending) and then ran (executing), p50 and p95 over the hour before each point, from Azure DevOps' own times (cicd.pipeline.run.duration). Every app shares the pipeline and its agents, so the service owner filter does not apply.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "altinn-studio-metrics"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 19,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "A",
+          "expr": "histogram_quantile(0.5, sum by (le, \"cicd.pipeline.run.state\") (increase_pure({\"cicd.pipeline.run.duration_bucket\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$studio_env\", \"altinn.environment\"=~\"$env\", \"altinn.designer.app_deploy.pipeline.type\"=\"deploy\"}[1h])))",
+          "legendFormat": "{{cicd.pipeline.run.state}} p50"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "refId": "B",
+          "expr": "histogram_quantile(0.95, sum by (le, \"cicd.pipeline.run.state\") (increase_pure({\"cicd.pipeline.run.duration_bucket\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$studio_env\", \"altinn.environment\"=~\"$env\", \"altinn.designer.app_deploy.pipeline.type\"=\"deploy\"}[1h])))",
+          "legendFormat": "{{cicd.pipeline.run.state}} p95"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "interval": "5m"
+    },
+    {
+      "id": 16,
       "type": "table",
       "title": "Recent deploys",
       "description": "The latest 200 deploys requested in the time range, one per row, from each deploy's trace, which joins Designer's request, its polls of the Azure DevOps pipeline, its reconcile call to the runtime gateway and the gateway's Flux event. Pipeline, Flux and Total are as in Time per phase by environment; Outcome as in Outcomes. Build is the deploy's Azure DevOps run; select it to open the run. Resource Registry is the result of publishing the app's service resource before the pipeline is queued; a failure does not stop the deploy. Select a trace ID to open the trace.",
@@ -1481,7 +1575,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 20,
+        "y": 27,
         "w": 24,
         "h": 12
       },
@@ -1909,12 +2003,12 @@
       }
     },
     {
-      "id": 16,
+      "id": 17,
       "type": "row",
       "title": "Failures",
       "gridPos": {
         "x": 0,
-        "y": 32,
+        "y": 39,
         "w": 24,
         "h": 1
       },
@@ -1922,7 +2016,7 @@
       "panels": []
     },
     {
-      "id": 17,
+      "id": 18,
       "type": "table",
       "title": "Failed and unfinished deploys",
       "description": "Deploys in the time range that did not end with a successful install or upgrade, newest first: failed requests, pipelines, reconcile calls and Flux results, and deploys still waiting for the pipeline or for Flux. A failed pipeline's log is in Azure DevOps, under the deploy pipeline linked at the top of the dashboard; Designer's Slack message on a Flux failure links to the app's pod logs. Build is as in Recent deploys. Select a trace ID to open the trace.",
@@ -1932,7 +2026,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 33,
+        "y": 40,
         "w": 24,
         "h": 9
       },
@@ -2360,7 +2454,7 @@
       }
     },
     {
-      "id": 18,
+      "id": 19,
       "type": "table",
       "title": "Flux failures by service owner",
       "description": "InstallFailed and UpgradeFailed results per service owner and environment in the time range (altinn.gateway.deploy_events).",
@@ -2370,7 +2464,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 42,
+        "y": 49,
         "w": 12,
         "h": 8
       },
@@ -2508,7 +2602,7 @@
       }
     },
     {
-      "id": 19,
+      "id": 20,
       "type": "table",
       "title": "Resource Registry publish failures",
       "description": "Deploys in the time range whose app could not be published to the Resource Registry, with the validation errors the registry returned (altinn.designer.resource_registry.publish.*). Designer publishes before it queues the pipeline and deploys the app anyway. Select a trace ID to open the trace.",
@@ -2518,7 +2612,7 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 42,
+        "y": 49,
         "w": 12,
         "h": 8
       },
@@ -2741,12 +2835,12 @@
       }
     },
     {
-      "id": 20,
+      "id": 21,
       "type": "row",
       "title": "Hand-off between Designer and the runtime",
       "gridPos": {
         "x": 0,
-        "y": 50,
+        "y": 57,
         "w": 24,
         "h": 1
       },
@@ -2754,7 +2848,7 @@
       "panels": []
     },
     {
-      "id": 21,
+      "id": 22,
       "type": "timeseries",
       "title": "Flux results not passed on to Designer",
       "description": "Flux results the runtime gateway could not pass on to the Studio environment that deployed the app, by error.type: helm_release_unresolved when the HelmRelease lacks the labels that name the app and build, otherwise the HTTP status or exception from Designer. Designer then never learns the result, and the deploy shows as waiting.",
@@ -2764,7 +2858,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 51,
+        "y": 58,
         "w": 6,
         "h": 8
       },
@@ -2803,7 +2897,7 @@
       }
     },
     {
-      "id": 22,
+      "id": 23,
       "type": "timeseries",
       "title": "Reconcile requests by status code",
       "description": "Designer's requests to the runtime gateways to reconcile an app's Flux resources after a pipeline succeeded, by the gateway's response status. Not filtered by Studio environment.",
@@ -2813,7 +2907,7 @@
       },
       "gridPos": {
         "x": 6,
-        "y": 51,
+        "y": 58,
         "w": 6,
         "h": 8
       },
@@ -2852,7 +2946,7 @@
       }
     },
     {
-      "id": 23,
+      "id": 24,
       "type": "timeseries",
       "title": "Designer's deploy routes by status code",
       "description": "Designer's responses on its deploy routes: deploy (POST .../deployments), undeploy, the deploy list and Flux results from the gateways (.../deployments/webhooks/events). A 404 on webhooks/events is an uninstall with no pending undeploy in Designer. Designer's request metrics have no service owner or environment deployed to, so only the Studio environment filter applies.",
@@ -2862,7 +2956,7 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 51,
+        "y": 58,
         "w": 6,
         "h": 8
       },
@@ -2905,7 +2999,7 @@
       }
     },
     {
-      "id": 24,
+      "id": 25,
       "type": "timeseries",
       "title": "Failure notifications sent",
       "description": "Designer's messages about a failed install, upgrade or uninstall (altinn.designer.notification.deliveries with kind deployment), by audience: the internal Slack channel and the service owner's contact points. A series with an error type is a message that could not be delivered.",
@@ -2915,7 +3009,7 @@
       },
       "gridPos": {
         "x": 18,
-        "y": 51,
+        "y": 58,
         "w": 6,
         "h": 8
       },
@@ -2970,12 +3064,12 @@
       }
     },
     {
-      "id": 25,
+      "id": 26,
       "type": "row",
       "title": "Undeploys",
       "gridPos": {
         "x": 0,
-        "y": 59,
+        "y": 66,
         "w": 24,
         "h": 1
       },
@@ -2983,30 +3077,29 @@
       "panels": []
     },
     {
-      "id": 26,
+      "id": 27,
       "type": "timeseries",
       "title": "Undeploys by trigger",
-      "description": "Undeploy requests to Designer (Manual) and runs of the nightly undeploy of an inactive app (Inactivity, in at22, at23, at24, tt02 and yt01 only), per interval, including those Designer skipped or that failed.",
+      "description": "Undeploy pipelines Designer queued per interval, by what triggered them: manual, when someone asked for the undeploy, or inactivity, the nightly undeploy of an inactive app in at22, at23, at24, tt02 and yt01 (altinn.designer.app_deploy.queued).",
       "datasource": {
-        "type": "victoriametrics-logs-datasource",
-        "uid": "altinn-studio-traces-logsql"
+        "type": "prometheus",
+        "uid": "altinn-studio-metrics"
       },
       "gridPos": {
         "x": 0,
-        "y": 60,
+        "y": 67,
         "w": 8,
         "h": 8
       },
       "targets": [
         {
           "datasource": {
-            "type": "victoriametrics-logs-datasource",
-            "uid": "altinn-studio-traces-logsql"
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
           },
           "refId": "A",
-          "expr": "{resource_attr:service.name=\"studio-designer\"} \"resource_attr:deployment.environment.name\":~\"^(${studio_env:regex})$\" ((kind:2 name:~\"^POST /designer/api/.+/deployments/undeploy$\") or name:=\"execute AppInactivityUndeployAppJob\") \"span_attr:altinn.environment\":~\"^(${env:regex})$\" \"span_attr:altinn.service_owner\":~\"^(${service_owner:regex})$\" | format if (kind:2) \"Manual\" as trigger | format if (kind:1) \"Inactivity\" as trigger | stats by (trigger) count() undeploys",
-          "queryType": "statsRange",
-          "legendFormat": "{{trigger}}"
+          "expr": "sum by (\"altinn.designer.app_deploy.trigger\") (increase_pure({\"altinn.designer.app_deploy.queued\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$studio_env\", \"altinn.environment\"=~\"$env\", \"altinn.service_owner\"=~\"$service_owner\", \"altinn.designer.app_deploy.pipeline.type\"=\"undeploy\"}[$__interval]))",
+          "legendFormat": "{{altinn.designer.app_deploy.trigger}}"
         }
       ],
       "fieldConfig": {
@@ -3037,7 +3130,7 @@
       }
     },
     {
-      "id": 27,
+      "id": 28,
       "type": "timeseries",
       "title": "Uninstall results",
       "description": "Flux's uninstall results for apps, as the runtime gateways count them (altinn.gateway.deploy_events), per interval. The HelmRelease is gone by then, so these are not in the undeploy's trace.",
@@ -3047,7 +3140,7 @@
       },
       "gridPos": {
         "x": 8,
-        "y": 60,
+        "y": 67,
         "w": 8,
         "h": 8
       },
@@ -3181,7 +3274,7 @@
       }
     },
     {
-      "id": 28,
+      "id": 29,
       "type": "table",
       "title": "Skipped undeploys",
       "description": "Undeploys Designer skipped because another undeploy of the same app and environment was queued less than 10 minutes earlier (altinn.designer.undeploy.skip_reason), with that undeploy's age and build. Select the build to open its run in Azure DevOps, or a trace ID to open the trace.",
@@ -3191,7 +3284,7 @@
       },
       "gridPos": {
         "x": 16,
-        "y": 60,
+        "y": 67,
         "w": 8,
         "h": 8
       },
@@ -3454,7 +3547,7 @@
       }
     },
     {
-      "id": 29,
+      "id": 30,
       "type": "table",
       "title": "Recent undeploys",
       "description": "The latest 200 undeploys in the time range whose pipeline Designer queued, one per row, from each undeploy's trace. Pipeline is from the request or job until Designer's last poll of the Azure DevOps pipeline. Outcome is Pipeline finished once Designer has asked the runtime gateway to reconcile, which it does only after a pipeline that succeeded; Flux's uninstall result is in Uninstall results. Select a trace ID to open the trace.",
@@ -3464,7 +3557,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 68,
+        "y": 75,
         "w": 24,
         "h": 9
       },
@@ -3808,19 +3901,19 @@
       }
     },
     {
-      "id": 31,
+      "id": 32,
       "type": "row",
       "title": "Logs",
       "gridPos": {
         "x": 0,
-        "y": 77,
+        "y": 84,
         "w": 24,
         "h": 1
       },
       "collapsed": true,
       "panels": [
         {
-          "id": 30,
+          "id": 31,
           "type": "logs",
           "title": "Deploy warnings and errors",
           "description": "Warning and error records about deploys from Designer and the runtime gateways (altinn-studio-logs), newest first, such as a reconcile call that failed, a Flux result Designer did not get, or a HelmRelease without the labels the gateway needs. A record written during a deploy carries its trace ID: open the record and select the trace link.",
@@ -3830,7 +3923,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 78,
+            "y": 85,
             "w": 24,
             "h": 12
           },
