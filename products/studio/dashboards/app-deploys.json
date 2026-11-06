@@ -278,7 +278,7 @@
       "id": 3,
       "type": "stat",
       "title": "Failed pipelines",
-      "description": "Deploys in the time range whose Azure DevOps pipeline failed, which ends the deploy, since Designer asks the runtime to reconcile only after a pipeline that succeeded (altinn.designer.app_deploy.duration with result pipeline_failed). A pipeline someone canceled is not a failure. Failed and unfinished deploys lists them, with links to their runs.",
+      "description": "Deploy pipelines that failed in the time range (altinn.designer.app_deploy.pipeline.duration with cicd.pipeline.result failure), also those that failed after Flux had already installed the app. A pipeline someone canceled is not a failure. Failed and unfinished deploys lists the deploys a failed pipeline ended, with links to their runs.",
       "datasource": {
         "type": "prometheus",
         "uid": "altinn-studio-metrics"
@@ -296,7 +296,7 @@
             "uid": "altinn-studio-metrics"
           },
           "refId": "A",
-          "expr": "sum(increase_pure({\"altinn.designer.app_deploy.duration_count\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$studio_env\", \"altinn.environment\"=~\"$env\", \"altinn.service_owner\"=~\"$service_owner\", \"altinn.designer.app_deploy.pipeline.type\"=\"deploy\", \"altinn.designer.app_deploy.result\"=\"pipeline_failed\"}[$__range])) or vector(0)",
+          "expr": "sum(increase_pure({\"altinn.designer.app_deploy.pipeline.duration_count\", \"service.name\"=\"studio-designer\", \"deployment.environment.name\"=~\"$studio_env\", \"altinn.environment\"=~\"$env\", \"altinn.service_owner\"=~\"$service_owner\", \"altinn.designer.app_deploy.pipeline.type\"=\"deploy\", \"cicd.pipeline.result\"=\"failure\"}[$__range])) or vector(0)",
           "instant": true,
           "range": false
         }
@@ -1561,8 +1561,7 @@
           "mode": "multi",
           "sort": "desc"
         }
-      },
-      "interval": "5m"
+      }
     },
     {
       "id": 16,
@@ -3550,7 +3549,7 @@
       "id": 30,
       "type": "table",
       "title": "Recent undeploys",
-      "description": "The latest 200 undeploys in the time range whose pipeline Designer queued, one per row, from each undeploy's trace. Pipeline is from the request or job until Designer's last poll of the Azure DevOps pipeline. Outcome is Pipeline finished once Designer has asked the runtime gateway to reconcile, which it does only after a pipeline that succeeded; Flux's uninstall result is in Uninstall results. Select a trace ID to open the trace.",
+      "description": "The latest 200 undeploys in the time range whose pipeline Designer queued, one per row, from each undeploy's trace. Pipeline is from the request or job until Designer's last poll of the Azure DevOps pipeline. Outcome is Pipeline finished once Designer has asked the runtime gateway to reconcile, which it does only after a pipeline that succeeded; Flux's uninstall result is in Uninstall results. Build is the undeploy's Azure DevOps run; select it to open the run. Select a trace ID to open the trace.",
       "datasource": {
         "type": "victoriametrics-logs-datasource",
         "uid": "altinn-studio-traces-logsql"
@@ -3568,7 +3567,7 @@
             "uid": "altinn-studio-traces-logsql"
           },
           "refId": "A",
-          "expr": "{resource_attr:service.name=\"studio-designer\"} ((kind:2 name:~\"^POST /designer/api/.+/deployments/undeploy$\") or name:=\"execute AppInactivityUndeployAppJob\" or name:=\"DeploymentPipelinePollingJob.Execute\" or (kind:3 \"span_attr:url.full\":~\"/reconcile$\")) | stats by (trace_id) count() if (kind:2 name:~\"^POST /designer/api/.+/deployments/undeploy$\") manual, count() if (name:=\"execute AppInactivityUndeployAppJob\") automatic, min(start_time_unix_nano) if ((kind:2 name:~\"^POST /designer/api/.+/deployments/undeploy$\") or name:=\"execute AppInactivityUndeployAppJob\") started, max(\"resource_attr:deployment.environment.name\") if ((kind:2 name:~\"^POST /designer/api/.+/deployments/undeploy$\") or name:=\"execute AppInactivityUndeployAppJob\") studio_env, max(\"span_attr:altinn.environment\") if ((kind:2 name:~\"^POST /designer/api/.+/deployments/undeploy$\") or name:=\"execute AppInactivityUndeployAppJob\") env, max(\"span_attr:altinn.service_owner\") if ((kind:2 name:~\"^POST /designer/api/.+/deployments/undeploy$\") or name:=\"execute AppInactivityUndeployAppJob\") service_owner, max(\"span_attr:altinn.app\") if ((kind:2 name:~\"^POST /designer/api/.+/deployments/undeploy$\") or name:=\"execute AppInactivityUndeployAppJob\") app, max(\"span_attr:enduser.id\") if (kind:2 name:~\"^POST /designer/api/.+/deployments/undeploy$\") user, count() if (((kind:2 name:~\"^POST /designer/api/.+/deployments/undeploy$\") or name:=\"execute AppInactivityUndeployAppJob\") status_code:2) failed, count() if (name:=\"DeploymentPipelinePollingJob.Execute\") polls, max(end_time_unix_nano) if (name:=\"DeploymentPipelinePollingJob.Execute\") last_poll, count() if (kind:3) reconciles, count() if (kind:3 status_code:2) reconcile_failed | filter polls:>0 (manual:>0 or automatic:>0) | filter studio_env:~\"^(${studio_env:regex})$\" env:~\"^(${env:regex})$\" service_owner:~\"^(${service_owner:regex})$\" | math (last_poll - started) / 1e9 as pipeline_s, (now() - last_poll) / 1e9 as since_poll_s, started / 1e6 as started_ms | format if (manual:>0) \"Manual\" as trigger | format if (automatic:>0) \"Inactivity\" as trigger | format if (failed:>0) \"Failed\" as outcome | format if (outcome:\"\" reconcile_failed:>0) \"Reconcile failed\" as outcome | format if (outcome:\"\" reconciles:>0) \"Pipeline finished\" as outcome | format if (outcome:\"\" since_poll_s:<60) \"Pipeline running\" as outcome | format if (outcome:\"\") \"Pipeline failed\" as outcome | sort by (started desc) limit 200 | fields started_ms, trigger, studio_env, env, service_owner, app, user, outcome, pipeline_s, trace_id | rename trace_id as trace",
+          "expr": "{resource_attr:service.name=\"studio-designer\"} ((kind:2 name:~\"^POST /designer/api/.+/deployments/undeploy$\") or name:=\"execute AppInactivityUndeployAppJob\" or name:=\"DeploymentPipelinePollingJob.Execute\" or (kind:3 \"span_attr:url.full\":~\"/reconcile$\")) | stats by (trace_id) count() if (kind:2 name:~\"^POST /designer/api/.+/deployments/undeploy$\") manual, count() if (name:=\"execute AppInactivityUndeployAppJob\") automatic, min(start_time_unix_nano) if ((kind:2 name:~\"^POST /designer/api/.+/deployments/undeploy$\") or name:=\"execute AppInactivityUndeployAppJob\") started, max(\"resource_attr:deployment.environment.name\") if ((kind:2 name:~\"^POST /designer/api/.+/deployments/undeploy$\") or name:=\"execute AppInactivityUndeployAppJob\") studio_env, max(\"span_attr:altinn.environment\") if ((kind:2 name:~\"^POST /designer/api/.+/deployments/undeploy$\") or name:=\"execute AppInactivityUndeployAppJob\") env, max(\"span_attr:altinn.service_owner\") if ((kind:2 name:~\"^POST /designer/api/.+/deployments/undeploy$\") or name:=\"execute AppInactivityUndeployAppJob\") service_owner, max(\"span_attr:altinn.app\") if ((kind:2 name:~\"^POST /designer/api/.+/deployments/undeploy$\") or name:=\"execute AppInactivityUndeployAppJob\") app, max(\"span_attr:enduser.id\") if (kind:2 name:~\"^POST /designer/api/.+/deployments/undeploy$\") user, count() if (((kind:2 name:~\"^POST /designer/api/.+/deployments/undeploy$\") or name:=\"execute AppInactivityUndeployAppJob\") status_code:2) failed, count() if (name:=\"DeploymentPipelinePollingJob.Execute\") polls, max(end_time_unix_nano) if (name:=\"DeploymentPipelinePollingJob.Execute\") last_poll, count() if (kind:3) reconciles, count() if (kind:3 status_code:2) reconcile_failed, max(\"span_attr:altinn.app_deploy.build.id\") build_id | filter polls:>0 (manual:>0 or automatic:>0) | filter studio_env:~\"^(${studio_env:regex})$\" env:~\"^(${env:regex})$\" service_owner:~\"^(${service_owner:regex})$\" | math (last_poll - started) / 1e9 as pipeline_s, (now() - last_poll) / 1e9 as since_poll_s, started / 1e6 as started_ms | format if (manual:>0) \"Manual\" as trigger | format if (automatic:>0) \"Inactivity\" as trigger | format if (failed:>0) \"Failed\" as outcome | format if (outcome:\"\" reconcile_failed:>0) \"Reconcile failed\" as outcome | format if (outcome:\"\" reconciles:>0) \"Pipeline finished\" as outcome | format if (outcome:\"\" since_poll_s:<60) \"Pipeline running\" as outcome | format if (outcome:\"\") \"Pipeline failed\" as outcome | sort by (started desc) limit 200 | fields started_ms, trigger, studio_env, env, service_owner, app, user, outcome, pipeline_s, build_id, trace_id | rename trace_id as trace",
           "queryType": "instant",
           "maxLines": 200
         }
@@ -3613,7 +3612,8 @@
               "user": 6,
               "outcome": 7,
               "pipeline_s": 8,
-              "trace": 9
+              "build_id": 9,
+              "trace": 10
             },
             "renameByName": {},
             "includeByName": {
@@ -3626,6 +3626,7 @@
               "user": true,
               "outcome": true,
               "pipeline_s": true,
+              "build_id": true,
               "trace": true
             }
           }
@@ -3850,6 +3851,36 @@
               {
                 "id": "decimals",
                 "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "build_id"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Build"
+              },
+              {
+                "id": "custom.width",
+                "value": 100
+              },
+              {
+                "id": "unit",
+                "value": "string"
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Open the run in Azure DevOps",
+                    "url": "https://dev.azure.com/brreg/altinn-studio/_build/results?buildId=${__value.raw}",
+                    "targetBlank": true
+                  }
+                ]
               }
             ]
           },
