@@ -1168,7 +1168,7 @@
         "type": "prometheus",
         "uid": "altinn-studio-metrics"
       },
-      "description": "Rate of workflow lifecycle events. Failed/Canceled/Requeued broken down by reason — failed: execution / dependency_failed / poisoned / wait_expired (a step's wait budget ran out) / manual (a caller failed a parked workflow through the fail endpoint); canceled: before_processing / during_processing; requeued: step_retry / shutdown.",
+      "description": "Rate of workflow lifecycle events. Failed/Canceled/Requeued broken down by reason - failed: execution / dependency_failed / poisoned / wait_expired (a step's wait budget ran out) / manual (a caller failed a parked workflow through the fail endpoint); canceled: before_processing / during_processing; requeued: step_retry / shutdown.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1569,7 +1569,7 @@
         "type": "prometheus",
         "uid": "altinn-studio-metrics"
       },
-      "description": "Rate of durable yields. A deferral is a command reporting “ran fine, the awaited outcome is not available yet” — it is not a failure and does not consume a retry. Step deferrals exceed workflow deferrals whenever one workflow parks repeatedly. Wait Budget Expired is the failure mode this row is here to make visible: a step that kept deferring until its waitBudget ran out, failed with reason=wait_expired — deliberately excluded from the default ops alert, so this is where it surfaces.",
+      "description": "Rate of durable yields. A deferral is a command reporting “ran fine, the awaited outcome is not available yet” - it is not a failure and does not consume a retry. Step deferrals exceed workflow deferrals whenever one workflow parks repeatedly. Wait Budget Expired is the failure mode this row is here to make visible: a step that kept deferring until its waitBudget ran out, failed with reason=wait_expired - deliberately excluded from the default ops alert, so this is where it surfaces.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1716,7 +1716,7 @@
         "type": "prometheus",
         "uid": "altinn-studio-metrics"
       },
-      "description": "Workflows currently parked in Waiting because a step deferred. Waiting is in the Incomplete/active set — no lease, no worker slot, no backoff timer of its own — so this population is invisible in the Active/Scheduled gauges on the Workflow Inventory panel. A level that only ever rises means deferring commands are never resolving. Every replica reports the same database-wide count, so replicas are combined with max() rather than sum().",
+      "description": "Workflows currently parked in Waiting because a step deferred. Waiting is in the Incomplete/active set - no lease, no worker slot, no backoff timer of its own - so this population is invisible in the Active/Scheduled gauges on the Workflow Inventory panel. A level that only ever rises means deferring commands are never resolving. Every replica reports the same database-wide count, so replicas are combined with max() rather than sum().",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1815,7 +1815,7 @@
         "type": "prometheus",
         "uid": "altinn-studio-metrics"
       },
-      "description": "Percentiles of the wait budget a deferring step actually consumed, from its first deferral to the moment it resolved — completed, expired, or failed. Recorded once per deferring step, so a step that deferred forty times contributes one sample. Compare the upper percentiles against the configured command.waitBudget (default 24h): this is the only signal that shows budgets being approached rather than blown.",
+      "description": "Percentiles of the wait budget a deferring step actually consumed, from its first deferral to the moment it resolved - completed, expired, or failed. Recorded once per deferring step, so a step that deferred forty times contributes one sample. Compare the upper percentiles against the configured command.waitBudget (default 24h): this is the only signal that shows budgets being approached rather than blown.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1975,7 +1975,7 @@
         "type": "prometheus",
         "uid": "altinn-studio-metrics"
       },
-      "description": "Namespace circuit breakers currently in the Tripped state. Zero is the normal reading. The gauge carries no namespace label — it is a per-process scalar — and every replica reports its own snapshot of the same shared state table, so replicas are combined with max() rather than sum(). The feature ships dark: with EngineSettings:Throttling:Enabled left false the sweep never runs and this stays flat at zero. workflow-engine-app turns it on; the engine's own test host only does with the playground compose override.",
+      "description": "Namespace circuit breakers currently in the Tripped state. Zero is the normal reading. The gauge carries no namespace label - it is a per-process scalar - and every replica reports its own snapshot of the same shared state table, so replicas are combined with max() rather than sum(). The feature ships dark: with EngineSettings:Throttling:Enabled left false the sweep never runs and this stays flat at zero. workflow-engine-app turns it on; the engine's own test host only does with the playground compose override.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -2041,7 +2041,7 @@
         "type": "prometheus",
         "uid": "altinn-studio-metrics"
       },
-      "description": "Circuit-breaker state changes in the last 5 minutes, per namespace. These are rare discrete events, so this is a count over the window rather than a per-second rate like the throughput panels — one trip reads as 1, not as 0.003/s, including the first trip in a namespace, which starts a new series. Tripped includes re-trips from a failed recovery. Extended means every canary failed its probe and the throttle window doubled. Cleared means recovery drained the parked population. Handler Parked counts workflows the handler parked the moment they failed retryably in an already-tripped namespace — the sweep's own parking is not counted there, so this series stays flat when the storm is not producing fresh failures.",
+      "description": "Circuit-breaker state changes in the last 5 minutes, per namespace. These are rare discrete events, so this is a count over the window rather than a per-second rate like the throughput panels - one trip reads as 1, not as 0.003/s, including the first trip in a namespace, which starts a new series. Tripped includes re-trips from a failed recovery. Extended means every canary failed its probe and the throttle window doubled. Cleared means recovery drained the parked population. Handler Parked counts workflows the handler parked the moment they failed retryably in an already-tripped namespace - the sweep's own parking is not counted there, so this series stays flat when the storm is not producing fresh failures.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -2173,7 +2173,7 @@
             "uid": "altinn-studio-metrics"
           },
           "expr": "sum by (\"altinn.workflow_engine.namespace\") (increase_pure({\"altinn.workflow_engine.throttle.tripped\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\"}[5m]))",
-          "legendFormat": "Tripped — {{altinn.workflow_engine.namespace}}",
+          "legendFormat": "Tripped - {{altinn.workflow_engine.namespace}}",
           "refId": "A"
         },
         {
@@ -2182,7 +2182,7 @@
             "uid": "altinn-studio-metrics"
           },
           "expr": "sum by (\"altinn.workflow_engine.namespace\") (increase_pure({\"altinn.workflow_engine.throttle.extended\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\"}[5m]))",
-          "legendFormat": "Extended — {{altinn.workflow_engine.namespace}}",
+          "legendFormat": "Extended - {{altinn.workflow_engine.namespace}}",
           "refId": "B"
         },
         {
@@ -2191,7 +2191,7 @@
             "uid": "altinn-studio-metrics"
           },
           "expr": "sum by (\"altinn.workflow_engine.namespace\") (increase_pure({\"altinn.workflow_engine.throttle.cleared\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\"}[5m]))",
-          "legendFormat": "Cleared — {{altinn.workflow_engine.namespace}}",
+          "legendFormat": "Cleared - {{altinn.workflow_engine.namespace}}",
           "refId": "C"
         },
         {
@@ -2200,7 +2200,7 @@
             "uid": "altinn-studio-metrics"
           },
           "expr": "sum by (\"altinn.workflow_engine.namespace\") (increase_pure({\"altinn.workflow_engine.throttle.handler_parked\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\"}[5m]))",
-          "legendFormat": "Handler parked — {{altinn.workflow_engine.namespace}}",
+          "legendFormat": "Handler parked - {{altinn.workflow_engine.namespace}}",
           "refId": "D"
         }
       ],
@@ -2212,7 +2212,7 @@
         "type": "prometheus",
         "uid": "altinn-studio-metrics"
       },
-      "description": "Rate at which recovery cohorts hand parked workflows back to the fetch gate, per namespace. Counted by the number of rows actually released, not once per cohort, and cohorts double every sweep — so a healthy recovery is a rising curve that stops abruptly when the last cohort comes back empty and the breaker clears. This is the only throttle counter with a population large enough to read as a rate.",
+      "description": "Rate at which recovery cohorts hand parked workflows back to the fetch gate, per namespace. Counted by the number of rows actually released, not once per cohort, and cohorts double every sweep - so a healthy recovery is a rising curve that stops abruptly when the last cohort comes back empty and the breaker clears. This is the only throttle counter with a population large enough to read as a rate.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -2454,7 +2454,7 @@
         "type": "prometheus",
         "uid": "altinn-studio-metrics"
       },
-      "description": "Per-attempt P95 of queue wait and active execution, stacked. Stack height is the sum of two marginal P95s — useful for seeing where tail latency is concentrated, but it does not reconcile arithmetically with the Workflow Duration panel's P95(total) because percentiles are not additive across the queue/processing decomposition. Within a single attempt, queue + processing does equal total by construction.",
+      "description": "Per-attempt P95 of queue wait and active execution, stacked. Stack height is the sum of two marginal P95s - useful for seeing where tail latency is concentrated, but it does not reconcile arithmetically with the Workflow Duration panel's P95(total) because percentiles are not additive across the queue/processing decomposition. Within a single attempt, queue + processing does equal total by construction.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -2577,7 +2577,7 @@
         "type": "prometheus",
         "uid": "altinn-studio-metrics"
       },
-      "description": "Step duration percentiles for a single attempt (queue + processing). Step retries land as separate samples — see Step Failures for retry rate.",
+      "description": "Step duration percentiles for a single attempt (queue + processing). Step retries land as separate samples - see Step Failures for retry rate.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -2723,7 +2723,7 @@
         "type": "prometheus",
         "uid": "altinn-studio-metrics"
       },
-      "description": "Per-attempt P95 of step queue wait (engine/DB overhead between steps) and active execution, stacked. Stack height is the sum of two marginal P95s — useful for seeing whether queue or processing drives tail latency, but it does not reconcile arithmetically with the Step Duration panel's P95(total) because percentiles are not additive across the queue/processing decomposition. Within a single attempt, queue + processing does equal total by construction.",
+      "description": "Per-attempt P95 of step queue wait (engine/DB overhead between steps) and active execution, stacked. Stack height is the sum of two marginal P95s - useful for seeing whether queue or processing drives tail latency, but it does not reconcile arithmetically with the Step Duration panel's P95(total) because percentiles are not additive across the queue/processing decomposition. Within a single attempt, queue + processing does equal total by construction.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -3515,7 +3515,7 @@
         "type": "prometheus",
         "uid": "altinn-studio-metrics"
       },
-      "description": "P95 of each main-loop iteration broken down: Queue (post-fetch wait — debounce or ~500ms idle ceiling) and Active Work (fetch + dispatch), stacked. Total is the joint P95 of the same iterations, drawn outside the stack: percentiles are not additive, so it will not equal the stack height, and the gap between them is exactly how much that non-additivity costs you here. For iteration throughput see Main Loop Rate.",
+      "description": "P95 of each main-loop iteration broken down: Queue (post-fetch wait - debounce or ~500ms idle ceiling) and Active Work (fetch + dispatch), stacked. Total is the joint P95 of the same iterations, drawn outside the stack: percentiles are not additive, so it will not equal the stack height, and the gap between them is exactly how much that non-additivity costs you here. For iteration throughput see Main Loop Rate.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -4013,7 +4013,7 @@
         "type": "prometheus",
         "uid": "altinn-studio-metrics"
       },
-      "description": "Receive workflows the rendezvous could not answer for — tagged unregistered or undecided. Both mean the engine is violating an invariant of its own rendezvous, which is why they fail the step critically rather than retryably: a retry would launder the violation. ALERT ON ANY VALUE ABOVE ZERO; this is a different pager from a step failing because the app returned an error. The `or vector(0)` keeps the panel reading a true zero rather than “No data” before the counter has ever fired.",
+      "description": "Receive workflows the rendezvous could not answer for - tagged unregistered or undecided. Both mean the engine is violating an invariant of its own rendezvous, which is why they fail the step critically rather than retryably: a retry would launder the violation. ALERT ON ANY VALUE ABOVE ZERO; this is a different pager from a step failing because the app returned an error. The `or vector(0)` keeps the panel reading a true zero rather than “No data” before the counter has ever fired.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -4079,7 +4079,7 @@
         "type": "prometheus",
         "uid": "altinn-studio-metrics"
       },
-      "description": "Mailboxes still open more than one MailboxSweepInterval past their deadline. Exactly zero is the only healthy reading — anything else means the deadline sweep is not running or not draining. A mass timeout can make it briefly non-zero while one tick drains, so alert on persistence rather than on a single sample. The count saturates at 10 000, so never read it as an exact backlog size. Every replica reports the same database-wide count, so replicas are combined with max() rather than sum().",
+      "description": "Mailboxes still open more than one MailboxSweepInterval past their deadline. Exactly zero is the only healthy reading - anything else means the deadline sweep is not running or not draining. A mass timeout can make it briefly non-zero while one tick drains, so alert on persistence rather than on a single sample. The count saturates at 10 000, so never read it as an exact backlog size. Every replica reports the same database-wide count, so replicas are combined with max() rather than sum().",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -4145,7 +4145,7 @@
         "type": "prometheus",
         "uid": "altinn-studio-metrics"
       },
-      "description": "Accepted deliveries that no receiver was ever enqueued for, counted when a mailbox closes at its deadline. Not an engine fault — the message was accepted and stored exactly as promised — but it means a saga stopped reading before the other side stopped writing, so the reply was never consumed. Non-zero deserves a look at the owning app, not a page.",
+      "description": "Accepted deliveries that no receiver was ever enqueued for, counted when a mailbox closes at its deadline. Not an engine fault - the message was accepted and stored exactly as promised - but it means a saga stopped reading before the other side stopped writing, so the reply was never consumed. Non-zero deserves a look at the owning app, not a page.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -4349,7 +4349,7 @@
         "type": "prometheus",
         "uid": "altinn-studio-metrics"
       },
-      "description": "Every delivery request the engine answered, by verdict. `accepted` appended a message; `duplicate` replayed a stored idempotency key and is a healthy forwarder retrying, not an error. The refusals — `closed`, `not_found`, `log_full`, `too_large`, `invalid` — store nothing, so their keys stay free for a corrected replay. Note that the idempotency lookup runs before the refusals, so a kept message still replays 200 after the mailbox closed.",
+      "description": "Every delivery request the engine answered, by verdict. `accepted` appended a message; `duplicate` replayed a stored idempotency key and is a healthy forwarder retrying, not an error. The refusals - `closed`, `not_found`, `log_full`, `too_large`, `invalid` - store nothing, so their keys stay free for a corrected replay. Note that the idempotency lookup runs before the refusals, so a kept message still replays 200 after the mailbox closed.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -4853,7 +4853,7 @@
         "type": "prometheus",
         "uid": "altinn-studio-metrics"
       },
-      "description": "The one thing the engine emits that answers “is mailbox batching actually happening?” — requests answered by a flush divided by flushes, per operation, over the same window. Both counters are recorded at the same point once a batch is known answered, so a faulted flush counts in neither. 1.0 means every request flushed alone, and for deliveries that is worse than the bespoke path it replaced: the break-even is a mean batch of about 1.25 (the batched delivery flush issues a fixed five statements). The ceiling is MaxBatchSize, 100 for all three buffers; a ratio pinned there means the buffer is saturated and that setting is what to tune next. altinn.workflow_engine.mailbox_buffer.depth cannot answer this question — see the Buffer Depth panel.",
+      "description": "The one thing the engine emits that answers “is mailbox batching actually happening?” - requests answered by a flush divided by flushes, per operation, over the same window. Both counters are recorded at the same point once a batch is known answered, so a faulted flush counts in neither. 1.0 means every request flushed alone, and for deliveries that is worse than the bespoke path it replaced: the break-even is a mean batch of about 1.25 (the batched delivery flush issues a fixed five statements). The ceiling is MaxBatchSize, 100 for all three buffers; a ratio pinned there means the buffer is saturated and that setting is what to tune next. altinn.workflow_engine.mailbox_buffer.depth cannot answer this question - see the Buffer Depth panel.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -4943,7 +4943,7 @@
         "type": "prometheus",
         "uid": "altinn-studio-metrics"
       },
-      "description": "Mailbox requests waiting for a batch flush, per operation. Read this as LATENCY, not capacity: the queues wait rather than refuse when full, so a sustained depth means callers waiting longer for a verdict, never requests turned away. Read only the sustained value — it is a 5s sample of a queue that fills and drains between flushes, and a storm accepting 3.86 messages per flush held it at zero throughout. A zero here is therefore no evidence the queue never filled, and this panel cannot tell you whether batching is happening. Mean Batch Size is what does.",
+      "description": "Mailbox requests waiting for a batch flush, per operation. Read this as LATENCY, not capacity: the queues wait rather than refuse when full, so a sustained depth means callers waiting longer for a verdict, never requests turned away. Read only the sustained value - it is a 5s sample of a queue that fills and drains between flushes, and a storm accepting 3.86 messages per flush held it at zero throughout. A zero here is therefore no evidence the queue never filled, and this panel cannot tell you whether batching is happening. Mean Batch Size is what does.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -5347,7 +5347,7 @@
         "type": "prometheus",
         "uid": "altinn-studio-metrics"
       },
-      "description": "Rate of in-flight workflows abandoned because the row's lease token no longer matches at write-back. Non-zero indicates heartbeat lag or aggressive maintenance reclaim — workflows self-heal via reclaim, but downstream side effects may have been duplicated. Reads 0 rather than No data while the engine reports and this has not happened.",
+      "description": "Rate of in-flight workflows abandoned because the row's lease token no longer matches at write-back. Non-zero indicates heartbeat lag or aggressive maintenance reclaim - workflows self-heal via reclaim, but downstream side effects may have been duplicated. Reads 0 rather than No data while the engine reports and this has not happened.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -5413,7 +5413,7 @@
         "type": "prometheus",
         "uid": "altinn-studio-metrics"
       },
-      "description": "Rate of fetched workflows skipped because they were already in-flight on this host — same-host DbMaintenance reclaim raced the main fetch loop. Self-heals on the next maintenance sweep. Reads 0 rather than No data while the engine reports and this has not happened.",
+      "description": "Rate of fetched workflows skipped because they were already in-flight on this host - same-host DbMaintenance reclaim raced the main fetch loop. Self-heals on the next maintenance sweep. Reads 0 rather than No data while the engine reports and this has not happened.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -5479,7 +5479,7 @@
         "type": "prometheus",
         "uid": "altinn-studio-metrics"
       },
-      "description": "Rate of fire-and-forget status updates dropped because the update-buffer channel was full. These are real losses (intermediate progress updates) — non-zero signals backpressure exceeding the buffer's capacity. Reads 0 rather than No data while the engine reports and this has not happened.",
+      "description": "Rate of fire-and-forget status updates dropped because the update-buffer channel was full. These are real losses (intermediate progress updates) - non-zero signals backpressure exceeding the buffer's capacity. Reads 0 rather than No data while the engine reports and this has not happened.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -5545,7 +5545,7 @@
         "type": "prometheus",
         "uid": "altinn-studio-metrics"
       },
-      "description": "Operator actions on workflows the engine had already placed, in the last 5 minutes. Discrete and rare, so a count over the window rather than a per-second rate. Nudged cleared a parked workflow's backoff so it runs on the next fetch cycle instead of when its timer elapses — the engine's push channel, an acceleration that is never load-bearing for correctness. Abandoned wrote off an unsuccessful terminal workflow, which stops it condemning dependents evaluated afterwards and atomically releases its enqueue idempotency key, so replaying the same fingerprint creates a fresh workflow instead of deduplicating onto the write-off.",
+      "description": "Operator actions on workflows the engine had already placed, in the last 5 minutes. Discrete and rare, so a count over the window rather than a per-second rate. Nudged cleared a parked workflow's backoff so it runs on the next fetch cycle instead of when its timer elapses - the engine's push channel, an acceleration that is never load-bearing for correctness. Abandoned wrote off an unsuccessful terminal workflow, which stops it condemning dependents evaluated afterwards and atomically releases its enqueue idempotency key, so replaying the same fingerprint creates a fresh workflow instead of deduplicating onto the write-off.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -5668,7 +5668,7 @@
         "type": "prometheus",
         "uid": "altinn-studio-metrics"
       },
-      "description": "DependencyFailed workflows re-enqueued in the last 5 minutes because their dependencies have all completed since — the engine healing itself, and the only counter on this row nobody triggered by hand. The maintenance sweep that does it runs once a minute, so this lags its cause. On its own panel rather than beside the interventions because abandonments outrun recoveries by two orders of magnitude and would flatten this to the baseline.",
+      "description": "DependencyFailed workflows re-enqueued in the last 5 minutes because their dependencies have all completed since - the engine healing itself, and the only counter on this row nobody triggered by hand. The maintenance sweep that does it runs once a minute, so this lags its cause. On its own panel rather than beside the interventions because abandonments outrun recoveries by two orders of magnitude and would flatten this to the baseline.",
       "fieldConfig": {
         "defaults": {
           "color": {

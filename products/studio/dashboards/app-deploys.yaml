@@ -1,0 +1,16 @@
+# App deploys and undeploys from Altinn Studio, end to end: Designer's request, the Azure DevOps
+# pipeline, the runtime gateway's reconcile and Flux's result. Lands in the Altinn Studio folder
+# (external-grafana-studio, defined in ../alerting/folder.yaml).
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: external-grafana-studio-app-deploys
+  namespace: grafana
+spec:
+  folderRef: external-grafana-studio
+  instanceSelector:
+    matchLabels:
+      dashboards: external-grafana
+  configMapRef:
+    name: dashboard-studio-app-deploys
+    key: app-deploys.json

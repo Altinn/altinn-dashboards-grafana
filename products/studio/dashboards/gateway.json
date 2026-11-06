@@ -1,6 +1,6 @@
 {
   "uid": "altinn-studio-gateway",
-  "title": "Altinn Studio — Gateway",
+  "title": "Altinn Studio - Gateway",
   "description": "The runtime gateway (service gateway) in every service owner's runtime cluster: the API Designer uses to deploy apps and read their metrics, Grafana's alert webhook, and the Flux webhook that reports deploy outcomes back to Designer. Requests, deploys, Azure Monitor queries and outgoing calls come from its metrics (altinn-studio-metrics), with links to matching traces; below them, for triage, lists of failed and slow requests and of deploy events from its spans through altinn-studio-traces-logsql (LogsQL). The gateway marks every trace to be kept, so the lists are complete. Filter by environment (deployment.environment.name) and service owner (altinn.service_owner, which the runtime's collector adds to everything from a service owner's cluster). Datasource UIDs are pinned, matching the other Altinn Studio dashboards. Rates use increase_pure() over $__rate_interval divided by its length rather than rate(), so that a new series' first sample counts; deploy events are counted per interval. Instance markers come from altinn.workload.start_time: blue marks the earliest retained start per environment and version over 90 days, orange marks each process start in range (off by default, switch on Process starts).",
   "tags": [
     "altinn-studio",
