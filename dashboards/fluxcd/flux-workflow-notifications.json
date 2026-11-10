@@ -1,7 +1,7 @@
 {
   "uid": "flux-workflow-notifications",
   "title": "Flux Workflow Notifications",
-  "description": "Flux workflow notifications ([RFC 0019](https://github.com/Altinn/altinn-platform/blob/main/rfcs/0019-flux-workflow-notifications.md)): whether Flux delivered deployment results to the products' GitHub repositories, and whether the platform kept their GitHub tokens fresh, next to the deployment state itself.\n\nTell the failures apart:\n* **Deployment failed**: the Kustomization is not ready on the timeline. Flux sends the product a failure event, and its workflow reports it.\n* **Delivery failed**: a row under *Delivery failures* (`NotificationDispatchFailed` on the product's Flux `Alert`). Flux kept reconciling, but GitHub never received the result.\n* **Follow-up workflow failed**: neither of the above. The product's `repository_dispatch` run in GitHub Actions shows why.\n\nSources, pinned to fixed datasource UIDs: Container Insights `KubeEvents` in the four `dis-core-<env>-aks-law` workspaces (only Warning events are collected, so a successful dispatch never shows here), Azure Resource Graph for the Flux extension, and kube-state-metrics `gotk_resource_info` in each `dis-core-<env>-products-amw`. The alert rules are in `platform/alerting/rules-flux-dispatch.yaml`.",
+  "description": "Flux workflow notifications ([RFC 0019](https://github.com/Altinn/altinn-platform/blob/main/rfcs/0019-flux-workflow-notifications.md)): whether Flux delivered deployment results to the products' GitHub repositories, and whether the platform kept their GitHub tokens fresh, next to the deployment state itself.\n\nTell the failures apart:\n* **Deployment failed**: the Kustomization is not ready on the timeline. Flux sends the product a failure event, and its workflow reports it.\n* **Delivery failed**: a row under *Delivery failures* (`NotificationDispatchFailed` on the product's Flux `Alert`). Flux kept reconciling, but GitHub never received the result.\n* **Follow-up workflow failed**: neither of the above. The product's `repository_dispatch` run in GitHub Actions shows why.\n\nSources, pinned to fixed datasource UIDs: Container Insights `KubeEvents` in the four `dis-core-<env>-aks-law` workspaces (only Warning events are collected, so a successful dispatch never shows here), Azure Resource Graph for the Flux extension, and kube-state-metrics `gotk_resource_info` in each `dis-core-<env>-products-amw`.",
   "tags": [
     "flux",
     "dis-core",
@@ -303,7 +303,7 @@
       "id": 3,
       "type": "table",
       "title": "Flux extension version — now",
-      "description": "The AKS Flux extension's version per cluster, live from Resource Graph and not affected by the time range. The extension upgrades itself, and the shared result action recognises success by the event's message text, so each upgrade needs the RFC 0019 checks again. The `Flux extension version changed AT23` alert fires until its rule records the new version.",
+      "description": "The AKS Flux extension's version per cluster, live from Resource Graph and not affected by the time range. The extension upgrades itself, and the shared result action recognises success by the event's message text, so each upgrade needs the RFC 0019 checks again.",
       "gridPos": {
         "h": 5,
         "w": 8,
