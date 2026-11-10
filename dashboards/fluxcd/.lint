@@ -1,0 +1,16 @@
+exclusions:
+  panel-datasource-rule:
+    reason: >-
+      Datasource UIDs are pinned on purpose. Flux Workflow Notifications mixes
+      Azure Monitor (Log Analytics for KubeEvents and Resource Graph for the Flux
+      extension, both via azure-monitor-oob) with the four
+      dis-core-<env>-products-amw Prometheus workspaces, which a single template
+      variable cannot express. A ${datasource} variable would also save the value
+      "default" and silently bind the wrong Prometheus. See CLAUDE.md.
+    entries:
+      - dashboard: "Flux Workflow Notifications"
+  template-datasource-rule:
+    reason: >-
+      No datasource template variable by design; see panel-datasource-rule.
+    entries:
+      - dashboard: "Flux Workflow Notifications"

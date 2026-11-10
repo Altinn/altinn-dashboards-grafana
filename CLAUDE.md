@@ -52,6 +52,7 @@ products/<product>/
     └── rules-*.yaml              # GrafanaAlertRuleGroup(s)
 products/<product>/datasources/   # optional GrafanaDatasource + ExternalSecret overlay
 platform/datasources/             # optional shared datasource overlay
+platform/alerting/                # platform-team contact point + rules (folders from dashboards/)
 platform/secrets/                 # shared Key Vault, datasource SecretStore + Slack secret wiring
 examples/datasources/             # validated templates, excluded from the root aggregate
 public/                           # publicly shared dashboards (grafana-public instance)

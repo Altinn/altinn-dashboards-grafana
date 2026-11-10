@@ -1,0 +1,258 @@
+# RFC 0019 (Flux results to GitHub repository_dispatch), pilot in AT23. Hand-authored:
+# keep each rule's uid on edit, or Grafana creates a duplicate. Add a rule per environment
+# as products subscribe there.
+# Container Insights collects only Warning events, so these rules see failures, never
+# successful dispatches. notification-controller has no metric for failed deliveries.
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaAlertRuleGroup
+metadata:
+  name: platform-flux-dispatch
+  namespace: grafana
+spec:
+  name: Flux dispatch
+  folderRef: external-grafana-fluxcd
+  instanceSelector:
+    matchLabels:
+      dashboards: external-grafana
+  interval: 5m
+  rules:
+    - uid: flux-dispatch-delivery-at23
+      title: Flux dispatch failed AT23
+      condition: C
+      for: 0s
+      noDataState: OK
+      execErrState: Error
+      labels:
+        AlertType: FluxDispatch
+        Env: AT23
+        Product: Platform
+        Severity: Warning
+      annotations:
+        summary: 'Flux could not send a deployment result from {{ $labels.Namespace }} to GitHub.'
+        description: >-
+          Flux Alert {{ $labels.Alert }}: {{ $labels.Details }}
+          Flux keeps reconciling, but the product's workflow did not get this result.
+          Check the token Secret, the App installation and GitHub's status.
+        __dashboardUid__: flux-workflow-notifications
+        __panelId__: "4"
+      notificationSettings:
+        receiver: Platform Slack
+      data:
+        - refId: A
+          queryType: Azure Log Analytics
+          # 15 minutes covers the 5-minute collection interval plus ingestion delay.
+          relativeTimeRange:
+            from: 900
+            to: 0
+          datasourceUid: azure-monitor-oob
+          model:
+            azureLogAnalytics:
+              dashboardTime: true
+              # One alert per Flux Alert and message. Container Insights writes a row per
+              # event update, so count distinct events.
+              query: |-
+                KubeEvents
+                | where Reason == "NotificationDispatchFailed"
+                | extend EventKey = strcat(Namespace, "|", Name, "|", tostring(FirstSeen))
+                | summarize Events = dcount(EventKey) by Namespace, Alert = Name, Details = substring(Message, 0, 300)
+                | project Namespace, Alert, Details, Events
+              resources:
+                - /subscriptions/3be00243-992b-41a2-8bb5-34ed04f7d653/resourceGroups/dis-core-at23-monitor-rg/providers/Microsoft.OperationalInsights/workspaces/dis-core-at23-aks-law
+              resultFormat: logs
+              timeColumn: TimeGenerated
+              workspace: ''
+            datasource:
+              type: grafana-azure-monitor-datasource
+              uid: azure-monitor-oob
+            intervalMs: 1000
+            maxDataPoints: 43200
+            queryType: Azure Log Analytics
+            refId: A
+        - refId: C
+          relativeTimeRange:
+            from: 900
+            to: 0
+          datasourceUid: __expr__
+          model:
+            conditions:
+              - evaluator:
+                  params: [0]
+                  type: gt
+                operator:
+                  type: and
+                query:
+                  params: [C]
+                reducer:
+                  params: []
+                  type: last
+                type: query
+            datasource:
+              type: __expr__
+              uid: __expr__
+            expression: A
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: C
+            type: threshold
+
+    - uid: flux-dispatch-token-at23
+      title: Flux dispatch token not renewed AT23
+      condition: C
+      for: 0s
+      noDataState: OK
+      execErrState: Error
+      labels:
+        AlertType: FluxDispatch
+        Env: AT23
+        Product: Platform
+        Severity: Warning
+      annotations:
+        summary: '{{ $labels.Kind }} {{ $labels.Name }} failed in platform-system ({{ $labels.Reason }}).'
+        description: >-
+          {{ $labels.Details }}
+          The App key, token generation and the copy to the product all use the
+          flux-dispatch-* objects in platform-system. A token lasts one hour and is renewed
+          every 30 minutes, so the product's current token expires within an hour of its
+          last renewal.
+        __dashboardUid__: flux-workflow-notifications
+        __panelId__: "5"
+      notificationSettings:
+        receiver: Platform Slack
+      data:
+        - refId: A
+          queryType: Azure Log Analytics
+          relativeTimeRange:
+            from: 900
+            to: 0
+          datasourceUid: azure-monitor-oob
+          model:
+            azureLogAnalytics:
+              dashboardTime: true
+              # ExternalSecret UpdateFailed, PushSecret Errored and SecretStore errors.
+              query: |-
+                KubeEvents
+                | where Namespace == "platform-system" and Name startswith "flux-dispatch-"
+                | extend EventKey = strcat(ObjectKind, "|", Name, "|", Reason, "|", tostring(FirstSeen))
+                | summarize Events = dcount(EventKey) by Kind = ObjectKind, Name, Reason, Details = substring(Message, 0, 300)
+                | project Kind, Name, Reason, Details, Events
+              resources:
+                - /subscriptions/3be00243-992b-41a2-8bb5-34ed04f7d653/resourceGroups/dis-core-at23-monitor-rg/providers/Microsoft.OperationalInsights/workspaces/dis-core-at23-aks-law
+              resultFormat: logs
+              timeColumn: TimeGenerated
+              workspace: ''
+            datasource:
+              type: grafana-azure-monitor-datasource
+              uid: azure-monitor-oob
+            intervalMs: 1000
+            maxDataPoints: 43200
+            queryType: Azure Log Analytics
+            refId: A
+        - refId: C
+          relativeTimeRange:
+            from: 900
+            to: 0
+          datasourceUid: __expr__
+          model:
+            conditions:
+              - evaluator:
+                  params: [0]
+                  type: gt
+                operator:
+                  type: and
+                query:
+                  params: [C]
+                reducer:
+                  params: []
+                  type: last
+                type: query
+            datasource:
+              type: __expr__
+              uid: __expr__
+            expression: A
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: C
+            type: threshold
+
+    # The Flux extension upgrades itself, and the shared action classifies success by
+    # message text. This fires while AT23 runs another version than the one the RFC 0019
+    # checks last passed on. After re-running them, change 1.26.4 below.
+    - uid: flux-extension-version-at23
+      title: Flux extension version changed AT23
+      condition: C
+      for: 0s
+      # No row means the query no longer finds the extension, so report it.
+      noDataState: NoData
+      execErrState: Error
+      labels:
+        AlertType: FluxUpgrade
+        Env: AT23
+        Product: Platform
+        Severity: Warning
+      annotations:
+        summary: 'The Flux extension on {{ $labels.Cluster }} is now {{ $labels.Version }}.'
+        description: >-
+          The RFC 0019 checks last passed on 1.26.4. Re-run the event isolation checks
+          (Altinn/altinn-platform#4376) and the shared action's fixture tests (#4377) on this
+          version, then set it in platform/alerting/rules-flux-dispatch.yaml.
+        resolution: The validated version matches the cluster again.
+        __dashboardUid__: flux-workflow-notifications
+        __panelId__: "3"
+      notificationSettings:
+        receiver: Platform Slack
+        # A state alert: one reminder a day until the rule records the new version.
+        repeat_interval: 24h
+      data:
+        - refId: A
+          queryType: Azure Resource Graph
+          relativeTimeRange:
+            from: 600
+            to: 0
+          datasourceUid: azure-monitor-oob
+          model:
+            azureResourceGraph:
+              query: |-
+                kubernetesconfigurationresources
+                | where type =~ "microsoft.kubernetesconfiguration/extensions"
+                | where properties.ExtensionType =~ "microsoft.flux"
+                | extend Cluster = tostring(split(tolower(id), "/")[8])
+                | where Cluster == "dis-core-at23-aks"
+                | extend Version = coalesce(tostring(properties.Version), tostring(properties.CurrentVersion))
+                | where isnotempty(Version)
+                | project Cluster, Version, Changed = iff(Version == "1.26.4", 0, 1)
+              resultFormat: table
+            subscriptions:
+              - 3be00243-992b-41a2-8bb5-34ed04f7d653
+            datasource:
+              type: grafana-azure-monitor-datasource
+              uid: azure-monitor-oob
+            intervalMs: 1000
+            maxDataPoints: 43200
+            queryType: Azure Resource Graph
+            refId: A
+        - refId: C
+          relativeTimeRange:
+            from: 600
+            to: 0
+          datasourceUid: __expr__
+          model:
+            conditions:
+              - evaluator:
+                  params: [0]
+                  type: gt
+                operator:
+                  type: and
+                query:
+                  params: [C]
+                reducer:
+                  params: []
+                  type: last
+                type: query
+            datasource:
+              type: __expr__
+              uid: __expr__
+            expression: A
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: C
+            type: threshold

@@ -13,7 +13,7 @@ dashboards/                     # platform dashboards (self-contained configMapR
 ├── altinn-uptime/              #   Altinn Uptime dashboard JSON (SLA per service owner and per product, status, endpoint statistics)
 ├── dis-core/                   #   DIS Core dashboard JSON (Traefik, Linkerd Deployment, Product Versions, Public IPs, + .lint exclusions)
 ├── dis-edge/                   #   DIS Edge Envoy dashboard JSON (+ .lint exclusions)
-├── fluxcd/                     #   FluxCD dashboard JSON
+├── fluxcd/                     #   FluxCD dashboard JSON (Flux Workflow Notifications, + .lint exclusions)
 └── kubernetes/                 #   Kubernetes events dashboard JSON (+ .lint exclusions)
 products/                       # product dashboards, alerts and optional datasources/ overlays
 ├── dialogporten/
@@ -32,6 +32,9 @@ products/                       # product dashboards, alerts and optional dataso
     │   └── all-environments.json
     └── alerting/
 platform/                       # platform-team infrastructure CRs
+├── alerting/                   #   platform contact point + rules (see "Platform alerts")
+│   ├── contact-points.yaml        # GrafanaContactPoint "Platform Slack"
+│   └── rules-flux-dispatch.yaml   # RFC 0019 Flux dispatch rules (AT23)
 └── secrets/                    #   Slack-webhook Key Vault wiring
     ├── application-identity.yaml  # ApplicationIdentity (DIS identity operator)
     ├── vault.yaml                 # Vault (DIS vault operator) + managed SecretStore
@@ -75,8 +78,26 @@ its product's contact point directly — full per-product ownership, no shared s
 Dialogporten rules route to `Dialogporten Slack Exceptions`. **Option B (optional):** a central
 `GrafanaNotificationPolicy` (root) plus per-product `GrafanaNotificationPolicyRoute`s for
 centralized grouping/inheritance. Because every rule is already labelled `Product=<name>`, it's a
-drop-in later. There can be only one root policy per instance, so confirm before adding
+drop-in later. There can be only one root policy per instance, so confirm before adding one to
 `platform/alerting/`.
+
+## Platform alerts
+
+`platform/alerting/` holds the platform team's own rules. They route to the `Platform Slack`
+contact point (key `platform`, vault secret `slack-webhook-platform`) and use the platform
+folders from `dashboards/folders.yaml`.
+
+`rules-flux-dispatch.yaml` covers
+[RFC 0019](https://github.com/Altinn/altinn-platform/blob/main/rfcs/0019-flux-workflow-notifications.md)
+in AT23, next to the *Flux Workflow Notifications* dashboard:
+
+- **Flux dispatch failed**: `NotificationDispatchFailed` events on product Flux Alerts.
+- **Flux dispatch token not renewed**: Warning events on the `flux-dispatch-*` objects in
+  `platform-system` (App key, token generation, copy to the product).
+- **Flux extension version changed**: the AKS Flux extension runs another version than the one
+  the RFC 0019 checks last passed on. Re-run those checks, then change the version in the rule.
+
+Add a rule per environment when a product subscribes there.
 
 ## Slack webhook secrets
 

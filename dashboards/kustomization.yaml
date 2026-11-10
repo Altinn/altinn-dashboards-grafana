@@ -43,6 +43,9 @@ configMapGenerator:
   - name: dashboard-fluxcd-gitops-flux-application-deployments-dashboard
     files:
       - fluxcd/gitops-flux-application-deployments-dashboard.json
+  - name: dashboard-fluxcd-flux-workflow-notifications
+    files:
+      - fluxcd/flux-workflow-notifications.json
   - name: dashboard-kubernetes-events
     files:
       - kubernetes/events.json

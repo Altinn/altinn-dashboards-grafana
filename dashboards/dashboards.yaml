@@ -201,6 +201,20 @@ spec:
 apiVersion: grafana.integreatly.org/v1beta1
 kind: GrafanaDashboard
 metadata:
+  name: external-grafana-fluxcd-flux-workflow-notifications
+  namespace: grafana
+spec:
+  folderRef: external-grafana-fluxcd
+  instanceSelector:
+    matchLabels:
+      dashboards: "external-grafana"
+  configMapRef:
+    name: dashboard-fluxcd-flux-workflow-notifications
+    key: flux-workflow-notifications.json
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
   name: external-grafana-dis-core-caches
   namespace: grafana
 spec:
