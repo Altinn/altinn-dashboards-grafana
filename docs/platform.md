@@ -13,7 +13,7 @@ dashboards/                     # platform dashboards (self-contained configMapR
 ├── altinn-uptime/              #   Altinn Uptime dashboard JSON (SLA per service owner and per product, status, endpoint statistics)
 ├── dis-core/                   #   DIS Core dashboard JSON (Traefik, Linkerd Deployment, Product Versions, Public IPs, + .lint exclusions)
 ├── dis-edge/                   #   DIS Edge Envoy dashboard JSON (+ .lint exclusions)
-├── fluxcd/                     #   FluxCD dashboard JSON
+├── fluxcd/                     #   FluxCD dashboard JSON (Flux Workflow Notifications, + .lint exclusions)
 └── kubernetes/                 #   Kubernetes events dashboard JSON (+ .lint exclusions)
 products/                       # product dashboards, alerts and optional datasources/ overlays
 ├── dialogporten/

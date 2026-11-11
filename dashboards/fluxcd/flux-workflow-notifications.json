@@ -1,0 +1,850 @@
+{
+  "uid": "flux-workflow-notifications",
+  "title": "Flux Workflow Notifications",
+  "description": "Flux workflow notifications ([RFC 0019](https://github.com/Altinn/altinn-platform/blob/main/rfcs/0019-flux-workflow-notifications.md)): whether Flux delivered deployment results to the products' GitHub repositories, and whether the platform kept their GitHub tokens fresh, next to the deployment state itself.\n\nTell the failures apart:\n* **Deployment failed**: the Kustomization is not ready on the timeline. Flux sends the product a failure event, and its workflow reports it.\n* **Delivery failed**: a row under *Delivery failures* (`NotificationDispatchFailed` on the product's Flux `Alert`). Flux kept reconciling, but GitHub never received the result.\n* **Follow-up workflow failed**: neither of the above. The product's `repository_dispatch` run in GitHub Actions shows why.\n\nSources, pinned to fixed datasource UIDs: Container Insights `KubeEvents` in the four `dis-core-<env>-aks-law` workspaces (only Warning events are collected, so a successful dispatch never shows here), Azure Resource Graph for the Flux extension, and kube-state-metrics `gotk_resource_info` in each `dis-core-<env>-products-amw`.",
+  "tags": [
+    "flux",
+    "dis-core",
+    "rfc-0019"
+  ],
+  "editable": false,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "preload": false,
+  "refresh": "5m",
+  "schemaVersion": 42,
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "browser",
+  "weekStart": "",
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "links": [
+    {
+      "asDropdown": false,
+      "icon": "dashboard",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "type": "link",
+      "title": "Kubernetes Events",
+      "tooltip": "All Warning events and Flux state, with the same environment and product filters",
+      "url": "/d/kubernetes-events"
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "type": "custom",
+        "name": "env",
+        "label": "Environment",
+        "description": "dis-core environment; derived from the cluster name in every query.",
+        "query": "AT22,AT23,TT02,PROD",
+        "multi": true,
+        "includeAll": true,
+        "allValue": "",
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "options": [
+          {
+            "selected": true,
+            "text": "All",
+            "value": "$__all"
+          },
+          {
+            "selected": false,
+            "text": "AT22",
+            "value": "AT22"
+          },
+          {
+            "selected": false,
+            "text": "AT23",
+            "value": "AT23"
+          },
+          {
+            "selected": false,
+            "text": "TT02",
+            "value": "TT02"
+          },
+          {
+            "selected": false,
+            "text": "PROD",
+            "value": "PROD"
+          }
+        ],
+        "hide": 0,
+        "skipUrlSync": false
+      },
+      {
+        "type": "query",
+        "name": "product",
+        "label": "Product",
+        "description": "Every `product-<name>` namespace that had pods in the last 7 days or a Warning event in the last 30 days, plus `platform` for all other namespaces. The lookback is fixed in the query (time range: Query), so the list does not shrink when the dashboard range is narrowed.",
+        "datasource": {
+          "type": "grafana-azure-monitor-datasource",
+          "uid": "azure-monitor-oob"
+        },
+        "definition": "union\n  (KubePodInventory | where TimeGenerated > ago(7d) and isnotempty(Namespace) | distinct Namespace),\n  (KubeEvents | where TimeGenerated > ago(30d) and isnotempty(Namespace) | distinct Namespace)\n| extend Product = iff(Namespace startswith \"product-\", substring(Namespace, 8), \"platform\")\n| distinct Product\n| order by Product asc",
+        "query": {
+          "queryType": "Azure Log Analytics",
+          "refId": "A",
+          "azureLogAnalytics": {
+            "dashboardTime": false,
+            "query": "union\n  (KubePodInventory | where TimeGenerated > ago(7d) and isnotempty(Namespace) | distinct Namespace),\n  (KubeEvents | where TimeGenerated > ago(30d) and isnotempty(Namespace) | distinct Namespace)\n| extend Product = iff(Namespace startswith \"product-\", substring(Namespace, 8), \"platform\")\n| distinct Product\n| order by Product asc",
+            "resources": [
+              "/subscriptions/3be00243-992b-41a2-8bb5-34ed04f7d653/resourceGroups/dis-core-at22-monitor-rg/providers/Microsoft.OperationalInsights/workspaces/dis-core-at22-aks-law",
+              "/subscriptions/3be00243-992b-41a2-8bb5-34ed04f7d653/resourceGroups/dis-core-at23-monitor-rg/providers/Microsoft.OperationalInsights/workspaces/dis-core-at23-aks-law",
+              "/subscriptions/b946eabe-2509-4652-abfc-6aa3b991fe25/resourceGroups/dis-core-tt02-monitor-rg/providers/Microsoft.OperationalInsights/workspaces/dis-core-tt02-aks-law",
+              "/subscriptions/f272e0dd-c13f-413a-a5d7-a6a7cf4a8622/resourceGroups/dis-core-prod-monitor-rg/providers/Microsoft.OperationalInsights/workspaces/dis-core-prod-aks-law"
+            ],
+            "resultFormat": "table"
+          }
+        },
+        "multi": true,
+        "includeAll": true,
+        "allValue": "",
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "options": [],
+        "refresh": 2,
+        "regex": "",
+        "sort": 1,
+        "hide": 0,
+        "skipUrlSync": false
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Delivery failures — selected range",
+      "description": "Distinct `NotificationDispatchFailed` events per environment: notification-controller could not send a Flux event to the product's GitHub repository (`repository_dispatch`). Typical causes are a missing or expired token Secret, a repository that is not in the App installation, or GitHub being unavailable. Green means no dispatch failed in the range; a successful dispatch leaves no event.",
+      "gridPos": {
+        "h": 5,
+        "w": 8,
+        "x": 0,
+        "y": 0
+      },
+      "datasource": {
+        "type": "grafana-azure-monitor-datasource",
+        "uid": "azure-monitor-oob"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-azure-monitor-datasource",
+            "uid": "azure-monitor-oob"
+          },
+          "queryType": "Azure Log Analytics",
+          "azureLogAnalytics": {
+            "dashboardTime": true,
+            "timeColumn": "TimeGenerated",
+            "query": "let base = KubeEvents\n| where Reason == \"NotificationDispatchFailed\"\n| extend Env = toupper(extract(\"dis-core-(\\\\w+)-aks\", 1, ClusterName))\n| extend Product = iff(Namespace startswith \"product-\", substring(Namespace, 8), \"platform\")\n| where Env in ($env) and Product in ($product)\n| extend EventKey = strcat(ClusterName, \"|\", Namespace, \"|\", ObjectKind, \"|\", Name, \"|\", Reason, \"|\", tostring(FirstSeen));\nlet envs = datatable(Env: string) [\"AT22\", \"AT23\", \"TT02\", \"PROD\"]\n| where Env in ($env);\nenvs\n| join kind=leftouter (\n    base\n    | summarize Events = dcount(EventKey) by Env\n  ) on Env\n| project Env, Events = coalesce(Events, 0)\n| extend EnvOrder = case(Env == \"AT22\", 1, Env == \"AT23\", 2, Env == \"TT02\", 3, Env == \"PROD\", 4, 9)\n| order by EnvOrder asc\n| project Env, Events",
+            "resources": [
+              "/subscriptions/3be00243-992b-41a2-8bb5-34ed04f7d653/resourceGroups/dis-core-at22-monitor-rg/providers/Microsoft.OperationalInsights/workspaces/dis-core-at22-aks-law",
+              "/subscriptions/3be00243-992b-41a2-8bb5-34ed04f7d653/resourceGroups/dis-core-at23-monitor-rg/providers/Microsoft.OperationalInsights/workspaces/dis-core-at23-aks-law",
+              "/subscriptions/b946eabe-2509-4652-abfc-6aa3b991fe25/resourceGroups/dis-core-tt02-monitor-rg/providers/Microsoft.OperationalInsights/workspaces/dis-core-tt02-aks-law",
+              "/subscriptions/f272e0dd-c13f-413a-a5d7-a6a7cf4a8622/resourceGroups/dis-core-prod-monitor-rg/providers/Microsoft.OperationalInsights/workspaces/dis-core-prod-aks-law"
+            ],
+            "resultFormat": "table"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "horizontal",
+        "textMode": "value_and_name",
+        "wideLayout": true,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": true
+        }
+      }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Token failures — selected range",
+      "description": "Distinct Warning events on the `flux-dispatch-*` objects in `platform-system` per environment: the App key ExternalSecret, the token ExternalSecrets (renewed every 30 minutes), the PushSecrets (copied to the product every minute) and their SecretStores. These are platform objects, so the *Product* filter does not apply. A token lasts one hour, so the product's current token expires within an hour of its last renewal.",
+      "gridPos": {
+        "h": 5,
+        "w": 8,
+        "x": 8,
+        "y": 0
+      },
+      "datasource": {
+        "type": "grafana-azure-monitor-datasource",
+        "uid": "azure-monitor-oob"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-azure-monitor-datasource",
+            "uid": "azure-monitor-oob"
+          },
+          "queryType": "Azure Log Analytics",
+          "azureLogAnalytics": {
+            "dashboardTime": true,
+            "timeColumn": "TimeGenerated",
+            "query": "let base = KubeEvents\n| where Namespace == \"platform-system\" and Name startswith \"flux-dispatch-\"\n| extend Env = toupper(extract(\"dis-core-(\\\\w+)-aks\", 1, ClusterName))\n| where Env in ($env)\n| extend EventKey = strcat(ClusterName, \"|\", Namespace, \"|\", ObjectKind, \"|\", Name, \"|\", Reason, \"|\", tostring(FirstSeen));\nlet envs = datatable(Env: string) [\"AT22\", \"AT23\", \"TT02\", \"PROD\"]\n| where Env in ($env);\nenvs\n| join kind=leftouter (\n    base\n    | summarize Events = dcount(EventKey) by Env\n  ) on Env\n| project Env, Events = coalesce(Events, 0)\n| extend EnvOrder = case(Env == \"AT22\", 1, Env == \"AT23\", 2, Env == \"TT02\", 3, Env == \"PROD\", 4, 9)\n| order by EnvOrder asc\n| project Env, Events",
+            "resources": [
+              "/subscriptions/3be00243-992b-41a2-8bb5-34ed04f7d653/resourceGroups/dis-core-at22-monitor-rg/providers/Microsoft.OperationalInsights/workspaces/dis-core-at22-aks-law",
+              "/subscriptions/3be00243-992b-41a2-8bb5-34ed04f7d653/resourceGroups/dis-core-at23-monitor-rg/providers/Microsoft.OperationalInsights/workspaces/dis-core-at23-aks-law",
+              "/subscriptions/b946eabe-2509-4652-abfc-6aa3b991fe25/resourceGroups/dis-core-tt02-monitor-rg/providers/Microsoft.OperationalInsights/workspaces/dis-core-tt02-aks-law",
+              "/subscriptions/f272e0dd-c13f-413a-a5d7-a6a7cf4a8622/resourceGroups/dis-core-prod-monitor-rg/providers/Microsoft.OperationalInsights/workspaces/dis-core-prod-aks-law"
+            ],
+            "resultFormat": "table"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "horizontal",
+        "textMode": "value_and_name",
+        "wideLayout": true,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": true
+        }
+      }
+    },
+    {
+      "id": 3,
+      "type": "table",
+      "title": "Flux extension version — now",
+      "description": "The AKS Flux extension's version per cluster, live from Resource Graph and not affected by the time range. The extension upgrades itself, and the shared result action recognises success by the event's message text, so each upgrade needs the RFC 0019 checks again.",
+      "gridPos": {
+        "h": 5,
+        "w": 8,
+        "x": 16,
+        "y": 0
+      },
+      "datasource": {
+        "type": "grafana-azure-monitor-datasource",
+        "uid": "azure-monitor-oob"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-azure-monitor-datasource",
+            "uid": "azure-monitor-oob"
+          },
+          "queryType": "Azure Resource Graph",
+          "subscriptions": [
+            "3be00243-992b-41a2-8bb5-34ed04f7d653",
+            "b946eabe-2509-4652-abfc-6aa3b991fe25",
+            "f272e0dd-c13f-413a-a5d7-a6a7cf4a8622"
+          ],
+          "azureResourceGraph": {
+            "query": "kubernetesconfigurationresources\n| where type =~ \"microsoft.kubernetesconfiguration/extensions\"\n| where properties.ExtensionType =~ \"microsoft.flux\"\n| extend Cluster = tostring(split(tolower(id), \"/\")[8])\n| where Cluster startswith \"dis-core-\"\n| extend Env = toupper(extract(\"dis-core-(\\\\w+)-aks\", 1, Cluster))\n| where Env in ($env)\n| extend Version = coalesce(tostring(properties.Version), tostring(properties.CurrentVersion))\n| extend EnvOrder = case(Env == \"AT22\", 1, Env == \"AT23\", 2, Env == \"TT02\", 3, Env == \"PROD\", 4, 9)\n| order by EnvOrder asc\n| project Env, Version, State = tostring(properties.ProvisioningState)",
+            "resultFormat": "table"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true,
+            "inspect": true
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Env"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 70
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "cellHeight": "sm",
+        "showHeader": true,
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "fields": "",
+          "countRows": false
+        },
+        "sortBy": []
+      }
+    },
+    {
+      "id": 4,
+      "type": "table",
+      "title": "Delivery failures",
+      "description": "One row per dispatch failure, newest first, with notification-controller's message (it masks the token). `Alert` is the product's Flux `Alert`, and the message names the Flux object whose result was lost. `Count` is how often the same event recurred. Flux does not retry a failed dispatch, so the product's workflow never ran for that result.",
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 5
+      },
+      "datasource": {
+        "type": "grafana-azure-monitor-datasource",
+        "uid": "azure-monitor-oob"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-azure-monitor-datasource",
+            "uid": "azure-monitor-oob"
+          },
+          "queryType": "Azure Log Analytics",
+          "azureLogAnalytics": {
+            "dashboardTime": true,
+            "timeColumn": "TimeGenerated",
+            "query": "KubeEvents\n| where Reason == \"NotificationDispatchFailed\"\n| extend Env = toupper(extract(\"dis-core-(\\\\w+)-aks\", 1, ClusterName))\n| extend Product = iff(Namespace startswith \"product-\", substring(Namespace, 8), \"platform\")\n| where Env in ($env) and Product in ($product)\n| summarize arg_max(TimeGenerated, Message, Count) by Env, Product, Namespace, Name, FirstSeen\n| project TimeGenerated, Env, Product, Alert = Name, Count = toint(Count), Message\n| order by TimeGenerated desc\n| take 300",
+            "resources": [
+              "/subscriptions/3be00243-992b-41a2-8bb5-34ed04f7d653/resourceGroups/dis-core-at22-monitor-rg/providers/Microsoft.OperationalInsights/workspaces/dis-core-at22-aks-law",
+              "/subscriptions/3be00243-992b-41a2-8bb5-34ed04f7d653/resourceGroups/dis-core-at23-monitor-rg/providers/Microsoft.OperationalInsights/workspaces/dis-core-at23-aks-law",
+              "/subscriptions/b946eabe-2509-4652-abfc-6aa3b991fe25/resourceGroups/dis-core-tt02-monitor-rg/providers/Microsoft.OperationalInsights/workspaces/dis-core-tt02-aks-law",
+              "/subscriptions/f272e0dd-c13f-413a-a5d7-a6a7cf4a8622/resourceGroups/dis-core-prod-monitor-rg/providers/Microsoft.OperationalInsights/workspaces/dis-core-prod-aks-law"
+            ],
+            "resultFormat": "table"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true,
+            "inspect": true
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "TimeGenerated"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 170
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Env"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 70
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Product"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 140
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Alert"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 220
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Count"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 70
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Message"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "auto",
+                  "wrapText": true
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "cellHeight": "sm",
+        "showHeader": true,
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "fields": "",
+          "countRows": false
+        },
+        "sortBy": []
+      }
+    },
+    {
+      "id": 5,
+      "type": "table",
+      "title": "Token generation and distribution failures",
+      "description": "One row per Warning event on a `flux-dispatch-*` object in `platform-system`, newest first. `UpdateFailed` on an ExternalSecret means the App key or a token could not be read or generated; `Errored` on a PushSecret means the token could not be copied to the product namespace. In both cases the product keeps its last token until it expires.",
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 13
+      },
+      "datasource": {
+        "type": "grafana-azure-monitor-datasource",
+        "uid": "azure-monitor-oob"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-azure-monitor-datasource",
+            "uid": "azure-monitor-oob"
+          },
+          "queryType": "Azure Log Analytics",
+          "azureLogAnalytics": {
+            "dashboardTime": true,
+            "timeColumn": "TimeGenerated",
+            "query": "KubeEvents\n| where Namespace == \"platform-system\" and Name startswith \"flux-dispatch-\"\n| extend Env = toupper(extract(\"dis-core-(\\\\w+)-aks\", 1, ClusterName))\n| where Env in ($env)\n| summarize arg_max(TimeGenerated, Message, Count) by Env, ObjectKind, Name, Reason, FirstSeen\n| project TimeGenerated, Env, Kind = ObjectKind, Name, Reason, Count = toint(Count), Message\n| order by TimeGenerated desc\n| take 300",
+            "resources": [
+              "/subscriptions/3be00243-992b-41a2-8bb5-34ed04f7d653/resourceGroups/dis-core-at22-monitor-rg/providers/Microsoft.OperationalInsights/workspaces/dis-core-at22-aks-law",
+              "/subscriptions/3be00243-992b-41a2-8bb5-34ed04f7d653/resourceGroups/dis-core-at23-monitor-rg/providers/Microsoft.OperationalInsights/workspaces/dis-core-at23-aks-law",
+              "/subscriptions/b946eabe-2509-4652-abfc-6aa3b991fe25/resourceGroups/dis-core-tt02-monitor-rg/providers/Microsoft.OperationalInsights/workspaces/dis-core-tt02-aks-law",
+              "/subscriptions/f272e0dd-c13f-413a-a5d7-a6a7cf4a8622/resourceGroups/dis-core-prod-monitor-rg/providers/Microsoft.OperationalInsights/workspaces/dis-core-prod-aks-law"
+            ],
+            "resultFormat": "table"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true,
+            "inspect": true
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "TimeGenerated"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 170
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Env"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 70
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Kind"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 120
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Name"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 260
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Reason"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 140
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Count"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 70
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Message"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "auto",
+                  "wrapText": true
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "cellHeight": "sm",
+        "showHeader": true,
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "fields": "",
+          "countRows": false
+        },
+        "sortBy": []
+      }
+    },
+    {
+      "id": 6,
+      "type": "state-timeline",
+      "title": "Product Flux Kustomizations — ready state over time",
+      "description": "The deployment result itself: ready / reconciling / not-ready bands for every Flux `Kustomization` in a `product-*` namespace (kube-state-metrics `gotk_resource_info` in each environment's `dis-core-<env>-products-amw`). A red block is a failed deployment, which Flux reports to the product as a failure event, independent of GitHub delivery. A gap means kube-state-metrics stopped reporting the object.",
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 21
+      },
+      "datasource": {
+        "type": "datasource",
+        "uid": "-- Mixed --"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "dis-core-at22-products-amw"
+          },
+          "editorMode": "code",
+          "expr": "(max by (cluster, exported_namespace, name) (gotk_resource_info{customresource_kind=\"kustomization\", cluster=~\"(?i)^dis-core-${env:regex}-aks$\", exported_namespace=~\"^product-${product:regex}$\", ready=\"false\"}) * 2)\nor (max by (cluster, exported_namespace, name) (gotk_resource_info{customresource_kind=\"kustomization\", cluster=~\"(?i)^dis-core-${env:regex}-aks$\", exported_namespace=~\"^product-${product:regex}$\", ready=\"unknown\"}) * 1)\nor (max by (cluster, exported_namespace, name) (gotk_resource_info{customresource_kind=\"kustomization\", cluster=~\"(?i)^dis-core-${env:regex}-aks$\", exported_namespace=~\"^product-${product:regex}$\", ready=\"true\"}) * 0)",
+          "instant": false,
+          "range": true,
+          "legendFormat": "AT22 · {{exported_namespace}}/{{name}}"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "dis-core-at23-products-amw"
+          },
+          "editorMode": "code",
+          "expr": "(max by (cluster, exported_namespace, name) (gotk_resource_info{customresource_kind=\"kustomization\", cluster=~\"(?i)^dis-core-${env:regex}-aks$\", exported_namespace=~\"^product-${product:regex}$\", ready=\"false\"}) * 2)\nor (max by (cluster, exported_namespace, name) (gotk_resource_info{customresource_kind=\"kustomization\", cluster=~\"(?i)^dis-core-${env:regex}-aks$\", exported_namespace=~\"^product-${product:regex}$\", ready=\"unknown\"}) * 1)\nor (max by (cluster, exported_namespace, name) (gotk_resource_info{customresource_kind=\"kustomization\", cluster=~\"(?i)^dis-core-${env:regex}-aks$\", exported_namespace=~\"^product-${product:regex}$\", ready=\"true\"}) * 0)",
+          "instant": false,
+          "range": true,
+          "legendFormat": "AT23 · {{exported_namespace}}/{{name}}"
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "dis-core-tt02-products-amw"
+          },
+          "editorMode": "code",
+          "expr": "(max by (cluster, exported_namespace, name) (gotk_resource_info{customresource_kind=\"kustomization\", cluster=~\"(?i)^dis-core-${env:regex}-aks$\", exported_namespace=~\"^product-${product:regex}$\", ready=\"false\"}) * 2)\nor (max by (cluster, exported_namespace, name) (gotk_resource_info{customresource_kind=\"kustomization\", cluster=~\"(?i)^dis-core-${env:regex}-aks$\", exported_namespace=~\"^product-${product:regex}$\", ready=\"unknown\"}) * 1)\nor (max by (cluster, exported_namespace, name) (gotk_resource_info{customresource_kind=\"kustomization\", cluster=~\"(?i)^dis-core-${env:regex}-aks$\", exported_namespace=~\"^product-${product:regex}$\", ready=\"true\"}) * 0)",
+          "instant": false,
+          "range": true,
+          "legendFormat": "TT02 · {{exported_namespace}}/{{name}}"
+        },
+        {
+          "refId": "D",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "dis-core-prod-products-amw"
+          },
+          "editorMode": "code",
+          "expr": "(max by (cluster, exported_namespace, name) (gotk_resource_info{customresource_kind=\"kustomization\", cluster=~\"(?i)^dis-core-${env:regex}-aks$\", exported_namespace=~\"^product-${product:regex}$\", ready=\"false\"}) * 2)\nor (max by (cluster, exported_namespace, name) (gotk_resource_info{customresource_kind=\"kustomization\", cluster=~\"(?i)^dis-core-${env:regex}-aks$\", exported_namespace=~\"^product-${product:regex}$\", ready=\"unknown\"}) * 1)\nor (max by (cluster, exported_namespace, name) (gotk_resource_info{customresource_kind=\"kustomization\", cluster=~\"(?i)^dis-core-${env:regex}-aks$\", exported_namespace=~\"^product-${product:regex}$\", ready=\"true\"}) * 0)",
+          "instant": false,
+          "range": true,
+          "legendFormat": "PROD · {{exported_namespace}}/{{name}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "fillOpacity": 80,
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineWidth": 0,
+            "spanNulls": false
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "color": "green",
+                  "index": 0,
+                  "text": "Ready"
+                },
+                "1": {
+                  "color": "blue",
+                  "index": 1,
+                  "text": "Reconciling"
+                },
+                "2": {
+                  "color": "red",
+                  "index": 2,
+                  "text": "Not ready"
+                }
+              }
+            }
+          ],
+          "max": 2,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "blue",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 2
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "alignValue": "left",
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "mergeValues": true,
+        "perPage": 20,
+        "rowHeight": 0.8,
+        "showValue": "never",
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      }
+    }
+  ]
+}
