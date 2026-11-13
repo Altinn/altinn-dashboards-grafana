@@ -51,6 +51,7 @@ products/<product>/
     ├── contact-points.yaml       # GrafanaContactPoint (Slack)
     └── rules-*.yaml              # GrafanaAlertRuleGroup(s)
 products/<product>/datasources/   # optional GrafanaDatasource + ExternalSecret overlay
+platform/alerting/                # platform-wide rules (e.g. TLS cert expiry) → Slack #altinn-platform-alerts
 platform/datasources/             # optional shared datasource overlay
 platform/secrets/                 # shared Key Vault, datasource SecretStore + Slack secret wiring
 examples/datasources/             # validated templates, excluded from the root aggregate

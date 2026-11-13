@@ -10,5 +10,6 @@ resources:
   - products/studio/alerting
   - products/studio/dashboards
   - products/studio/datasources
+  - platform/alerting
   - platform/secrets
   - public

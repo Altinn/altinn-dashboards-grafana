@@ -1,0 +1,99 @@
+# Hand-authored alert rule (not a Grafana UI export). Keep the `uid` stable on edits;
+# regenerating it duplicates the rule in Grafana.
+#
+# Fires when the TLS certificate of any blackbox-probed host expires in under 21 days.
+# `probe_ssl_earliest_cert_expiry` is the earliest notAfter in the served chain, so an expiring
+# intermediate counts too. It comes from the blackbox exporter in `admin-prod-obs-amw`, for every
+# job family (kuberneteswrapper, health-check, shallow http, tls, whoami).
+#
+# `min by (instance)` collapses the IPv4/IPv6 jobs, the job families and the exporter replicas
+# into one series per host, so each host becomes one alert instance. It still picks the earliest
+# expiry if one edge serves an older certificate than another.
+#
+# A host whose probe stops completing the TLS handshake drops out of the result and resolves
+# here. Availability alerts cover that case; this rule is only about expiry.
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaAlertRuleGroup
+metadata:
+  name: altinn-platform-cert-expiry
+  namespace: grafana
+spec:
+  name: Certificate expiry
+  folderRef: external-grafana-altinn-platform
+  instanceSelector:
+    matchLabels:
+      dashboards: external-grafana
+  # Expiry moves by a day per day; evaluating every 10m is plenty.
+  interval: 10m
+  rules:
+  - uid: altinn-platform-cert-expiry-21d
+    title: TLS certificate expires in under 21 days
+    condition: C
+    # Rides out a rotation that only some edges or replicas have picked up yet.
+    for: 1h
+    noDataState: NoData
+    execErrState: OK
+    labels:
+      Product: Altinn Platform
+      # One rule spans every environment; the host name (instance label) says which.
+      Env: All
+      AlertType: CertificateExpiry
+      Severity: Warning
+    annotations:
+      summary: 'TLS certificate for {{ $labels.instance }} expires in {{ printf "%.0f" $values.A.Value }} days'
+      description: 'probe_ssl_earliest_cert_expiry for {{ $labels.instance }} is under 21 days away. Renew the certificate or check that the renewed one is actually served.'
+      days: '{{ printf "%.1f" $values.A.Value }}'
+      # "Open" in Slack lands on the Endpoint Statistics "Certificate Expiration Time" panel.
+      __dashboardUid__: altinn-uptime-endpoint-statistics
+      __panelId__: "18"
+    notificationSettings:
+      receiver: Altinn Platform Slack Alerts
+      # One reminder a day while the countdown runs, instead of the root policy's 4h.
+      # Must be a multiple of the root group_interval (5m); Grafana's max is 120h.
+      repeat_interval: 24h
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 600
+        to: 0
+      datasourceUid: admin-prod-obs-amw
+      model:
+        datasource:
+          type: prometheus
+          uid: admin-prod-obs-amw
+        editorMode: code
+        expr: '(min by (instance) (probe_ssl_earliest_cert_expiry) - time()) / 86400'
+        instant: true
+        range: false
+        intervalMs: 1000
+        maxDataPoints: 43200
+        refId: A
+    - refId: C
+      relativeTimeRange:
+        from: 600
+        to: 0
+      datasourceUid: __expr__
+      model:
+        conditions:
+        - evaluator:
+            params:
+            - 21
+            type: lt
+          operator:
+            type: and
+          query:
+            params:
+            - C
+          reducer:
+            params: []
+            type: last
+          type: query
+        datasource:
+          type: __expr__
+          uid: __expr__
+        expression: A
+        intervalMs: 1000
+        maxDataPoints: 43200
+        refId: C
+        type: threshold
