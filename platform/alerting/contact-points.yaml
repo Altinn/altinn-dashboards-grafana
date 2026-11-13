@@ -1,0 +1,32 @@
+# Slack #altinn-platform-alerts. The webhook is injected from the grafana-slack-webhooks Secret at
+# reconcile time — never commit it. The `altinn-platform-alerts` key is fed from the Key Vault
+# secret `slack-webhook-altinn-platform-alerts`; see platform/secrets/external-secret.yaml.
+#
+# Alerts are grouped by the root policy (folder + alert name), so one message lists every host
+# that is under the threshold. Resolve messages stay on: "renewed" closes the loop.
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaContactPoint
+metadata:
+  name: altinn-platform-slack-alerts
+  namespace: grafana
+spec:
+  name: "Altinn Platform Slack Alerts"
+  instanceSelector:
+    matchLabels:
+      dashboards: external-grafana
+  resyncPeriod: 10m0s
+  receivers:
+    - type: slack
+      disableResolveMessage: false
+      settings:
+        title: '{{ if eq .Status "firing" }}:warning: {{ len .Alerts.Firing }} firing{{ else }}:large_green_circle: resolved{{ end }} — {{ .CommonLabels.alertname }}'
+        text: |
+          {{ range .Alerts.Firing }}{{ $host := .Labels.instance }}{{ $host }}{{ with .Annotations.days }} — {{ . }} days left{{ end }}{{ with .PanelURL }} · <{{ . }}&var-instance={{ $host }}|panel>{{ end }}
+          {{ end }}{{ range .Alerts.Resolved }}{{ .Labels.instance }} — resolved
+          {{ end }}
+      valuesFrom:
+        - targetPath: url
+          valueFrom:
+            secretKeyRef:
+              name: grafana-slack-webhooks
+              key: altinn-platform-alerts
