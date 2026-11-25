@@ -1,0 +1,16 @@
+# Requests through Traefik, the ingress in every service owner's runtime cluster, from the spans
+# the platform's collector forwards to Studio. Lands in the Altinn Studio folder
+# (external-grafana-studio, defined in ../alerting/folder.yaml).
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: external-grafana-studio-runtime-ingress
+  namespace: grafana
+spec:
+  folderRef: external-grafana-studio
+  instanceSelector:
+    matchLabels:
+      dashboards: external-grafana
+  configMapRef:
+    name: dashboard-studio-runtime-ingress
+    key: runtime-ingress.json

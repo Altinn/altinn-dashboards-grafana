@@ -13,6 +13,7 @@ resources:
   - operator.yaml
   - gateway.yaml
   - app-deploys.yaml
+  - runtime-ingress.yaml
 configMapGenerator:
   - name: dashboard-studio-pdf3
     files:
@@ -38,3 +39,6 @@ configMapGenerator:
   - name: dashboard-studio-app-deploys
     files:
       - app-deploys.json
+  - name: dashboard-studio-runtime-ingress
+    files:
+      - runtime-ingress.json

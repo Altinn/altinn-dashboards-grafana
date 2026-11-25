@@ -20,6 +20,8 @@ exclusions:
       through altinn-studio-traces-logsql, links them to altinn-studio-traces, reads
       Flux's results and the hand-off from altinn-studio-metrics, and shows deploy
       logs from altinn-studio-logs.
+      The runtime ingress dashboard reads Traefik's spans through
+      altinn-studio-traces-logsql and links them to altinn-studio-traces.
     entries:
       - dashboard: "Altinn Studio - PDF3"
       - dashboard: "Altinn Studio - Observability"
@@ -29,6 +31,7 @@ exclusions:
       - dashboard: "Altinn Studio - Operator"
       - dashboard: "Altinn Studio - Gateway"
       - dashboard: "Altinn Studio - App deploys"
+      - dashboard: "Altinn Studio - Runtime ingress"
   template-datasource-rule:
     reason: >-
       No datasource template variable by design; see panel-datasource-rule.
@@ -41,3 +44,4 @@ exclusions:
       - dashboard: "Altinn Studio - Operator"
       - dashboard: "Altinn Studio - Gateway"
       - dashboard: "Altinn Studio - App deploys"
+      - dashboard: "Altinn Studio - Runtime ingress"
