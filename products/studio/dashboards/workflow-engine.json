@@ -1,7 +1,7 @@
 {
   "uid": "altinn-studio-workflow-engine",
   "title": "Altinn Studio - Workflow Engine",
-  "description": "The workflow engine (service workflow-engine-app) in the runtime environments, from its altinn.workflow_engine.* OpenTelemetry metrics and warning and error logs: the first screen (right now: health, processes, missing engines, unresolved failed, active and scheduled workflows; in the time range: failures, engine errors, retries and the workflows that ended), where to look (each service owner's engine, failed workflows over time and by app with their traces, engine errors and logs), workflow lifecycle, durable waits, throttling, latency, resource slots, engine internals, mailboxes and recovery signals. Each service owner's cluster runs its own engine, with its own database: Service owner picks the clusters, and numbers counted in the database are added up per service owner. Rates use increase_pure() over $__rate_interval divided by its length rather than rate(), as on the other Altinn Studio dashboards. Blue markers are the first start of each engine version and orange markers each process start (off by default; switch on Process starts), from altinn.workload.start_time. The local copy of this dashboard also has an Npgsql connection pool row, left out here because the runtime gateway's metric allowlist drops db.client.* metrics. Adapted from src/Runtime/localtest/infra/grafana-dashboards/workflow-engine.json in Altinn/altinn-studio; change the queries there first. Datasource UIDs are pinned, matching the other Altinn Studio dashboards. Right now means the samples of the last minute before the end of the time range. A counter that never fired reads 0; No data means no engine reported, except where a latency panel says what was not measured. In the log panels an empty panel means no such records. Resource Utilization, Engine Internals, Mailboxes and Lease & Recovery Signals are collapsed; open a row to load its panels.",
+  "description": "The workflow engine (service workflow-engine-app) in the runtime environments, from its altinn.workflow_engine.* OpenTelemetry metrics and warning and error logs: the first screen (right now: health, processes, missing engines, unresolved failed, active and scheduled workflows; in the time range: failures, engine errors, retries and the workflows that ended), where to look (each service owner's engine, each app's workflows right now, unresolved failed workflows over time and failures by app with their traces, engine errors and logs), workflow lifecycle, durable waits, throttling, latency, resource slots, engine internals, mailboxes and recovery signals. Each service owner's cluster runs its own engine, with its own database: Service owner picks the clusters, and numbers counted in the database are added up per service owner. Rates use increase_pure() over $__rate_interval divided by its length rather than rate(), as on the other Altinn Studio dashboards. Blue markers are the first start of each engine version and orange markers each process start (off by default; switch on Process starts), from altinn.workload.start_time. The local copy of this dashboard also has an Npgsql connection pool row, left out here because the runtime gateway's metric allowlist drops db.client.* metrics. Adapted from src/Runtime/localtest/infra/grafana-dashboards/workflow-engine.json in Altinn/altinn-studio; change the queries there first. Datasource UIDs are pinned, matching the other Altinn Studio dashboards. Right now means the samples of the last minute before the end of the time range. A counter that never fired reads 0; No data means no engine reported, except where a latency panel says what was not measured. In the log panels an empty panel means no such records. Resource Utilization, Engine Internals, Mailboxes and Lease & Recovery Signals are collapsed; open a row to load its panels.",
   "annotations": {
     "list": [
       {
@@ -166,7 +166,7 @@
       "type": "row"
     },
     {
-      "id": 123,
+      "id": 124,
       "type": "text",
       "title": "Right Now",
       "transparent": true,
@@ -187,7 +187,7 @@
       }
     },
     {
-      "id": 124,
+      "id": 125,
       "type": "text",
       "title": "In the Selected Time Range",
       "transparent": true,
@@ -438,7 +438,7 @@
       "id": 9,
       "type": "stat",
       "title": "Unresolved Failed",
-      "description": "Workflows that ended failed or canceled and that nobody has dealt with yet, right now (at the end of the time range): the retained workflows in status Failed, Canceled or DependencyFailed, counted in the engine's database. A workflow leaves the count when it is resumed or abandoned, when a dependency-failed workflow's dependency succeeds after all, or when retention deletes it, by default 90 days after it was last updated, so the count ignores the time range and can hold failures from long before it. Added up over the selected service owners. Every engine process of a service owner reads the same count from that service owner's database, so each service owner is counted once, not once per process. It covers only the engines reporting now: the workflows of an engine that stopped reporting drop out though they are still in its database; Missing Engines and Processes show such an engine. While an engine cannot reach its database it keeps reporting the last count it read. Unresolved Failed over Time below shows it per service owner. Select the number to see it by service owner.",
+      "description": "Workflows that ended failed or dependency-failed and that nobody has dealt with yet, right now (at the end of the time range): the workflows in status Failed or DependencyFailed, which each engine counts per app in its database every 15 seconds. Canceled workflows are left out: a cancellation is deliberate. A workflow leaves the count when it is resumed or abandoned, when a dependency-failed workflow's dependency succeeds after all, or when retention deletes it, by default 90 days after it was last updated, so the count ignores the time range and can hold failures from long before it. An engine that does not report per-app counts yet is counted with its canceled workflows included. Added up over the selected service owners. Every engine process of a service owner reads the same count from that service owner's database, so each service owner is counted once, not once per process. It covers only the engines reporting now: the workflows of an engine that stopped reporting drop out though they are still in its database; Missing Engines and Processes show such an engine. While an engine cannot reach its database it keeps reporting the last counts it read. Unresolved Failed over Time below shows it per service owner, Workflows by App Right Now per app. Select the number to see it by service owner or by app.",
       "datasource": {
         "type": "prometheus",
         "uid": "altinn-studio-metrics"
@@ -449,7 +449,7 @@
             "type": "prometheus",
             "uid": "altinn-studio-metrics"
           },
-          "expr": "sum(max by (\"deployment.environment.name\", \"altinn.service_owner\", \"service.name\") (last_over_time({\"altinn.workflow_engine.workflow.failed\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}[1m])))",
+          "expr": "sum((sum by (\"deployment.environment.name\", \"altinn.service_owner\") (max by (\"deployment.environment.name\", \"altinn.service_owner\", \"service.name\", \"altinn.workflow_engine.namespace\", \"altinn.workflow_engine.workflow.status\") (last_over_time({\"altinn.workflow_engine.workflow.count\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\", \"altinn.workflow_engine.workflow.status\"=~\"^(Failed|DependencyFailed)$\"}[1m]))) or sum by (\"deployment.environment.name\", \"altinn.service_owner\") (max by (\"deployment.environment.name\", \"altinn.service_owner\", \"service.name\") (last_over_time({\"altinn.workflow_engine.workflow.failed\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}[1m])))))",
           "refId": "A",
           "instant": true,
           "range": false,
@@ -486,6 +486,10 @@
             {
               "title": "Show by service owner",
               "url": "/d/${__dashboard.uid}?${__url_time_range}&${env:queryparam}&${service_owner:queryparam}&${service:queryparam}&viewPanel=panel-112"
+            },
+            {
+              "title": "Show by app",
+              "url": "/d/${__dashboard.uid}?${__url_time_range}&${env:queryparam}&${service_owner:queryparam}&${service:queryparam}&viewPanel=panel-123"
             }
           ]
         },
@@ -1259,7 +1263,7 @@
             "type": "prometheus",
             "uid": "altinn-studio-metrics"
           },
-          "expr": "sum by (\"deployment.environment.name\", \"altinn.service_owner\") (max by (\"deployment.environment.name\", \"altinn.service_owner\", \"service.name\") (last_over_time({\"altinn.workflow_engine.workflow.failed\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}[1m])))",
+          "expr": "(sum by (\"deployment.environment.name\", \"altinn.service_owner\") (max by (\"deployment.environment.name\", \"altinn.service_owner\", \"service.name\", \"altinn.workflow_engine.namespace\", \"altinn.workflow_engine.workflow.status\") (last_over_time({\"altinn.workflow_engine.workflow.count\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\", \"altinn.workflow_engine.workflow.status\"=~\"^(Failed|DependencyFailed)$\"}[1m]))) or sum by (\"deployment.environment.name\", \"altinn.service_owner\") (max by (\"deployment.environment.name\", \"altinn.service_owner\", \"service.name\") (last_over_time({\"altinn.workflow_engine.workflow.failed\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}[1m]))))",
           "refId": "M",
           "instant": true,
           "range": false,
@@ -1314,7 +1318,7 @@
             "type": "prometheus",
             "uid": "altinn-studio-metrics"
           },
-          "expr": "(((group by (\"deployment.environment.name\", \"altinn.service_owner\") (present_over_time({\"altinn.workload.start_time\", \"service.name\"=\"operator\", \"deployment.environment.name\"=~\"$env\", \"altinn.service_owner\"=~\"$service_owner\"}[1m])) unless on (\"deployment.environment.name\", \"altinn.service_owner\") group by (\"deployment.environment.name\", \"altinn.service_owner\") (group by (\"deployment.environment.name\", \"altinn.service_owner\", \"service.name\", \"service.instance.id\") (present_over_time({\"altinn.workload.start_time\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}[1m])))) * 1e14 or (0 * group by (\"deployment.environment.name\", \"altinn.service_owner\") (max_over_time({\"altinn.workflow_engine.health.status\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}[$__range])))) + ((max by (\"deployment.environment.name\", \"altinn.service_owner\") (last_over_time({\"altinn.workflow_engine.health.status\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}[1m])) > bool 0) * 1e13 or (0 * group by (\"deployment.environment.name\", \"altinn.service_owner\") (max_over_time({\"altinn.workflow_engine.health.status\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}[$__range])))) + (((count by (\"deployment.environment.name\", \"altinn.service_owner\") (group by (\"deployment.environment.name\", \"altinn.service_owner\", \"service.name\", \"service.instance.id\") (present_over_time({\"altinn.workload.start_time\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}[1m]))) or (0 * group by (\"deployment.environment.name\", \"altinn.service_owner\") (max_over_time({\"altinn.workflow_engine.health.status\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}[$__range])))) < bool 2) * 1e12 or (0 * group by (\"deployment.environment.name\", \"altinn.service_owner\") (max_over_time({\"altinn.workflow_engine.health.status\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}[$__range])))) + ((sum by (\"deployment.environment.name\", \"altinn.service_owner\") (increase_pure({\"altinn.workflow_engine.workflow.execution.failed\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}[$__range]))) * 1e6 or (0 * group by (\"deployment.environment.name\", \"altinn.service_owner\") (max_over_time({\"altinn.workflow_engine.health.status\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}[$__range])))) + ((sum by (\"deployment.environment.name\", \"altinn.service_owner\") (max by (\"deployment.environment.name\", \"altinn.service_owner\", \"service.name\") (last_over_time({\"altinn.workflow_engine.workflow.failed\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}[1m])))) * 1 or (0 * group by (\"deployment.environment.name\", \"altinn.service_owner\") (max_over_time({\"altinn.workflow_engine.health.status\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}[$__range])))) + ((max by (\"deployment.environment.name\", \"altinn.service_owner\") (max_over_time({\"altinn.workflow_engine.health.status\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}[$__range])) > bool 0) * 0.5 or (0 * group by (\"deployment.environment.name\", \"altinn.service_owner\") (max_over_time({\"altinn.workflow_engine.health.status\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}[$__range]))))) or (1e14 * group by (\"deployment.environment.name\", \"altinn.service_owner\") (present_over_time({\"altinn.workload.start_time\", \"service.name\"=\"operator\", \"deployment.environment.name\"=~\"$env\", \"altinn.service_owner\"=~\"$service_owner\"}[1m])) unless on (\"deployment.environment.name\", \"altinn.service_owner\") group by (\"deployment.environment.name\", \"altinn.service_owner\") (group by (\"deployment.environment.name\", \"altinn.service_owner\", \"service.name\", \"service.instance.id\") (present_over_time({\"altinn.workload.start_time\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}[1m]))))",
+          "expr": "(((group by (\"deployment.environment.name\", \"altinn.service_owner\") (present_over_time({\"altinn.workload.start_time\", \"service.name\"=\"operator\", \"deployment.environment.name\"=~\"$env\", \"altinn.service_owner\"=~\"$service_owner\"}[1m])) unless on (\"deployment.environment.name\", \"altinn.service_owner\") group by (\"deployment.environment.name\", \"altinn.service_owner\") (group by (\"deployment.environment.name\", \"altinn.service_owner\", \"service.name\", \"service.instance.id\") (present_over_time({\"altinn.workload.start_time\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}[1m])))) * 1e14 or (0 * group by (\"deployment.environment.name\", \"altinn.service_owner\") (max_over_time({\"altinn.workflow_engine.health.status\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}[$__range])))) + ((max by (\"deployment.environment.name\", \"altinn.service_owner\") (last_over_time({\"altinn.workflow_engine.health.status\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}[1m])) > bool 0) * 1e13 or (0 * group by (\"deployment.environment.name\", \"altinn.service_owner\") (max_over_time({\"altinn.workflow_engine.health.status\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}[$__range])))) + (((count by (\"deployment.environment.name\", \"altinn.service_owner\") (group by (\"deployment.environment.name\", \"altinn.service_owner\", \"service.name\", \"service.instance.id\") (present_over_time({\"altinn.workload.start_time\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}[1m]))) or (0 * group by (\"deployment.environment.name\", \"altinn.service_owner\") (max_over_time({\"altinn.workflow_engine.health.status\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}[$__range])))) < bool 2) * 1e12 or (0 * group by (\"deployment.environment.name\", \"altinn.service_owner\") (max_over_time({\"altinn.workflow_engine.health.status\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}[$__range])))) + ((sum by (\"deployment.environment.name\", \"altinn.service_owner\") (increase_pure({\"altinn.workflow_engine.workflow.execution.failed\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}[$__range]))) * 1e6 or (0 * group by (\"deployment.environment.name\", \"altinn.service_owner\") (max_over_time({\"altinn.workflow_engine.health.status\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}[$__range])))) + (((sum by (\"deployment.environment.name\", \"altinn.service_owner\") (max by (\"deployment.environment.name\", \"altinn.service_owner\", \"service.name\", \"altinn.workflow_engine.namespace\", \"altinn.workflow_engine.workflow.status\") (last_over_time({\"altinn.workflow_engine.workflow.count\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\", \"altinn.workflow_engine.workflow.status\"=~\"^(Failed|DependencyFailed)$\"}[1m]))) or sum by (\"deployment.environment.name\", \"altinn.service_owner\") (max by (\"deployment.environment.name\", \"altinn.service_owner\", \"service.name\") (last_over_time({\"altinn.workflow_engine.workflow.failed\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}[1m]))))) * 1 or (0 * group by (\"deployment.environment.name\", \"altinn.service_owner\") (max_over_time({\"altinn.workflow_engine.health.status\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}[$__range])))) + ((max by (\"deployment.environment.name\", \"altinn.service_owner\") (max_over_time({\"altinn.workflow_engine.health.status\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}[$__range])) > bool 0) * 0.5 or (0 * group by (\"deployment.environment.name\", \"altinn.service_owner\") (max_over_time({\"altinn.workflow_engine.health.status\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}[$__range]))))) or (1e14 * group by (\"deployment.environment.name\", \"altinn.service_owner\") (present_over_time({\"altinn.workload.start_time\", \"service.name\"=\"operator\", \"deployment.environment.name\"=~\"$env\", \"altinn.service_owner\"=~\"$service_owner\"}[1m])) unless on (\"deployment.environment.name\", \"altinn.service_owner\") group by (\"deployment.environment.name\", \"altinn.service_owner\") (group by (\"deployment.environment.name\", \"altinn.service_owner\", \"service.name\", \"service.instance.id\") (present_over_time({\"altinn.workload.start_time\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}[1m]))))",
           "refId": "Z",
           "instant": true,
           "range": false,
@@ -2059,10 +2063,418 @@
       }
     },
     {
+      "id": 123,
+      "type": "table",
+      "title": "Workflows by App Right Now",
+      "description": "Per app, right now (at the end of the time range): Active, the workflows that have not finished, Scheduled and Waiting included; Scheduled; Waiting; and Unresolved failed, the Unresolved Failed tile's count. Only the apps that hold active or unresolved failed workflows, the most unresolved failed first, then the most active; when no app does, one row says so. Each engine counts per app every 15 seconds and the tiles' Active and Scheduled every 5, so they can differ for a moment. The apps of an engine that is not reporting are not listed; Missing Engines and Processes show such an engine. An engine that does not report per-app counts yet has one row, \"all apps, not counted per app\", with its database-wide counts, canceled workflows included. An engine names at most 1,000 apps and counts the rest together, as \"other apps, counted together\". Admin pages opens the app's page in Designer's admin pages, which lists the instances with failing workflows, where they can be resumed or failed. Failures by App in the Selected Time Range has the failures of the time range instead.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "altinn-studio-metrics"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "expr": "label_replace(label_replace(label_replace(label_replace((sum by (\"deployment.environment.name\", \"altinn.service_owner\", \"app\") (label_replace(label_replace(label_replace(max by (\"deployment.environment.name\", \"altinn.service_owner\", \"service.name\", \"altinn.workflow_engine.namespace\", \"altinn.workflow_engine.workflow.status\") (last_over_time({\"altinn.workflow_engine.workflow.count\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\", \"altinn.workflow_engine.workflow.status\"=~\"^(Scheduled|Enqueued|Processing|Requeued|Waiting|Held)$\"}[1m])), \"app\", \"$1\", \"altinn.workflow_engine.namespace\", \"(.*)\"), \"app\", \"$2\", \"altinn.workflow_engine.namespace\", \"([^/%]+)(?:/|%2[fF])(.+)\"), \"app\", \"other apps, counted together\", \"app\", \"_OTHER\")) or label_set((sum by (\"deployment.environment.name\", \"altinn.service_owner\") (max by (\"deployment.environment.name\", \"altinn.service_owner\", \"service.name\") (last_over_time({\"altinn.workflow_engine.workflow.active\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}[1m])))) and on (\"deployment.environment.name\", \"altinn.service_owner\") (group by (\"deployment.environment.name\", \"altinn.service_owner\") (last_over_time({\"altinn.workflow_engine.health.status\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}[1m])) unless on (\"deployment.environment.name\", \"altinn.service_owner\") group by (\"deployment.environment.name\", \"altinn.service_owner\") (last_over_time({\"altinn.workflow_engine.workflow.count\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\", \"altinn.workflow_engine.workflow.status\"=\"Failed\"}[1m]))), \"app\", \"all apps, not counted per app\")), \"studio_env\", \"$1\", \"deployment.environment.name\", \"(.*)\"), \"studio_env\", \"production\", \"deployment.environment.name\", \"prod\"), \"admin\", \"Admin pages\", \"app\", \".*\"), \"admin\", \"\", \"app\", \"other apps, counted together|all apps, not counted per app|no app has active or unresolved failed workflows\")",
+          "refId": "A",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "expr": "label_replace(label_replace(label_replace(label_replace((sum by (\"deployment.environment.name\", \"altinn.service_owner\", \"app\") (label_replace(label_replace(label_replace(max by (\"deployment.environment.name\", \"altinn.service_owner\", \"service.name\", \"altinn.workflow_engine.namespace\", \"altinn.workflow_engine.workflow.status\") (last_over_time({\"altinn.workflow_engine.workflow.count\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\", \"altinn.workflow_engine.workflow.status\"=~\"^(Scheduled)$\"}[1m])), \"app\", \"$1\", \"altinn.workflow_engine.namespace\", \"(.*)\"), \"app\", \"$2\", \"altinn.workflow_engine.namespace\", \"([^/%]+)(?:/|%2[fF])(.+)\"), \"app\", \"other apps, counted together\", \"app\", \"_OTHER\")) or label_set((sum by (\"deployment.environment.name\", \"altinn.service_owner\") (max by (\"deployment.environment.name\", \"altinn.service_owner\", \"service.name\") (last_over_time({\"altinn.workflow_engine.workflow.scheduled\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}[1m])))) and on (\"deployment.environment.name\", \"altinn.service_owner\") (group by (\"deployment.environment.name\", \"altinn.service_owner\") (last_over_time({\"altinn.workflow_engine.health.status\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}[1m])) unless on (\"deployment.environment.name\", \"altinn.service_owner\") group by (\"deployment.environment.name\", \"altinn.service_owner\") (last_over_time({\"altinn.workflow_engine.workflow.count\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\", \"altinn.workflow_engine.workflow.status\"=\"Failed\"}[1m]))), \"app\", \"all apps, not counted per app\")), \"studio_env\", \"$1\", \"deployment.environment.name\", \"(.*)\"), \"studio_env\", \"production\", \"deployment.environment.name\", \"prod\"), \"admin\", \"Admin pages\", \"app\", \".*\"), \"admin\", \"\", \"app\", \"other apps, counted together|all apps, not counted per app|no app has active or unresolved failed workflows\")",
+          "refId": "B",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "expr": "label_replace(label_replace(label_replace(label_replace((sum by (\"deployment.environment.name\", \"altinn.service_owner\", \"app\") (label_replace(label_replace(label_replace(max by (\"deployment.environment.name\", \"altinn.service_owner\", \"service.name\", \"altinn.workflow_engine.namespace\", \"altinn.workflow_engine.workflow.status\") (last_over_time({\"altinn.workflow_engine.workflow.count\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\", \"altinn.workflow_engine.workflow.status\"=~\"^(Waiting)$\"}[1m])), \"app\", \"$1\", \"altinn.workflow_engine.namespace\", \"(.*)\"), \"app\", \"$2\", \"altinn.workflow_engine.namespace\", \"([^/%]+)(?:/|%2[fF])(.+)\"), \"app\", \"other apps, counted together\", \"app\", \"_OTHER\")) or label_set((sum by (\"deployment.environment.name\", \"altinn.service_owner\") (max by (\"deployment.environment.name\", \"altinn.service_owner\", \"service.name\") (last_over_time({\"altinn.workflow_engine.workflow.waiting\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}[1m])))) and on (\"deployment.environment.name\", \"altinn.service_owner\") (group by (\"deployment.environment.name\", \"altinn.service_owner\") (last_over_time({\"altinn.workflow_engine.health.status\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}[1m])) unless on (\"deployment.environment.name\", \"altinn.service_owner\") group by (\"deployment.environment.name\", \"altinn.service_owner\") (last_over_time({\"altinn.workflow_engine.workflow.count\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\", \"altinn.workflow_engine.workflow.status\"=\"Failed\"}[1m]))), \"app\", \"all apps, not counted per app\")), \"studio_env\", \"$1\", \"deployment.environment.name\", \"(.*)\"), \"studio_env\", \"production\", \"deployment.environment.name\", \"prod\"), \"admin\", \"Admin pages\", \"app\", \".*\"), \"admin\", \"\", \"app\", \"other apps, counted together|all apps, not counted per app|no app has active or unresolved failed workflows\")",
+          "refId": "C",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "expr": "label_replace(label_replace(label_replace(label_replace((sum by (\"deployment.environment.name\", \"altinn.service_owner\", \"app\") (label_replace(label_replace(label_replace(max by (\"deployment.environment.name\", \"altinn.service_owner\", \"service.name\", \"altinn.workflow_engine.namespace\", \"altinn.workflow_engine.workflow.status\") (last_over_time({\"altinn.workflow_engine.workflow.count\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\", \"altinn.workflow_engine.workflow.status\"=~\"^(Failed|DependencyFailed)$\"}[1m])), \"app\", \"$1\", \"altinn.workflow_engine.namespace\", \"(.*)\"), \"app\", \"$2\", \"altinn.workflow_engine.namespace\", \"([^/%]+)(?:/|%2[fF])(.+)\"), \"app\", \"other apps, counted together\", \"app\", \"_OTHER\")) or label_set((sum by (\"deployment.environment.name\", \"altinn.service_owner\") (max by (\"deployment.environment.name\", \"altinn.service_owner\", \"service.name\") (last_over_time({\"altinn.workflow_engine.workflow.failed\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}[1m])))) and on (\"deployment.environment.name\", \"altinn.service_owner\") (group by (\"deployment.environment.name\", \"altinn.service_owner\") (last_over_time({\"altinn.workflow_engine.health.status\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}[1m])) unless on (\"deployment.environment.name\", \"altinn.service_owner\") group by (\"deployment.environment.name\", \"altinn.service_owner\") (last_over_time({\"altinn.workflow_engine.workflow.count\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\", \"altinn.workflow_engine.workflow.status\"=\"Failed\"}[1m]))), \"app\", \"all apps, not counted per app\")), \"studio_env\", \"$1\", \"deployment.environment.name\", \"(.*)\"), \"studio_env\", \"production\", \"deployment.environment.name\", \"prod\"), \"admin\", \"Admin pages\", \"app\", \".*\"), \"admin\", \"\", \"app\", \"other apps, counted together|all apps, not counted per app|no app has active or unresolved failed workflows\")",
+          "refId": "D",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "expr": "label_replace(label_replace(label_replace(label_replace((((sum by (\"deployment.environment.name\", \"altinn.service_owner\", \"app\") (label_replace(label_replace(label_replace(max by (\"deployment.environment.name\", \"altinn.service_owner\", \"service.name\", \"altinn.workflow_engine.namespace\", \"altinn.workflow_engine.workflow.status\") (last_over_time({\"altinn.workflow_engine.workflow.count\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\", \"altinn.workflow_engine.workflow.status\"=~\"^(Failed|DependencyFailed)$\"}[1m])), \"app\", \"$1\", \"altinn.workflow_engine.namespace\", \"(.*)\"), \"app\", \"$2\", \"altinn.workflow_engine.namespace\", \"([^/%]+)(?:/|%2[fF])(.+)\"), \"app\", \"other apps, counted together\", \"app\", \"_OTHER\")) or label_set((sum by (\"deployment.environment.name\", \"altinn.service_owner\") (max by (\"deployment.environment.name\", \"altinn.service_owner\", \"service.name\") (last_over_time({\"altinn.workflow_engine.workflow.failed\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}[1m])))) and on (\"deployment.environment.name\", \"altinn.service_owner\") (group by (\"deployment.environment.name\", \"altinn.service_owner\") (last_over_time({\"altinn.workflow_engine.health.status\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}[1m])) unless on (\"deployment.environment.name\", \"altinn.service_owner\") group by (\"deployment.environment.name\", \"altinn.service_owner\") (last_over_time({\"altinn.workflow_engine.workflow.count\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\", \"altinn.workflow_engine.workflow.status\"=\"Failed\"}[1m]))), \"app\", \"all apps, not counted per app\")) * 1e9 + (sum by (\"deployment.environment.name\", \"altinn.service_owner\", \"app\") (label_replace(label_replace(label_replace(max by (\"deployment.environment.name\", \"altinn.service_owner\", \"service.name\", \"altinn.workflow_engine.namespace\", \"altinn.workflow_engine.workflow.status\") (last_over_time({\"altinn.workflow_engine.workflow.count\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\", \"altinn.workflow_engine.workflow.status\"=~\"^(Scheduled|Enqueued|Processing|Requeued|Waiting|Held)$\"}[1m])), \"app\", \"$1\", \"altinn.workflow_engine.namespace\", \"(.*)\"), \"app\", \"$2\", \"altinn.workflow_engine.namespace\", \"([^/%]+)(?:/|%2[fF])(.+)\"), \"app\", \"other apps, counted together\", \"app\", \"_OTHER\")) or label_set((sum by (\"deployment.environment.name\", \"altinn.service_owner\") (max by (\"deployment.environment.name\", \"altinn.service_owner\", \"service.name\") (last_over_time({\"altinn.workflow_engine.workflow.active\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}[1m])))) and on (\"deployment.environment.name\", \"altinn.service_owner\") (group by (\"deployment.environment.name\", \"altinn.service_owner\") (last_over_time({\"altinn.workflow_engine.health.status\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}[1m])) unless on (\"deployment.environment.name\", \"altinn.service_owner\") group by (\"deployment.environment.name\", \"altinn.service_owner\") (last_over_time({\"altinn.workflow_engine.workflow.count\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\", \"altinn.workflow_engine.workflow.status\"=\"Failed\"}[1m]))), \"app\", \"all apps, not counted per app\"))) > 0) or label_set(0 * count(last_over_time({\"altinn.workflow_engine.health.status\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}[1m])), \"app\", \"no app has active or unresolved failed workflows\") unless on () (((sum by (\"deployment.environment.name\", \"altinn.service_owner\", \"app\") (label_replace(label_replace(label_replace(max by (\"deployment.environment.name\", \"altinn.service_owner\", \"service.name\", \"altinn.workflow_engine.namespace\", \"altinn.workflow_engine.workflow.status\") (last_over_time({\"altinn.workflow_engine.workflow.count\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\", \"altinn.workflow_engine.workflow.status\"=~\"^(Failed|DependencyFailed)$\"}[1m])), \"app\", \"$1\", \"altinn.workflow_engine.namespace\", \"(.*)\"), \"app\", \"$2\", \"altinn.workflow_engine.namespace\", \"([^/%]+)(?:/|%2[fF])(.+)\"), \"app\", \"other apps, counted together\", \"app\", \"_OTHER\")) or label_set((sum by (\"deployment.environment.name\", \"altinn.service_owner\") (max by (\"deployment.environment.name\", \"altinn.service_owner\", \"service.name\") (last_over_time({\"altinn.workflow_engine.workflow.failed\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}[1m])))) and on (\"deployment.environment.name\", \"altinn.service_owner\") (group by (\"deployment.environment.name\", \"altinn.service_owner\") (last_over_time({\"altinn.workflow_engine.health.status\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}[1m])) unless on (\"deployment.environment.name\", \"altinn.service_owner\") group by (\"deployment.environment.name\", \"altinn.service_owner\") (last_over_time({\"altinn.workflow_engine.workflow.count\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\", \"altinn.workflow_engine.workflow.status\"=\"Failed\"}[1m]))), \"app\", \"all apps, not counted per app\")) * 1e9 + (sum by (\"deployment.environment.name\", \"altinn.service_owner\", \"app\") (label_replace(label_replace(label_replace(max by (\"deployment.environment.name\", \"altinn.service_owner\", \"service.name\", \"altinn.workflow_engine.namespace\", \"altinn.workflow_engine.workflow.status\") (last_over_time({\"altinn.workflow_engine.workflow.count\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\", \"altinn.workflow_engine.workflow.status\"=~\"^(Scheduled|Enqueued|Processing|Requeued|Waiting|Held)$\"}[1m])), \"app\", \"$1\", \"altinn.workflow_engine.namespace\", \"(.*)\"), \"app\", \"$2\", \"altinn.workflow_engine.namespace\", \"([^/%]+)(?:/|%2[fF])(.+)\"), \"app\", \"other apps, counted together\", \"app\", \"_OTHER\")) or label_set((sum by (\"deployment.environment.name\", \"altinn.service_owner\") (max by (\"deployment.environment.name\", \"altinn.service_owner\", \"service.name\") (last_over_time({\"altinn.workflow_engine.workflow.active\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}[1m])))) and on (\"deployment.environment.name\", \"altinn.service_owner\") (group by (\"deployment.environment.name\", \"altinn.service_owner\") (last_over_time({\"altinn.workflow_engine.health.status\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}[1m])) unless on (\"deployment.environment.name\", \"altinn.service_owner\") group by (\"deployment.environment.name\", \"altinn.service_owner\") (last_over_time({\"altinn.workflow_engine.workflow.count\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\", \"altinn.workflow_engine.workflow.status\"=\"Failed\"}[1m]))), \"app\", \"all apps, not counted per app\"))) > 0), \"studio_env\", \"$1\", \"deployment.environment.name\", \"(.*)\"), \"studio_env\", \"production\", \"deployment.environment.name\", \"prod\"), \"admin\", \"Admin pages\", \"app\", \".*\"), \"admin\", \"\", \"app\", \"other apps, counted together|all apps, not counted per app|no app has active or unresolved failed workflows\")",
+          "refId": "Z",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "groupBy",
+          "options": {
+            "fields": {
+              "deployment.environment.name": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "altinn.service_owner": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "app": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "Value #A": {
+                "aggregations": [
+                  "max"
+                ],
+                "operation": "aggregate"
+              },
+              "Value #B": {
+                "aggregations": [
+                  "max"
+                ],
+                "operation": "aggregate"
+              },
+              "Value #C": {
+                "aggregations": [
+                  "max"
+                ],
+                "operation": "aggregate"
+              },
+              "Value #D": {
+                "aggregations": [
+                  "max"
+                ],
+                "operation": "aggregate"
+              },
+              "Value #Z": {
+                "aggregations": [
+                  "max"
+                ],
+                "operation": "aggregate"
+              },
+              "studio_env": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "admin": {
+                "aggregations": [
+                  "lastNotNull"
+                ],
+                "operation": "aggregate"
+              }
+            }
+          }
+        },
+        {
+          "id": "filterByValue",
+          "options": {
+            "type": "include",
+            "match": "any",
+            "filters": [
+              {
+                "fieldName": "Value #Z (max)",
+                "config": {
+                  "id": "isNotNull",
+                  "options": {}
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "sort": [
+              {
+                "field": "Value #Z (max)",
+                "desc": true
+              }
+            ]
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "Value #Z (max)": true
+            },
+            "indexByName": {
+              "deployment.environment.name": 0,
+              "altinn.service_owner": 1,
+              "app": 2,
+              "Value #A (max)": 3,
+              "Value #B (max)": 4,
+              "Value #C (max)": 5,
+              "Value #D (max)": 6,
+              "admin (lastNotNull)": 7,
+              "studio_env": 8
+            },
+            "renameByName": {
+              "deployment.environment.name": "environment",
+              "altinn.service_owner": "service_owner",
+              "admin (lastNotNull)": "admin",
+              "Value #A (max)": "active",
+              "Value #B (max)": "scheduled",
+              "Value #C (max)": "waiting",
+              "Value #D (max)": "unresolved_failed"
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true
+          },
+          "decimals": 0,
+          "unit": "none",
+          "noValue": "No data"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*"
+            },
+            "properties": [
+              {
+                "id": "noValue",
+                "value": ""
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "environment"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Environment"
+              },
+              {
+                "id": "custom.width",
+                "value": 110
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "service_owner"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Service owner"
+              },
+              {
+                "id": "custom.width",
+                "value": 130
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "app"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "App"
+              },
+              {
+                "id": "custom.minWidth",
+                "value": 160
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "active"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Active"
+              },
+              {
+                "id": "custom.width",
+                "value": 110
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "scheduled"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Scheduled"
+              },
+              {
+                "id": "custom.width",
+                "value": 110
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "waiting"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Waiting"
+              },
+              {
+                "id": "custom.width",
+                "value": 110
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "unresolved_failed"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Unresolved failed"
+              },
+              {
+                "id": "custom.width",
+                "value": 170
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background",
+                  "mode": "basic"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "transparent",
+                      "value": null
+                    },
+                    {
+                      "color": "orange",
+                      "value": 1
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "thresholds"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "studio_env"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "admin"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Designer"
+              },
+              {
+                "id": "custom.width",
+                "value": 110
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "The app in Designer's admin pages",
+                    "url": "https://altinn.studio/admin/${__data.fields[\"altinn.service_owner\"]}/apps/${__data.fields.studio_env}/${__data.fields.app}/",
+                    "targetBlank": true
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "cellHeight": "sm",
+        "showHeader": true,
+        "footer": {
+          "show": false
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 21
+      }
+    },
+    {
       "id": 119,
       "type": "timeseries",
       "title": "Unresolved Failed over Time",
-      "description": "Lines: the Unresolved Failed count (see that tile) of each service owner whose count changed in the time range or who had failures in it. A step up is workflows ending failed or canceled; a step down is workflows resumed, abandoned, recovered or deleted. A gap is a time when the engine did not report, and the total line covers only the engines reporting, so it steps down when one stops. When no service owner changed, one line shows the total of all selected service owners. Bars (right axis): workflow failures in each interval from the failure counter, all selected service owners together. A failure and a resume in the same interval cancel out in the line but still show as a bar.",
+      "description": "Lines: the Unresolved Failed count (see that tile) over the time range. With one service owner selected, a line per app whose count changed in the time range or that had failures in it; with more, a line per service owner that did. The grey dashed line is the total of all selected service owners. A step up is workflows ending failed or dependency-failed; a step down is workflows resumed, abandoned, recovered or deleted. A gap is a time when the engine did not report, and the total covers only the engines reporting, so it steps down when one stops. An engine that does not report per-app counts yet has no app lines and is counted with its canceled workflows; once it starts reporting them, its line steps down by those once. Bars (right axis): workflow failures in each interval from the failure counter, all selected service owners together. A failure and a resume in the same interval cancel out in the line but still show as a bar.",
       "datasource": {
         "type": "prometheus",
         "uid": "altinn-studio-metrics"
@@ -2074,9 +2486,19 @@
             "type": "prometheus",
             "uid": "altinn-studio-metrics"
           },
-          "expr": "sum by (\"deployment.environment.name\", \"altinn.service_owner\") (max by (\"deployment.environment.name\", \"altinn.service_owner\", \"service.name\") ({\"altinn.workflow_engine.workflow.failed\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"})) and on (\"deployment.environment.name\", \"altinn.service_owner\") ((max by (\"deployment.environment.name\", \"altinn.service_owner\") (max_over_time({\"altinn.workflow_engine.workflow.failed\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}[$__range] @ end())) - min by (\"deployment.environment.name\", \"altinn.service_owner\") (min_over_time({\"altinn.workflow_engine.workflow.failed\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}[$__range] @ end())) > 0) or (sum by (\"deployment.environment.name\", \"altinn.service_owner\") (increase_pure({\"altinn.workflow_engine.workflow.execution.failed\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}[$__range] @ end())) > 0))",
+          "expr": "(sum by (\"deployment.environment.name\", \"altinn.service_owner\") (max by (\"deployment.environment.name\", \"altinn.service_owner\", \"service.name\", \"altinn.workflow_engine.namespace\", \"altinn.workflow_engine.workflow.status\") ({\"altinn.workflow_engine.workflow.count\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\", \"altinn.workflow_engine.workflow.status\"=~\"^(Failed|DependencyFailed)$\"})) or sum by (\"deployment.environment.name\", \"altinn.service_owner\") (max by (\"deployment.environment.name\", \"altinn.service_owner\", \"service.name\") ({\"altinn.workflow_engine.workflow.failed\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}))) and on (\"deployment.environment.name\", \"altinn.service_owner\") (group by (\"deployment.environment.name\", \"altinn.service_owner\") (sum by (\"deployment.environment.name\", \"altinn.service_owner\") (max_over_time({\"altinn.workflow_engine.workflow.count\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\", \"altinn.workflow_engine.workflow.status\"=~\"^(Failed|DependencyFailed)$\"}[$__range] @ end())) > sum by (\"deployment.environment.name\", \"altinn.service_owner\") (last_over_time({\"altinn.workflow_engine.workflow.count\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\", \"altinn.workflow_engine.workflow.status\"=~\"^(Failed|DependencyFailed)$\"}[$__range] @ end()))) or ((sum by (\"deployment.environment.name\", \"altinn.service_owner\") (max_over_time({\"altinn.workflow_engine.workflow.failed\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}[$__range] @ end())) > sum by (\"deployment.environment.name\", \"altinn.service_owner\") (last_over_time({\"altinn.workflow_engine.workflow.failed\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}[$__range] @ end()))) unless on (\"deployment.environment.name\", \"altinn.service_owner\") group by (\"deployment.environment.name\", \"altinn.service_owner\") (max_over_time({\"altinn.workflow_engine.workflow.count\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\", \"altinn.workflow_engine.workflow.status\"=\"Failed\"}[$__range] @ end()))) or group by (\"deployment.environment.name\", \"altinn.service_owner\") (sum by (\"deployment.environment.name\", \"altinn.service_owner\", \"altinn.workflow_engine.namespace\") (increase_pure({\"altinn.workflow_engine.workflow.execution.failed\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}[$__range] @ end())) > 0)) and on () (count(group by (\"deployment.environment.name\", \"altinn.service_owner\") (max_over_time({\"altinn.workflow_engine.health.status\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}[$__range] @ end()))) > 1)",
           "refId": "A",
           "legendFormat": "{{altinn.service_owner}} · {{deployment.environment.name}}",
+          "range": true
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "altinn-studio-metrics"
+          },
+          "expr": "sum by (\"deployment.environment.name\", \"altinn.service_owner\", \"app\") (label_replace(label_replace(label_replace(sum by (\"deployment.environment.name\", \"altinn.service_owner\", \"altinn.workflow_engine.namespace\") (max by (\"deployment.environment.name\", \"altinn.service_owner\", \"service.name\", \"altinn.workflow_engine.namespace\", \"altinn.workflow_engine.workflow.status\") ({\"altinn.workflow_engine.workflow.count\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\", \"altinn.workflow_engine.workflow.status\"=~\"^(Failed|DependencyFailed)$\"})), \"app\", \"$1\", \"altinn.workflow_engine.namespace\", \"(.*)\"), \"app\", \"$2\", \"altinn.workflow_engine.namespace\", \"([^/%]+)(?:/|%2[fF])(.+)\"), \"app\", \"other apps, counted together\", \"app\", \"_OTHER\")) and on (\"deployment.environment.name\", \"altinn.service_owner\", \"app\") (group by (\"deployment.environment.name\", \"altinn.service_owner\", \"app\") (label_replace(label_replace(label_replace(sum by (\"deployment.environment.name\", \"altinn.service_owner\", \"altinn.workflow_engine.namespace\") (max_over_time({\"altinn.workflow_engine.workflow.count\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\", \"altinn.workflow_engine.workflow.status\"=~\"^(Failed|DependencyFailed)$\"}[$__range] @ end())) > sum by (\"deployment.environment.name\", \"altinn.service_owner\", \"altinn.workflow_engine.namespace\") (last_over_time({\"altinn.workflow_engine.workflow.count\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\", \"altinn.workflow_engine.workflow.status\"=~\"^(Failed|DependencyFailed)$\"}[$__range] @ end())), \"app\", \"$1\", \"altinn.workflow_engine.namespace\", \"(.*)\"), \"app\", \"$2\", \"altinn.workflow_engine.namespace\", \"([^/%]+)(?:/|%2[fF])(.+)\"), \"app\", \"other apps, counted together\", \"app\", \"_OTHER\")) or group by (\"deployment.environment.name\", \"altinn.service_owner\", \"app\") (label_replace(label_replace(label_replace(sum by (\"deployment.environment.name\", \"altinn.service_owner\", \"altinn.workflow_engine.namespace\") (increase_pure({\"altinn.workflow_engine.workflow.execution.failed\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}[$__range] @ end())) > 0, \"app\", \"$1\", \"altinn.workflow_engine.namespace\", \"(.*)\"), \"app\", \"$2\", \"altinn.workflow_engine.namespace\", \"([^/%]+)(?:/|%2[fF])(.+)\"), \"app\", \"other apps, counted together\", \"app\", \"_OTHER\"))) and on () (count(group by (\"deployment.environment.name\", \"altinn.service_owner\") (max_over_time({\"altinn.workflow_engine.health.status\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}[$__range] @ end()))) == 1)",
+          "refId": "D",
+          "legendFormat": "{{app}}",
           "range": true
         },
         {
@@ -2094,9 +2516,9 @@
             "type": "prometheus",
             "uid": "altinn-studio-metrics"
           },
-          "expr": "sum(max by (\"deployment.environment.name\", \"altinn.service_owner\", \"service.name\") ({\"altinn.workflow_engine.workflow.failed\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"})) unless on () ((max by (\"deployment.environment.name\", \"altinn.service_owner\") (max_over_time({\"altinn.workflow_engine.workflow.failed\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}[$__range] @ end())) - min by (\"deployment.environment.name\", \"altinn.service_owner\") (min_over_time({\"altinn.workflow_engine.workflow.failed\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}[$__range] @ end())) > 0) or (sum by (\"deployment.environment.name\", \"altinn.service_owner\") (increase_pure({\"altinn.workflow_engine.workflow.execution.failed\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}[$__range] @ end())) > 0))",
+          "expr": "sum((sum by (\"deployment.environment.name\", \"altinn.service_owner\") (max by (\"deployment.environment.name\", \"altinn.service_owner\", \"service.name\", \"altinn.workflow_engine.namespace\", \"altinn.workflow_engine.workflow.status\") ({\"altinn.workflow_engine.workflow.count\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\", \"altinn.workflow_engine.workflow.status\"=~\"^(Failed|DependencyFailed)$\"})) or sum by (\"deployment.environment.name\", \"altinn.service_owner\") (max by (\"deployment.environment.name\", \"altinn.service_owner\", \"service.name\") ({\"altinn.workflow_engine.workflow.failed\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}))))",
           "refId": "C",
-          "legendFormat": "All selected service owners",
+          "legendFormat": "Total",
           "range": true
         }
       ],
@@ -2176,7 +2598,17 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "orange"
+                  "fixedColor": "#8e8e8e"
+                }
+              },
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "dash": [
+                    10,
+                    5
+                  ],
+                  "fill": "dash"
                 }
               }
             ]
@@ -2198,7 +2630,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 21
+        "y": 29
       }
     },
     {
@@ -2208,7 +2640,7 @@
       },
       "description": "Workflows that ended failed in the time range, by app and reason: execution (a step failed), wait_expired (a step's wait budget ran out), dependency_failed, poisoned and manual (failed through the fail endpoint). App and service owner come from the workflow's namespace. Select Traces for the failed workflows' traces, which only execution and wait_expired failures have. Select an app for its page in Designer's admin pages, which lists the instances with failing workflows.",
       "type": "table",
-      "title": "Failed Workflows by App",
+      "title": "Failures by App in the Selected Time Range",
       "targets": [
         {
           "datasource": {
@@ -2453,7 +2885,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 21
+        "y": 29
       }
     },
     {
@@ -2461,7 +2893,7 @@
         "type": "victoriametrics-logs-datasource",
         "uid": "altinn-studio-traces-logsql"
       },
-      "description": "The latest 200 workflows in the time range that failed while the engine ran them, one per row, from the workflow's trace: execution (a step failed) and wait_expired (a step's wait budget ran out). Step and Error are the failing step's operation and its error. Failures the engine records without running the workflow, dependency_failed, poisoned and manual, have no such trace; Failed Workflows by App counts them. Select a trace to open it, or an instance to open it in Designer's admin pages, where its workflows can be resumed or failed.",
+      "description": "The latest 200 workflows in the time range that failed while the engine ran them, one per row, from the workflow's trace: execution (a step failed) and wait_expired (a step's wait budget ran out). Step and Error are the failing step's operation and its error. Failures the engine records without running the workflow, dependency_failed, poisoned and manual, have no such trace; Failures by App in the Selected Time Range counts them. Select a trace to open it, or an instance to open it in Designer's admin pages, where its workflows can be resumed or failed.",
       "type": "table",
       "title": "Recent Failed Workflows",
       "targets": [
@@ -2754,7 +3186,7 @@
         "h": 9,
         "w": 24,
         "x": 0,
-        "y": 29
+        "y": 37
       }
     },
     {
@@ -2885,14 +3317,14 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 38
+        "y": 46
       }
     },
     {
       "id": 120,
       "type": "timeseries",
       "title": "Engine Errors by Operation",
-      "description": "Exceptions in the engine's own loops per interval, by the operation that failed, added up over the selected service owners and their engine processes. These are not failed workflows (see Failed); each comes with a log record, in Engine Error Logs below. workflow_handling: running a workflow ended in an exception outside its steps' own error handling; the workflow is picked up again once its lease runs out. fetch_and_lock: the main loop could not fetch the next workflows from the database, usually because the database is unreachable. db_maintenance: the periodic database maintenance failed (retention, failing poisoned workflows, reclaiming stale ones, releasing workflows whose dependencies finished); the dashed line (right axis) is how many times in a row it has failed, on the worst process. metrics_collector: counting the workflows in the database failed, so Active, Scheduled, Unresolved Failed and the table's Queue fill and Why keep their last values. throttle_sweep: the namespace circuit breaker's periodic sweep failed. mailbox_deadline_sweep: looking for mailboxes past their deadline failed. mailbox_deadline_close: closing one mailbox past its deadline failed; the next sweep tries again. A flat line at 0 means no errors in the time range.",
+      "description": "Exceptions in the engine's own loops per interval, by the operation that failed, added up over the selected service owners and their engine processes. These are not failed workflows (see Failed); each comes with a log record, in Engine Error Logs below. workflow_handling: running a workflow ended in an exception outside its steps' own error handling; the workflow is picked up again once its lease runs out. fetch_and_lock: the main loop could not fetch the next workflows from the database, usually because the database is unreachable. db_maintenance: the periodic database maintenance failed (retention, failing poisoned workflows, reclaiming stale ones, releasing workflows whose dependencies finished); the dashed line (right axis) is how many times in a row it has failed, on the worst process. metrics_collector: counting the workflows in the database failed, all of them or per app, so Active, Scheduled, Unresolved Failed, the apps table and the table's Queue fill and Why keep their last values. throttle_sweep: the namespace circuit breaker's periodic sweep failed. mailbox_deadline_sweep: looking for mailboxes past their deadline failed. mailbox_deadline_close: closing one mailbox past its deadline failed; the next sweep tries again. A flat line at 0 means no errors in the time range.",
       "datasource": {
         "type": "prometheus",
         "uid": "altinn-studio-metrics"
@@ -3060,7 +3492,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 38
+        "y": 46
       }
     },
     {
@@ -3098,7 +3530,7 @@
         "h": 9,
         "w": 24,
         "x": 0,
-        "y": 46
+        "y": 54
       }
     },
     {
@@ -3136,7 +3568,7 @@
         "h": 10,
         "w": 24,
         "x": 0,
-        "y": 55
+        "y": 63
       }
     },
     {
@@ -3145,7 +3577,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 65
+        "y": 73
       },
       "id": 10,
       "panels": [],
@@ -3264,7 +3696,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 66
+        "y": 74
       },
       "id": 11,
       "options": {
@@ -3483,7 +3915,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 66
+        "y": 74
       },
       "id": 12,
       "options": {
@@ -3566,7 +3998,7 @@
         "type": "prometheus",
         "uid": "altinn-studio-metrics"
       },
-      "description": "Current workflow counts by state (gauge values over time). Unresolved failed = retained failed, canceled and dependency-failed workflows (Unresolved Failed under Where to look); Finished = all retained terminal ones (successful + unresolved failed). Every replica reports the same database-wide counts, so replicas are combined with max() and only separate engines, each with its own database, are added up: one per service owner and service.",
+      "description": "Current workflow counts by state (gauge values over time). Unresolved failed = the Unresolved Failed tile's count; Finished = all retained terminal ones but the abandoned: successful, failed, dependency-failed and canceled. Every replica reports the same database-wide counts, so replicas are combined with max() and only separate engines, each with its own database, are added up: one per service owner and service.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -3687,7 +4119,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 66
+        "y": 74
       },
       "id": 13,
       "options": {
@@ -3728,7 +4160,7 @@
             "type": "prometheus",
             "uid": "altinn-studio-metrics"
           },
-          "expr": "sum(max by (\"deployment.environment.name\", \"altinn.service_owner\", \"service.name\") ({\"altinn.workflow_engine.workflow.failed\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}))",
+          "expr": "sum((sum by (\"deployment.environment.name\", \"altinn.service_owner\") (max by (\"deployment.environment.name\", \"altinn.service_owner\", \"service.name\", \"altinn.workflow_engine.namespace\", \"altinn.workflow_engine.workflow.status\") ({\"altinn.workflow_engine.workflow.count\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\", \"altinn.workflow_engine.workflow.status\"=~\"^(Failed|DependencyFailed)$\"})) or sum by (\"deployment.environment.name\", \"altinn.service_owner\") (max by (\"deployment.environment.name\", \"altinn.service_owner\", \"service.name\") ({\"altinn.workflow_engine.workflow.failed\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}))))",
           "legendFormat": "Unresolved failed",
           "refId": "C"
         },
@@ -3760,7 +4192,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 74
+        "y": 82
       },
       "id": 80,
       "panels": [],
@@ -3879,7 +4311,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 75
+        "y": 83
       },
       "id": 81,
       "options": {
@@ -4006,7 +4438,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 75
+        "y": 83
       },
       "id": 82,
       "options": {
@@ -4136,7 +4568,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 75
+        "y": 83
       },
       "id": 83,
       "options": {
@@ -4192,7 +4624,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 83
+        "y": 91
       },
       "id": 90,
       "panels": [],
@@ -4232,7 +4664,7 @@
         "h": 8,
         "w": 5,
         "x": 0,
-        "y": 84
+        "y": 92
       },
       "id": 91,
       "options": {
@@ -4392,7 +4824,7 @@
         "h": 8,
         "w": 10,
         "x": 5,
-        "y": 84
+        "y": 92
       },
       "id": 92,
       "options": {
@@ -4528,7 +4960,7 @@
         "h": 8,
         "w": 9,
         "x": 15,
-        "y": 84
+        "y": 92
       },
       "id": 93,
       "options": {
@@ -4576,7 +5008,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 92
+        "y": 100
       },
       "id": 20,
       "panels": [],
@@ -4681,7 +5113,7 @@
         "h": 8,
         "w": 6,
         "x": 0,
-        "y": 93
+        "y": 101
       },
       "id": 21,
       "options": {
@@ -4813,7 +5245,7 @@
         "h": 8,
         "w": 6,
         "x": 6,
-        "y": 93
+        "y": 101
       },
       "id": 22,
       "options": {
@@ -4952,7 +5384,7 @@
         "h": 8,
         "w": 6,
         "x": 12,
-        "y": 93
+        "y": 101
       },
       "id": 23,
       "options": {
@@ -5084,7 +5516,7 @@
         "h": 8,
         "w": 6,
         "x": 18,
-        "y": 93
+        "y": 101
       },
       "id": 53,
       "options": {
@@ -5131,7 +5563,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 101
+        "y": 109
       },
       "id": 50,
       "panels": [],
@@ -5265,7 +5697,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 102
+        "y": 110
       },
       "id": 51,
       "options": {
@@ -5417,7 +5849,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 102
+        "y": 110
       },
       "id": 52,
       "options": {
@@ -5466,7 +5898,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 110
+        "y": 118
       },
       "id": 30,
       "panels": [
@@ -5566,7 +5998,7 @@
             "h": 7,
             "w": 6,
             "x": 0,
-            "y": 111
+            "y": 119
           },
           "id": 31,
           "options": {
@@ -5702,7 +6134,7 @@
             "h": 7,
             "w": 6,
             "x": 6,
-            "y": 111
+            "y": 119
           },
           "id": 32,
           "options": {
@@ -5838,7 +6270,7 @@
             "h": 7,
             "w": 6,
             "x": 12,
-            "y": 111
+            "y": 119
           },
           "id": 33,
           "options": {
@@ -5974,7 +6406,7 @@
             "h": 7,
             "w": 6,
             "x": 18,
-            "y": 111
+            "y": 119
           },
           "id": 34,
           "options": {
@@ -6024,7 +6456,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 111
+        "y": 119
       },
       "id": 40,
       "panels": [
@@ -6110,7 +6542,7 @@
             "h": 9,
             "w": 6,
             "x": 0,
-            "y": 112
+            "y": 120
           },
           "id": 41,
           "options": {
@@ -6279,7 +6711,7 @@
             "h": 9,
             "w": 6,
             "x": 6,
-            "y": 112
+            "y": 120
           },
           "id": 42,
           "options": {
@@ -6442,7 +6874,7 @@
             "h": 9,
             "w": 6,
             "x": 12,
-            "y": 112
+            "y": 120
           },
           "id": 43,
           "options": {
@@ -6628,7 +7060,7 @@
             "h": 9,
             "w": 6,
             "x": 18,
-            "y": 112
+            "y": 120
           },
           "id": 65,
           "options": {
@@ -6698,7 +7130,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 112
+        "y": 120
       },
       "id": 100,
       "panels": [
@@ -6735,7 +7167,7 @@
             "h": 5,
             "w": 8,
             "x": 0,
-            "y": 113
+            "y": 121
           },
           "id": 101,
           "options": {
@@ -6801,7 +7233,7 @@
             "h": 5,
             "w": 8,
             "x": 8,
-            "y": 113
+            "y": 121
           },
           "id": 102,
           "options": {
@@ -6867,7 +7299,7 @@
             "h": 5,
             "w": 8,
             "x": 16,
-            "y": 113
+            "y": 121
           },
           "id": 103,
           "options": {
@@ -7012,7 +7444,7 @@
             "h": 8,
             "w": 8,
             "x": 0,
-            "y": 118
+            "y": 126
           },
           "id": 104,
           "options": {
@@ -7235,7 +7667,7 @@
             "h": 8,
             "w": 8,
             "x": 8,
-            "y": 118
+            "y": 126
           },
           "id": 105,
           "options": {
@@ -7419,7 +7851,7 @@
             "h": 8,
             "w": 8,
             "x": 16,
-            "y": 118
+            "y": 126
           },
           "id": 106,
           "options": {
@@ -7568,7 +8000,7 @@
             "h": 8,
             "w": 8,
             "x": 0,
-            "y": 126
+            "y": 134
           },
           "id": 107,
           "options": {
@@ -7692,7 +8124,7 @@
             "h": 8,
             "w": 8,
             "x": 8,
-            "y": 126
+            "y": 134
           },
           "id": 108,
           "options": {
@@ -7785,7 +8217,7 @@
             "h": 8,
             "w": 8,
             "x": 16,
-            "y": 126
+            "y": 134
           },
           "id": 109,
           "options": {
@@ -7827,7 +8259,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 113
+        "y": 121
       },
       "id": 70,
       "panels": [
@@ -7864,7 +8296,7 @@
             "h": 5,
             "w": 8,
             "x": 0,
-            "y": 114
+            "y": 122
           },
           "id": 71,
           "options": {
@@ -7930,7 +8362,7 @@
             "h": 5,
             "w": 8,
             "x": 8,
-            "y": 114
+            "y": 122
           },
           "id": 72,
           "options": {
@@ -7996,7 +8428,7 @@
             "h": 5,
             "w": 8,
             "x": 16,
-            "y": 114
+            "y": 122
           },
           "id": 73,
           "options": {
@@ -8126,7 +8558,7 @@
             "h": 6,
             "w": 12,
             "x": 0,
-            "y": 119
+            "y": 127
           },
           "id": 74,
           "options": {
@@ -8259,7 +8691,7 @@
             "h": 6,
             "w": 12,
             "x": 12,
-            "y": 119
+            "y": 127
           },
           "id": 75,
           "options": {
