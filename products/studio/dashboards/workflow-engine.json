@@ -2074,7 +2074,7 @@
             "type": "prometheus",
             "uid": "altinn-studio-metrics"
           },
-          "expr": "sum by (\"deployment.environment.name\", \"altinn.service_owner\") (max by (\"deployment.environment.name\", \"altinn.service_owner\", \"service.name\") ({\"altinn.workflow_engine.workflow.failed\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"})) and on (\"deployment.environment.name\", \"altinn.service_owner\") ((max by (\"deployment.environment.name\", \"altinn.service_owner\") (max_over_time({\"altinn.workflow_engine.workflow.failed\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}[$__range] @ end())) - min by (\"deployment.environment.name\", \"altinn.service_owner\") (min_over_time({\"altinn.workflow_engine.workflow.failed\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}[$__range] @ end())) > 0) or (sum by (\"deployment.environment.name\", \"altinn.service_owner\") (increase_pure({\"altinn.workflow_engine.workflow.execution.failed\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}[$__range] @ end())) > 0))",
+          "expr": "sum by (\"deployment.environment.name\", \"altinn.service_owner\") (max by (\"deployment.environment.name\", \"altinn.service_owner\", \"service.name\") ({\"altinn.workflow_engine.workflow.failed\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"})) and on (\"deployment.environment.name\", \"altinn.service_owner\") ((max by (\"deployment.environment.name\", \"altinn.service_owner\") (max_over_time({\"altinn.workflow_engine.workflow.failed\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}[$__range] @ (${__to} / 1000))) - min by (\"deployment.environment.name\", \"altinn.service_owner\") (min_over_time({\"altinn.workflow_engine.workflow.failed\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}[$__range] @ (${__to} / 1000))) > 0) or (sum by (\"deployment.environment.name\", \"altinn.service_owner\") (increase_pure({\"altinn.workflow_engine.workflow.execution.failed\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}[$__range] @ (${__to} / 1000))) > 0) or (sum by (\"deployment.environment.name\", \"altinn.service_owner\") (increase_pure({\"altinn.workflow_engine.workflow.execution.failed\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}[1m] @ (${__from} / 1000))) > 0))",
           "refId": "A",
           "legendFormat": "{{altinn.service_owner}} · {{deployment.environment.name}}",
           "range": true
@@ -2094,7 +2094,7 @@
             "type": "prometheus",
             "uid": "altinn-studio-metrics"
           },
-          "expr": "sum(max by (\"deployment.environment.name\", \"altinn.service_owner\", \"service.name\") ({\"altinn.workflow_engine.workflow.failed\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"})) unless on () ((max by (\"deployment.environment.name\", \"altinn.service_owner\") (max_over_time({\"altinn.workflow_engine.workflow.failed\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}[$__range] @ end())) - min by (\"deployment.environment.name\", \"altinn.service_owner\") (min_over_time({\"altinn.workflow_engine.workflow.failed\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}[$__range] @ end())) > 0) or (sum by (\"deployment.environment.name\", \"altinn.service_owner\") (increase_pure({\"altinn.workflow_engine.workflow.execution.failed\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}[$__range] @ end())) > 0))",
+          "expr": "sum(max by (\"deployment.environment.name\", \"altinn.service_owner\", \"service.name\") ({\"altinn.workflow_engine.workflow.failed\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"})) unless on () ((max by (\"deployment.environment.name\", \"altinn.service_owner\") (max_over_time({\"altinn.workflow_engine.workflow.failed\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}[$__range] @ (${__to} / 1000))) - min by (\"deployment.environment.name\", \"altinn.service_owner\") (min_over_time({\"altinn.workflow_engine.workflow.failed\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}[$__range] @ (${__to} / 1000))) > 0) or (sum by (\"deployment.environment.name\", \"altinn.service_owner\") (increase_pure({\"altinn.workflow_engine.workflow.execution.failed\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}[$__range] @ (${__to} / 1000))) > 0) or (sum by (\"deployment.environment.name\", \"altinn.service_owner\") (increase_pure({\"altinn.workflow_engine.workflow.execution.failed\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}[1m] @ (${__from} / 1000))) > 0))",
           "refId": "C",
           "legendFormat": "All selected service owners",
           "range": true
@@ -2771,7 +2771,7 @@
             "type": "prometheus",
             "uid": "altinn-studio-metrics"
           },
-          "expr": "max by (\"deployment.environment.name\", \"altinn.service_owner\") (max_over_time({\"altinn.workflow_engine.health.status\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}) or {\"altinn.workflow_engine.health.status\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}) and on (\"deployment.environment.name\", \"altinn.service_owner\") (max by (\"deployment.environment.name\", \"altinn.service_owner\") (max_over_time({\"altinn.workflow_engine.health.status\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}[$__range] @ end())) > 0)",
+          "expr": "max by (\"deployment.environment.name\", \"altinn.service_owner\") (max_over_time({\"altinn.workflow_engine.health.status\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}) or {\"altinn.workflow_engine.health.status\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}) and on (\"deployment.environment.name\", \"altinn.service_owner\") (max by (\"deployment.environment.name\", \"altinn.service_owner\") (max_over_time({\"altinn.workflow_engine.health.status\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}[$__range] @ (${__to} / 1000))) > 0)",
           "refId": "A",
           "legendFormat": "{{altinn.service_owner}} · {{deployment.environment.name}}",
           "range": true
@@ -2791,7 +2791,7 @@
             "type": "prometheus",
             "uid": "altinn-studio-metrics"
           },
-          "expr": "max({\"altinn.workflow_engine.health.status\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}) * 0 unless on () (max by (\"deployment.environment.name\", \"altinn.service_owner\") (max_over_time({\"altinn.workflow_engine.health.status\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}[$__range] @ end())) > 0)",
+          "expr": "max({\"altinn.workflow_engine.health.status\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}) * 0 unless on () (max by (\"deployment.environment.name\", \"altinn.service_owner\") (max_over_time({\"altinn.workflow_engine.health.status\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}[$__range] @ (${__to} / 1000))) > 0)",
           "refId": "C",
           "legendFormat": "All reporting service owners",
           "range": true
@@ -2924,7 +2924,7 @@
             "type": "prometheus",
             "uid": "altinn-studio-metrics"
           },
-          "expr": "0 * max({\"altinn.workflow_engine.health.status\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}) unless on () (sum(increase_pure({\"altinn.workflow_engine.errors\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}[$__range] @ end())) > 0)",
+          "expr": "0 * max({\"altinn.workflow_engine.health.status\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}) unless on () (sum(increase_pure({\"altinn.workflow_engine.errors\", \"deployment.environment.name\"=~\"$env\", \"service.name\"=~\"$service\", \"altinn.service_owner\"=~\"$service_owner\"}[$__range] @ (${__to} / 1000))) > 0)",
           "refId": "C",
           "legendFormat": "No errors in the time range",
           "range": true
@@ -5424,8 +5424,7 @@
         "legend": {
           "calcs": [
             "mean",
-            "max",
-            "sum"
+            "max"
           ],
           "displayMode": "table",
           "placement": "bottom",
