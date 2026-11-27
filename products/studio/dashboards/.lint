@@ -10,7 +10,9 @@ exclusions:
       through altinn-studio-traces-logsql and links them to altinn-studio-traces.
       The reports and alerts dashboard reads Designer's notification counters and
       lists failures from its spans the same way.
-      The workflow engine dashboard reads only the engine's metrics.
+      The workflow engine dashboard reads the engine's metrics, lists failed
+      workflows from their spans through altinn-studio-traces-logsql, links them
+      to altinn-studio-traces, and shows the engine's logs from altinn-studio-logs.
       The operator dashboard reads the operator's metrics, and its failed runs from
       altinn-studio-traces and altinn-studio-traces-logsql.
       The gateway dashboard reads the gateway's metrics, lists its spans through
